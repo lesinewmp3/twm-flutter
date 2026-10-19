@@ -27,3 +27,4 @@ export 'src/drivers/daqmx/cdaq_digitizer.dart';
 export 'src/drivers/dso/keysight_dso_digitizer.dart';
 export 'src/drivers/emu/emu_dso.dart';
 export 'src/drivers/aux/multiplexers.dart';
+export 'src/backend/isolate_backend.dart';

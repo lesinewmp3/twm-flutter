@@ -8,10 +8,11 @@ abstract class ServerControl {
   int? get port;
   int get clients;
   List<String> get log;
+  Future<void> refresh();
   Future<void> start({required String host, required int port, String? token, String? webRoot});
   Future<void> stop();
 }
 
-bool get canHostServer => impl.canHostServer;
+bool canHostServer(TwmBackend backend) => impl.canHostServer(backend);
 
 ServerControl serverControlFor(TwmBackend backend) => impl.serverControlFor(backend);

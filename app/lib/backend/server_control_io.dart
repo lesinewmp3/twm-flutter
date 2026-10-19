@@ -3,41 +3,35 @@ import 'package:twm_model/twm_model.dart';
 
 import 'server_control.dart';
 
-bool get canHostServer => true;
+bool canHostServer(TwmBackend backend) => backend is IsolateBackend;
 
-final _instances = <TwmBackend, _IoServer>{};
+final _cache = Expando<_IsoServer>();
 
-ServerControl serverControlFor(TwmBackend backend) => _instances.putIfAbsent(backend, () => _IoServer(backend));
+ServerControl serverControlFor(TwmBackend backend) => _cache[backend] ??= _IsoServer(backend as IsolateBackend);
 
-class _IoServer implements ServerControl {
-  final TwmBackend backend;
-  TwmServer? _s;
-  @override
-  final List<String> log = [];
-  _IoServer(this.backend);
+/// Server hosted in the backend isolate.
+class _IsoServer implements ServerControl {
+  final IsolateBackend b;
+  _IsoServer(this.b);
 
-  @override
-  bool get running => _s?.running ?? false;
-  @override
-  int? get port => _s?.port;
-  @override
-  int get clients => _s?.clients ?? 0;
+  Json _s = const {};
 
   @override
-  Future<void> start({required String host, required int port, String? token, String? webRoot}) async {
-    await stop();
-    _s = TwmServer(
-      backend,
-      token: token == null || token.isEmpty ? null : token,
-      webRoot: webRoot == null || webRoot.isEmpty ? null : webRoot,
-      log: (m) => log.add('[${DateTime.now().toIso8601String().substring(11, 19)}] $m'),
-    );
-    await _s!.start(host: host, port: port);
-  }
+  bool get running => jBool(_s['running']);
+  @override
+  int? get port => _s['port'] == null ? null : jInt(_s['port']);
+  @override
+  int get clients => jInt(_s['clients']);
+  @override
+  List<String> get log => jStringList(_s['log']);
 
   @override
-  Future<void> stop() async {
-    await _s?.stop();
-    _s = null;
-  }
+  Future<void> refresh() async => _s = await b.server('status');
+
+  @override
+  Future<void> start({required String host, required int port, String? token, String? webRoot}) async =>
+      _s = await b.server('start', host: host, port: port, token: token, web: webRoot);
+
+  @override
+  Future<void> stop() async => _s = await b.server('stop');
 }

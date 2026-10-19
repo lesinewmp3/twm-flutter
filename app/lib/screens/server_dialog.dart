@@ -30,7 +30,10 @@ class _ServerDialogState extends State<_ServerDialog> {
   @override
   void initState() {
     super.initState();
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
+    _t = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final st = AppScope.read(context);
+      if (!canHostServer(st.backend)) return;
+      await serverControlFor(st.backend).refresh();
       if (mounted) setState(() {});
     });
   }
@@ -44,7 +47,7 @@ class _ServerDialogState extends State<_ServerDialog> {
   @override
   Widget build(BuildContext context) {
     final st = AppScope.of(context);
-    if (!canHostServer || st.backend.description != 'local') {
+    if (!canHostServer(st.backend)) {
       return AlertDialog(
         title: const Text('TWM server'),
         content: Text(
