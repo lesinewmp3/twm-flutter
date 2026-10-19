@@ -1,0 +1,12 @@
+name: twm_core
+description: TWM/TPQA backend - measurement engine, digitizer drivers, GNU Octave bridge, server (dart:io).
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.9.0
+dependencies:
+  twm_model:
+    path: ../twm_model
+  path: any
+dev_dependencies:
+  test: any

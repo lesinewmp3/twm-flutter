@@ -1,0 +1,8 @@
+name: twm_model
+description: TWM/TPQA data formats, models and backend API (platform independent, web safe).
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.9.0
+dev_dependencies:
+  test: any
