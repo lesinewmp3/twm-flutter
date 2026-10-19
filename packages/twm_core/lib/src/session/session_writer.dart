@@ -317,6 +317,7 @@ class SessionWriter {
       i.setTextList(p.name, p.values);
     }
     final root2 = Info()..setSection('QWTB processing setup', i);
+    await Directory(root).create(recursive: true);
     await File(p.join(root, 'qwtb.info')).writeAsString(root2.toString());
   }
 

@@ -20,10 +20,14 @@ class RemoteBackend implements TwmBackend {
 
   static Future<RemoteBackend> connect(String url, {String? token}) async {
     final b = RemoteBackend._(Uri.parse(url), token);
-    b._connectEvents();
+    // verifies address and access token before opening the event channel
     try {
       b._measuring = jBool(jMap(await b._call('measuring'))['value']);
-    } catch (_) {}
+    } catch (e) {
+      b._client.close();
+      throw Exception('Cannot connect to TWM server $url: $e');
+    }
+    b._connectEvents();
     return b;
   }
 
@@ -35,6 +39,9 @@ class RemoteBackend implements TwmBackend {
     );
     final ws = WebSocketChannel.connect(wsUri);
     _ws = ws;
+    ws.ready.catchError((Object e) {
+      if (!_events.isClosed) _events.add(StatusEvent('Event channel error: $e'));
+    });
     ws.stream.listen(
       (m) {
         final e = BackendEvent.fromJson(jMap(jsonDecode(m as String)));
