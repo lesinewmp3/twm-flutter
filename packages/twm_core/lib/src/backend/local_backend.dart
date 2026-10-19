@@ -338,8 +338,13 @@ class LocalBackend implements TwmBackend {
         Json? onl;
         if (s.online.enabled && full != null) {
           try {
-            onl = online.analyze(full, 1 / e.fullTs, s.corrections.transducers).toJson();
-          } catch (_) {}
+            final res = online.analyze(full, 1 / e.fullTs, s.corrections.transducers);
+            onl = res.toJson();
+            if (s.online.saveResults && s.online.resultsFile.isNotEmpty)
+              _saveOnline(s.online.resultsFile, res, e.record);
+          } catch (err) {
+            _emit(StatusEvent('On-line analysis failed: $err'));
+          }
         }
         _emit(
           WaveformEvent(
@@ -357,6 +362,16 @@ class LocalBackend implements TwmBackend {
       case MeasFinished():
         _emit(FinishedEvent(e.sessionPath, aborted: e.aborted, error: e.error?.toString() ?? ''));
     }
+  }
+
+  void _saveOnline(String file, OnlineResult r, int record) {
+    final f = File(file);
+    final exists = f.existsSync() && f.lengthSync() > 0;
+    f.parent.createSync(recursive: true);
+    f.writeAsStringSync(
+      '${exists ? '' : '${onlineCsvHeader(r)}\n'}${onlineCsvRow(r, record, DateTime.now())}\n',
+      mode: FileMode.append,
+    );
   }
 
   @override

@@ -17,6 +17,11 @@ class OnlineAnalysisConfig {
   bool statistics;
   int averageCycles;
 
+  /// TPQA "Save CVI Processed Data": append results of every acquisition
+  /// to a CSV file ([resultsFile]).
+  bool saveResults;
+  String resultsFile;
+
   OnlineAnalysisConfig({
     this.enabled = true,
     this.harmonicAnalyzer = true,
@@ -24,6 +29,8 @@ class OnlineAnalysisConfig {
     this.window = WindowType.hann,
     this.statistics = false,
     this.averageCycles = 10,
+    this.saveResults = false,
+    this.resultsFile = '',
   });
 
   Json toJson() => {
@@ -33,6 +40,8 @@ class OnlineAnalysisConfig {
     'window': window.name,
     'statistics': statistics,
     'averageCycles': averageCycles,
+    'saveResults': saveResults,
+    'resultsFile': resultsFile,
   };
 
   factory OnlineAnalysisConfig.fromJson(Json j) => OnlineAnalysisConfig(
@@ -42,6 +51,8 @@ class OnlineAnalysisConfig {
     window: enumByName(WindowType.values, j['window'], WindowType.hann),
     statistics: jBool(j['statistics']),
     averageCycles: jInt(j['averageCycles'], 10),
+    saveResults: jBool(j['saveResults']),
+    resultsFile: jString(j['resultsFile']),
   );
 }
 
@@ -198,3 +209,11 @@ class OnlineAnalyzer {
     );
   }
 }
+
+/// CSV lines (`;` separated) for saving on-line results: header row and
+/// one data row per acquisition.
+String onlineCsvHeader(OnlineResult r) =>
+    ['time', 'record', for (final q in r.quantities) '${q.name} [${q.unit}]'].join(';');
+
+String onlineCsvRow(OnlineResult r, int record, DateTime t) =>
+    [t.toIso8601String(), '$record', for (final q in r.quantities) '${q.value}'].join(';');

@@ -4,6 +4,7 @@ import 'package:twm_model/twm_model.dart';
 import '../state/app_state.dart';
 import '../widgets/chart.dart';
 import '../widgets/fields.dart';
+import '../widgets/file_browser.dart';
 
 /// On-line data processing (TPQA "CVI Data Processing", guide figures
 /// 3.61/3.62): grid of measured values with statistics, harmonic graphs
@@ -88,6 +89,21 @@ class _OnlineViewState extends State<OnlineView> {
                 onChanged: (v) => setState(() => _maxPoints = v.round()),
               ),
               OutlinedButton(onPressed: () => setState(_history.clear), child: const Text('Clear history')),
+              Check(
+                label: 'Save CVI processed data',
+                value: o.saveResults,
+                onChanged: (v) => upd((c) => c.saveResults = v),
+              ),
+              if (o.saveResults)
+                PathField(
+                  label: 'Results file (CSV, appended)',
+                  value: o.resultsFile,
+                  backend: st.backend,
+                  mode: BrowseMode.saveFile,
+                  extensions: const ['.csv'],
+                  width: 420,
+                  onChanged: (v) => upd((c) => c.resultsFile = v),
+                ),
               const Text(
                 'Indicative values only (not validated - use QWTB algorithms for traceable results). '
                 'Settings apply to the next measurement start.',

@@ -46,6 +46,9 @@ void main() {
       TransducerConfig(path: p.join(dummy, 'dummy.vd', 'dummy.info'), highChannel: 1),
       TransducerConfig(path: p.join(dummy, 'dummy.cs', 'dummy.info'), type: TransducerType.shunt, highChannel: 2),
     ];
+    s.online
+      ..saveResults = true
+      ..resultsFile = p.join(tmp.path, 'online', 'cvi.csv');
     final events = <BackendEvent>[];
     final sub = b.events.listen(events.add);
     await b.startMeasurement(s);
@@ -59,6 +62,9 @@ void main() {
     expect(p1.value, closeTo(7.0710678 * 0.5 / 2 * 0.9800665778, 2e-3));
     expect(events.whereType<ProcessingEvent>().where((e) => !e.busy && e.error.isEmpty).length, 2);
 
+    final csv = File(s.online.resultsFile).readAsLinesSync();
+    expect(csv.length, 3); // header + 2 records
+    expect(csv.first, contains('P L1 [W]'));
     final sum = await b.sessionSummary(fin.sessionPath);
     expect(sum.recordsPerGroup, [2]);
     expect(sum.transducerTags, ['u1', 'i1']);
