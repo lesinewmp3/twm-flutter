@@ -1,0 +1,230 @@
+import 'package:flutter/material.dart';
+import 'package:twm_model/twm_model.dart';
+
+import '../state/app_state.dart';
+import '../widgets/chart.dart';
+import '../widgets/fields.dart';
+
+/// On-line data processing (TPQA "CVI Data Processing", guide figures
+/// 3.61/3.62): grid of measured values with statistics, harmonic graphs
+/// and history graph of a selected quantity.
+class OnlineView extends StatefulWidget {
+  const OnlineView({super.key});
+  @override
+  State<OnlineView> createState() => _OnlineViewState();
+}
+
+class _OnlineViewState extends State<OnlineView> {
+  final Map<String, List<double>> _history = {};
+  OnlineResult? _last;
+  String? _graph;
+  int _maxPoints = 500;
+
+  void _collect(OnlineResult r) {
+    if (identical(r, _last)) return;
+    _last = r;
+    for (final q in r.quantities) {
+      final h = _history.putIfAbsent(q.name, () => []);
+      h.add(q.value);
+      if (h.length > _maxPoints) h.removeRange(0, h.length - _maxPoints);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final st = AppScope.of(context);
+    final o = st.settings.online;
+    final r = st.lastOnline;
+    if (r != null) _collect(r);
+    void upd(void Function(OnlineAnalysisConfig c) f) => st.update((s) => f(s.online));
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Check(label: 'On-line processing enabled', value: o.enabled, onChanged: (v) => upd((c) => c.enabled = v)),
+              Check(
+                label: 'Harmonic analyzer ON',
+                value: o.harmonicAnalyzer,
+                onChanged: (v) => upd((c) => c.harmonicAnalyzer = v),
+              ),
+              NumField(
+                label: 'Harmonic number',
+                value: o.harmonics.toDouble(),
+                integer: true,
+                min: 1,
+                max: 200,
+                width: 140,
+                onChanged: (v) => upd((c) => c.harmonics = v.round()),
+              ),
+              Choice<WindowType>(
+                label: 'Window type',
+                value: o.window,
+                items: WindowType.values,
+                width: 190,
+                itemLabel: (w) => w.label,
+                onChanged: (v) => upd((c) => c.window = v),
+              ),
+              Check(label: 'On/Off statistic', value: o.statistics, onChanged: (v) => upd((c) => c.statistics = v)),
+              NumField(
+                label: 'Average cycles',
+                value: o.averageCycles.toDouble(),
+                integer: true,
+                min: 2,
+                width: 130,
+                onChanged: (v) => upd((c) => c.averageCycles = v.round()),
+              ),
+              NumField(
+                label: 'Max points to display',
+                value: _maxPoints.toDouble(),
+                integer: true,
+                min: 10,
+                width: 170,
+                onChanged: (v) => setState(() => _maxPoints = v.round()),
+              ),
+              OutlinedButton(onPressed: () => setState(_history.clear), child: const Text('Clear history')),
+              const Text(
+                'Indicative values only (not validated - use QWTB algorithms for traceable results). '
+                'Settings apply to the next measurement start.',
+                style: TextStyle(fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: r == null
+                ? const Center(child: Text('No on-line results - start a measurement (continuous mode recommended).'))
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(flex: 3, child: _grid(r, o.statistics)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_graph != null)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text('History: $_graph', style: Theme.of(context).textTheme.titleSmall),
+                                        const Spacer(),
+                                        IconButton(
+                                          onPressed: () => setState(() => _graph = null),
+                                          icon: const Icon(Icons.close),
+                                        ),
+                                      ],
+                                    ),
+                                    Expanded(
+                                      child: LineChart(
+                                        xLabel: 'acquisition #',
+                                        yLabel: _graph!,
+                                        series: [
+                                          ChartSeries(_graph!, _history[_graph] ?? const [], color: chartColors[0]),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            for (final e in r.harmonics.entries)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      'Harmonics ${e.key} (f0 = ${formatNum(r.f0)} Hz)',
+                                      style: Theme.of(context).textTheme.labelLarge,
+                                    ),
+                                    Expanded(
+                                      child: LineChart(
+                                        xLabel: 'harmonic #',
+                                        yLabel: e.key.startsWith('i') ? 'A' : 'V',
+                                        logY: true,
+                                        showLegend: false,
+                                        series: [
+                                          ChartSeries(
+                                            e.key,
+                                            e.value,
+                                            x0: 1,
+                                            color: chartColors[e.key.startsWith('i') ? 1 : 0],
+                                            bars: true,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _grid(OnlineResult r, bool stats) {
+    final th = Theme.of(context);
+    String f(double v) => v.isNaN ? '-' : formatNum(v, digits: 8);
+    return SingleChildScrollView(
+      child: Table(
+        border: TableBorder.all(color: th.dividerColor),
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        children: [
+          TableRow(
+            decoration: BoxDecoration(color: th.colorScheme.surfaceContainerHigh),
+            children: [
+              for (final h in [
+                'Quantity',
+                'Unit',
+                'Value',
+                if (stats) ...['Mean', 'Std. dev.', 'u_A', 'Error %', 'N'],
+                '',
+              ])
+                Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Text(h, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+            ],
+          ),
+          for (final q in r.quantities)
+            TableRow(
+              children: [
+                _c(q.name, bold: true),
+                _c(q.unit),
+                _c(f(q.value)),
+                if (stats) ...[_c(f(q.mean)), _c(f(q.std)), _c(f(q.uA)), _c(f(q.errorPercent)), _c('${q.count}')],
+                IconButton(
+                  tooltip: 'Show graph',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.show_chart, size: 18),
+                  onPressed: () => setState(() => _graph = q.name),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _c(String t, {bool bold = false}) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+    child: Text(
+      t,
+      style: TextStyle(fontFamily: 'monospace', fontWeight: bold ? FontWeight.bold : null),
+    ),
+  );
+}

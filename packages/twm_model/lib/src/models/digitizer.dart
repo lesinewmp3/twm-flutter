@@ -40,24 +40,19 @@ class TriggerConfig {
 
   /// Value written to the session header ('trigger mode').
   String get modeName => switch (source) {
-        TriggerSource.immediate => 'Immediate',
-        TriggerSource.external => 'External',
-        TriggerSource.level => 'Level',
-      };
+    TriggerSource.immediate => 'Immediate',
+    TriggerSource.external => 'External',
+    TriggerSource.level => 'Level',
+  };
 
-  Json toJson() => {
-        'source': source.name,
-        'slope': slope.name,
-        'coupling': coupling.name,
-        'level': level,
-      };
+  Json toJson() => {'source': source.name, 'slope': slope.name, 'coupling': coupling.name, 'level': level};
 
   factory TriggerConfig.fromJson(Json j) => TriggerConfig(
-        source: enumByName(TriggerSource.values, j['source'], TriggerSource.immediate),
-        slope: enumByName(TriggerSlope.values, j['slope'], TriggerSlope.positive),
-        coupling: enumByName(TriggerCoupling.values, j['coupling'], TriggerCoupling.dc),
-        level: jDouble(j['level']),
-      );
+    source: enumByName(TriggerSource.values, j['source'], TriggerSource.immediate),
+    slope: enumByName(TriggerSlope.values, j['slope'], TriggerSlope.positive),
+    coupling: enumByName(TriggerCoupling.values, j['coupling'], TriggerCoupling.dc),
+    level: jDouble(j['level']),
+  );
 }
 
 enum SampleRateStepMode { constPeriod, constFrequency }
@@ -128,51 +123,50 @@ class DigitizerCapabilities {
   }
 
   Json toJson() => {
-        'maxSamplesCount': maxSamplesCount,
-        'maxFs': maxFs,
-        'minFs': minFs,
-        'tsStep': jNum(tsStep),
-        'fsStep': jNum(fsStep),
-        'stepMode': stepMode.name,
-        'aperMin': aperMin,
-        'aperMax': aperMax,
-        'channelsCount': channelsCount,
-        'allowsStreaming': allowsStreaming,
-        'streamingOn': streamingOn,
-        'hasLevelTrig': hasLevelTrig,
-        'hasExtTrig': hasExtTrig,
-        'hasAperture': hasAperture,
-        'hasRanges': hasRanges,
-        'hasTemperature': hasTemperature,
-        'hasTemperatureLog': hasTemperatureLog,
-        'hasSelfCal': hasSelfCal,
-        'fixedRates': fixedRates,
-        'ranges': ranges,
-      };
+    'maxSamplesCount': maxSamplesCount,
+    'maxFs': maxFs,
+    'minFs': minFs,
+    'tsStep': jNum(tsStep),
+    'fsStep': jNum(fsStep),
+    'stepMode': stepMode.name,
+    'aperMin': aperMin,
+    'aperMax': aperMax,
+    'channelsCount': channelsCount,
+    'allowsStreaming': allowsStreaming,
+    'streamingOn': streamingOn,
+    'hasLevelTrig': hasLevelTrig,
+    'hasExtTrig': hasExtTrig,
+    'hasAperture': hasAperture,
+    'hasRanges': hasRanges,
+    'hasTemperature': hasTemperature,
+    'hasTemperatureLog': hasTemperatureLog,
+    'hasSelfCal': hasSelfCal,
+    'fixedRates': fixedRates,
+    'ranges': ranges,
+  };
 
   factory DigitizerCapabilities.fromJson(Json j) => DigitizerCapabilities(
-        maxSamplesCount: jInt(j['maxSamplesCount']),
-        maxFs: jDouble(j['maxFs']),
-        minFs: jDouble(j['minFs']),
-        tsStep: jDouble(j['tsStep'], double.nan),
-        fsStep: jDouble(j['fsStep'], double.nan),
-        stepMode: enumByName(SampleRateStepMode.values, j['stepMode'],
-            SampleRateStepMode.constFrequency),
-        aperMin: jDoubleOrNull(j['aperMin']),
-        aperMax: jDoubleOrNull(j['aperMax']),
-        channelsCount: jInt(j['channelsCount']),
-        allowsStreaming: jBool(j['allowsStreaming']),
-        streamingOn: jBool(j['streamingOn']),
-        hasLevelTrig: jBool(j['hasLevelTrig']),
-        hasExtTrig: jBool(j['hasExtTrig']),
-        hasAperture: jBool(j['hasAperture']),
-        hasRanges: jBool(j['hasRanges']),
-        hasTemperature: jBool(j['hasTemperature']),
-        hasTemperatureLog: jBool(j['hasTemperatureLog']),
-        hasSelfCal: jBool(j['hasSelfCal']),
-        fixedRates: jDoubleList(j['fixedRates']),
-        ranges: jDoubleList(j['ranges']),
-      );
+    maxSamplesCount: jInt(j['maxSamplesCount']),
+    maxFs: jDouble(j['maxFs']),
+    minFs: jDouble(j['minFs']),
+    tsStep: jDouble(j['tsStep'], double.nan),
+    fsStep: jDouble(j['fsStep'], double.nan),
+    stepMode: enumByName(SampleRateStepMode.values, j['stepMode'], SampleRateStepMode.constFrequency),
+    aperMin: jDoubleOrNull(j['aperMin']),
+    aperMax: jDoubleOrNull(j['aperMax']),
+    channelsCount: jInt(j['channelsCount']),
+    allowsStreaming: jBool(j['allowsStreaming']),
+    streamingOn: jBool(j['streamingOn']),
+    hasLevelTrig: jBool(j['hasLevelTrig']),
+    hasExtTrig: jBool(j['hasExtTrig']),
+    hasAperture: jBool(j['hasAperture']),
+    hasRanges: jBool(j['hasRanges']),
+    hasTemperature: jBool(j['hasTemperature']),
+    hasTemperatureLog: jBool(j['hasTemperatureLog']),
+    hasSelfCal: jBool(j['hasSelfCal']),
+    fixedRates: jDoubleList(j['fixedRates']),
+    ranges: jDoubleList(j['ranges']),
+  );
 }
 
 /// Device specific attribute stored to the session header.
@@ -183,9 +177,8 @@ class DeviceAttribute {
   const DeviceAttribute(this.name, this.values, {this.constPerGroup = true});
 
   Json toJson() => {'name': name, 'values': values, 'constPerGroup': constPerGroup};
-  factory DeviceAttribute.fromJson(Json j) => DeviceAttribute(
-      jString(j['name']), jStringList(j['values']),
-      constPerGroup: jBool(j['constPerGroup'], true));
+  factory DeviceAttribute.fromJson(Json j) =>
+      DeviceAttribute(jString(j['name']), jStringList(j['values']), constPerGroup: jBool(j['constPerGroup'], true));
 }
 
 /// Channel overload/clipping etc. reported in fetch status.

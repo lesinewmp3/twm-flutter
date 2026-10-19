@@ -10,14 +10,14 @@ sealed class BackendEvent {
   Json toJson();
 
   static BackendEvent fromJson(Json j) => switch (jString(j['type'])) {
-        'status' => StatusEvent.fromJson(j),
-        'waveform' => WaveformEvent.fromJson(j),
-        'record' => RecordStoredEvent.fromJson(j),
-        'finished' => FinishedEvent.fromJson(j),
-        'console' => ConsoleEvent.fromJson(j),
-        'processing' => ProcessingEvent.fromJson(j),
-        _ => StatusEvent('unknown event ${j['type']}'),
-      };
+    'status' => StatusEvent.fromJson(j),
+    'waveform' => WaveformEvent.fromJson(j),
+    'record' => RecordStoredEvent.fromJson(j),
+    'finished' => FinishedEvent.fromJson(j),
+    'console' => ConsoleEvent.fromJson(j),
+    'processing' => ProcessingEvent.fromJson(j),
+    _ => StatusEvent('unknown event ${j['type']}'),
+  };
 }
 
 /// Measurement status line / progress.
@@ -30,10 +30,13 @@ class StatusEvent extends BackendEvent {
   @override
   String get type => 'status';
   @override
-  Json toJson() =>
-      {'type': type, 'message': message, 'progress': progress, 'record': record, 'records': records};
-  factory StatusEvent.fromJson(Json j) => StatusEvent(jString(j['message']),
-      progress: jDouble(j['progress']), record: jInt(j['record']), records: jInt(j['records']));
+  Json toJson() => {'type': type, 'message': message, 'progress': progress, 'record': record, 'records': records};
+  factory StatusEvent.fromJson(Json j) => StatusEvent(
+    jString(j['message']),
+    progress: jDouble(j['progress']),
+    record: jInt(j['record']),
+    records: jInt(j['records']),
+  );
 }
 
 /// Last acquired waveform (decimated) and its spectrum for live views.
@@ -50,30 +53,37 @@ class WaveformEvent extends BackendEvent {
   /// On-line analysis results (TPQA "CVI data processing").
   final Json? online;
 
-  const WaveformEvent(this.record, this.names, this.channels, this.ts,
-      {this.spectra = const [], this.df = 0, this.online});
+  const WaveformEvent(
+    this.record,
+    this.names,
+    this.channels,
+    this.ts, {
+    this.spectra = const [],
+    this.df = 0,
+    this.online,
+  });
   @override
   String get type => 'waveform';
   @override
   Json toJson() => {
-        'type': type,
-        'record': record,
-        'names': names,
-        'channels': channels,
-        'ts': ts,
-        'spectra': spectra,
-        'df': df,
-        'online': online,
-      };
+    'type': type,
+    'record': record,
+    'names': names,
+    'channels': channels,
+    'ts': ts,
+    'spectra': spectra,
+    'df': df,
+    'online': online,
+  };
   factory WaveformEvent.fromJson(Json j) => WaveformEvent(
-        jInt(j['record']),
-        jStringList(j['names']),
-        [for (final c in (j['channels'] as List? ?? [])) jDoubleList(c)],
-        jDouble(j['ts']),
-        spectra: [for (final c in (j['spectra'] as List? ?? [])) jDoubleList(c)],
-        df: jDouble(j['df']),
-        online: j['online'] == null ? null : jMap(j['online']),
-      );
+    jInt(j['record']),
+    jStringList(j['names']),
+    [for (final c in (j['channels'] as List? ?? [])) jDoubleList(c)],
+    jDouble(j['ts']),
+    spectra: [for (final c in (j['spectra'] as List? ?? [])) jDoubleList(c)],
+    df: jDouble(j['df']),
+    online: j['online'] == null ? null : jMap(j['online']),
+  );
 }
 
 class RecordStoredEvent extends BackendEvent {
@@ -98,8 +108,8 @@ class FinishedEvent extends BackendEvent {
   String get type => 'finished';
   @override
   Json toJson() => {'type': type, 'sessionPath': sessionPath, 'aborted': aborted, 'error': error};
-  factory FinishedEvent.fromJson(Json j) => FinishedEvent(jString(j['sessionPath']),
-      aborted: jBool(j['aborted']), error: jString(j['error']));
+  factory FinishedEvent.fromJson(Json j) =>
+      FinishedEvent(jString(j['sessionPath']), aborted: jBool(j['aborted']), error: jString(j['error']));
 }
 
 class ConsoleEvent extends BackendEvent {
@@ -111,8 +121,8 @@ class ConsoleEvent extends BackendEvent {
   String get type => 'console';
   @override
   Json toJson() => {'type': type, 'text': text, 'isError': isError, 'isCommand': isCommand};
-  factory ConsoleEvent.fromJson(Json j) => ConsoleEvent(jString(j['text']),
-      isError: jBool(j['isError']), isCommand: jBool(j['isCommand']));
+  factory ConsoleEvent.fromJson(Json j) =>
+      ConsoleEvent(jString(j['text']), isError: jBool(j['isError']), isCommand: jBool(j['isCommand']));
 }
 
 /// Processing state: a record was processed (new result available) or
@@ -126,8 +136,11 @@ class ProcessingEvent extends BackendEvent {
   @override
   String get type => 'processing';
   @override
-  Json toJson() =>
-      {'type': type, 'sessionPath': sessionPath, 'record': record, 'busy': busy, 'error': error};
-  factory ProcessingEvent.fromJson(Json j) => ProcessingEvent(jString(j['sessionPath']),
-      record: jInt(j['record']), busy: jBool(j['busy']), error: jString(j['error']));
+  Json toJson() => {'type': type, 'sessionPath': sessionPath, 'record': record, 'busy': busy, 'error': error};
+  factory ProcessingEvent.fromJson(Json j) => ProcessingEvent(
+    jString(j['sessionPath']),
+    record: jInt(j['record']),
+    busy: jBool(j['busy']),
+    error: jString(j['error']),
+  );
 }

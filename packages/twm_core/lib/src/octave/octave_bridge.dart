@@ -52,17 +52,14 @@ class OctaveBridge {
   Map<String, dynamic>? get initInfo => _initInfo;
 
   String get octprogPath => config.octprogPath;
-  String get qwtbPath =>
-      config.qwtbPath.isNotEmpty ? config.qwtbPath : p.join(config.octprogPath, 'qwtb');
+  String get qwtbPath => config.qwtbPath.isNotEmpty ? config.qwtbPath : p.join(config.octprogPath, 'qwtb');
 
   /// Resolves the Octave/Matlab executable from the configuration.
   String resolveExecutable() {
     if (config.engine == CalcEngine.matlab) {
       final m = config.matlabPath;
       if (m.isEmpty) return 'matlab';
-      return FileSystemEntity.isDirectorySync(m)
-          ? p.join(m, Platform.isWindows ? 'matlab.exe' : 'matlab')
-          : m;
+      return FileSystemEntity.isDirectorySync(m) ? p.join(m, Platform.isWindows ? 'matlab.exe' : 'matlab') : m;
     }
     final o = config.octavePath;
     final exe = Platform.isWindows ? 'octave-cli.exe' : 'octave-cli';
@@ -89,8 +86,10 @@ class OctaveBridge {
     try {
       proc = await Process.start(exe, args, runInShell: Platform.isWindows);
     } on ProcessException catch (e) {
-      throw OctaveException('Cannot start "$exe": ${e.message}. '
-          'Check the GNU Octave/Matlab path in the configuration.');
+      throw OctaveException(
+        'Cannot start "$exe": ${e.message}. '
+        'Check the GNU Octave/Matlab path in the configuration.',
+      );
     }
     _proc = proc;
     proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
@@ -100,10 +99,12 @@ class OctaveBridge {
     proc.stderr.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
       if (!l.startsWith('warning:')) _log(l, error: true);
     });
-    unawaited(proc.exitCode.then((code) {
-      _log('engine exited with code $code', error: code != 0);
-      if (identical(_proc, proc)) _proc = null;
-    }));
+    unawaited(
+      proc.exitCode.then((code) {
+        _log('engine exited with code $code', error: code != 0);
+        if (identical(_proc, proc)) _proc = null;
+      }),
+    );
     final info = await call('init', [
       octprogPath,
       qwtbPath,
@@ -147,12 +148,10 @@ class OctaveBridge {
   }
 
   /// Executes raw code, returns its console output.
-  Future<String> eval(String code, {Duration? timeout}) =>
-      _exclusive(() => _eval(code, timeout: timeout));
+  Future<String> eval(String code, {Duration? timeout}) => _exclusive(() => _eval(code, timeout: timeout));
 
   /// Calls `twm_api(cmd, args...)` and returns decoded JSON result.
-  Future<Map<String, dynamic>> call(String cmd, List<Object?> args,
-      {Duration? timeout, String prelude = ''}) async {
+  Future<Map<String, dynamic>> call(String cmd, List<Object?> args, {Duration? timeout, String prelude = ''}) async {
     final a = [cmd, ...args].map(toLiteral).join(', ');
     final clear = config.clearCache ? 'clear functions; ' : '';
     final out = await eval('$prelude$clear twm_api($a);', timeout: timeout);
@@ -195,16 +194,21 @@ class OctaveBridge {
       }
     });
     _log('>> ${code.length > 300 ? '${code.substring(0, 300)}...' : code}', command: true);
-    pr.stdin.write('try\n$code\ncatch __twm_e\n'
-        "disp(['$_err' strrep(__twm_e.message, char(10), ' | ')]);\n"
-        'end\n'
-        "disp('$marker'); fflush(stdout);\n");
+    pr.stdin.write(
+      'try\n$code\ncatch __twm_e\n'
+      "disp(['$_err' strrep(__twm_e.message, char(10), ' | ')]);\n"
+      'end\n'
+      "disp('$marker'); fflush(stdout);\n",
+    );
     try {
       if (timeout != null) {
-        await done.future.timeout(timeout, onTimeout: () async {
-          await interrupt();
-          throw OctaveException('Calculation timeout (${timeout.inSeconds} s) - command interrupted.');
-        });
+        await done.future.timeout(
+          timeout,
+          onTimeout: () async {
+            await interrupt();
+            throw OctaveException('Calculation timeout (${timeout.inSeconds} s) - command interrupted.');
+          },
+        );
       } else {
         await Future.any([
           done.future,

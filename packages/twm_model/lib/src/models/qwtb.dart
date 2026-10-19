@@ -9,8 +9,7 @@ class AlgorithmSummary {
   final String name;
   const AlgorithmSummary(this.id, this.name);
   Json toJson() => {'id': id, 'name': name};
-  factory AlgorithmSummary.fromJson(Json j) =>
-      AlgorithmSummary(jString(j['id']), jString(j['name']));
+  factory AlgorithmSummary.fromJson(Json j) => AlgorithmSummary(jString(j['id']), jString(j['name']));
 }
 
 class AlgorithmInput {
@@ -36,21 +35,21 @@ class AlgorithmInput {
   }
 
   Json toJson() => {
-        'name': name,
-        'desc': desc,
-        'optional': optional,
-        'alternative': alternative,
-        'parameter': parameter,
-        'enum': enumValues,
-      };
+    'name': name,
+    'desc': desc,
+    'optional': optional,
+    'alternative': alternative,
+    'parameter': parameter,
+    'enum': enumValues,
+  };
   factory AlgorithmInput.fromJson(Json j) => AlgorithmInput(
-        name: jString(j['name']),
-        desc: jString(j['desc']),
-        optional: jBool(j['optional']),
-        alternative: jInt(j['alternative']),
-        parameter: jBool(j['parameter']),
-        enumValues: jStringList(j['enum']),
-      );
+    name: jString(j['name']),
+    desc: jString(j['desc']),
+    optional: jBool(j['optional']),
+    alternative: jInt(j['alternative']),
+    parameter: jBool(j['parameter']),
+    enumValues: jStringList(j['enum']),
+  );
 }
 
 class AlgorithmInfo {
@@ -88,38 +87,38 @@ class AlgorithmInfo {
   List<AlgorithmInput> get parameters => inputs.where((i) => i.parameter).toList();
 
   Json toJson() => {
-        'id': id,
-        'name': name,
-        'desc': desc,
-        'citation': citation,
-        'remarks': remarks,
-        'license': license,
-        'inputs': [for (final i in inputs) i.toJson()],
-        'outputs': [for (final o in outputs) {'name': o.name, 'desc': o.desc}],
-        'support_multi_records': supportMultiRecords,
-        'support_diff': supportDiff,
-        'has_ui': hasUi,
-        'unc_guf': uncGuf,
-        'unc_mcm': uncMcm,
-      };
+    'id': id,
+    'name': name,
+    'desc': desc,
+    'citation': citation,
+    'remarks': remarks,
+    'license': license,
+    'inputs': [for (final i in inputs) i.toJson()],
+    'outputs': [
+      for (final o in outputs) {'name': o.name, 'desc': o.desc},
+    ],
+    'support_multi_records': supportMultiRecords,
+    'support_diff': supportDiff,
+    'has_ui': hasUi,
+    'unc_guf': uncGuf,
+    'unc_mcm': uncMcm,
+  };
 
   factory AlgorithmInfo.fromJson(Json j) => AlgorithmInfo(
-        id: jString(j['id']),
-        name: jString(j['name']),
-        desc: jString(j['desc']),
-        citation: jString(j['citation']),
-        remarks: jString(j['remarks']),
-        license: jString(j['license']),
-        inputs: [for (final i in _list(j['inputs'])) AlgorithmInput.fromJson(i)],
-        outputs: [
-          for (final o in _list(j['outputs'])) (name: jString(o['name']), desc: jString(o['desc']))
-        ],
-        supportMultiRecords: jBool(j['support_multi_records']),
-        supportDiff: jBool(j['support_diff']),
-        hasUi: jBool(j['has_ui']),
-        uncGuf: jBool(j['unc_guf']),
-        uncMcm: jBool(j['unc_mcm']),
-      );
+    id: jString(j['id']),
+    name: jString(j['name']),
+    desc: jString(j['desc']),
+    citation: jString(j['citation']),
+    remarks: jString(j['remarks']),
+    license: jString(j['license']),
+    inputs: [for (final i in _list(j['inputs'])) AlgorithmInput.fromJson(i)],
+    outputs: [for (final o in _list(j['outputs'])) (name: jString(o['name']), desc: jString(o['desc']))],
+    supportMultiRecords: jBool(j['support_multi_records']),
+    supportDiff: jBool(j['support_diff']),
+    hasUi: jBool(j['has_ui']),
+    uncGuf: jBool(j['unc_guf']),
+    uncMcm: jBool(j['unc_mcm']),
+  );
 
   /// jsonencode of a 1-element struct array gives an object, not a list.
   static List<Json> _list(Object? v) => v is Map ? [jMap(v)] : jMapList(v);
@@ -180,38 +179,38 @@ class ResultViewConfig {
 
   /// The 'cfg' structure for the m-functions.
   Json toCfg() => {
-        'max_dim': maxDim.index,
-        'max_array': maxArray,
-        'unc_mode': unc.index,
-        'group_mode': group.index,
-        'phi_mode': phase.index,
-        'phi_ref_chn': phaseRefChannel,
-        'amp_mode': amplitude.factor,
-      };
+    'max_dim': maxDim.index,
+    'max_array': maxArray,
+    'unc_mode': unc.index,
+    'group_mode': group.index,
+    'phi_mode': phase.index,
+    'phi_ref_chn': phaseRefChannel,
+    'amp_mode': amplitude.factor,
+  };
 
   Json toJson() => {
-        'maxDim': maxDim.name,
-        'maxArray': maxArray,
-        'unc': unc.name,
-        'group': group.name,
-        'phase': phase.name,
-        'phaseRefChannel': phaseRefChannel,
-        'amplitude': amplitude.name,
-        'resultId': resultId,
-        'variables': variables,
-      };
+    'maxDim': maxDim.name,
+    'maxArray': maxArray,
+    'unc': unc.name,
+    'group': group.name,
+    'phase': phase.name,
+    'phaseRefChannel': phaseRefChannel,
+    'amplitude': amplitude.name,
+    'resultId': resultId,
+    'variables': variables,
+  };
 
   factory ResultViewConfig.fromJson(Json j) => ResultViewConfig(
-        maxDim: enumByName(ResultDim.values, j['maxDim'], ResultDim.scalar),
-        maxArray: jInt(j['maxArray'], 10),
-        unc: enumByName(UncDisplay.values, j['unc'], UncDisplay.none),
-        group: enumByName(GroupMode.values, j['group'], GroupMode.byChannels),
-        phase: enumByName(PhaseMode.values, j['phase'], PhaseMode.pmPi),
-        phaseRefChannel: jInt(j['phaseRefChannel']),
-        amplitude: enumByName(AmplitudeMode.values, j['amplitude'], AmplitudeMode.amplitude),
-        resultId: jInt(j['resultId'], -1),
-        variables: jStringList(j['variables']),
-      );
+    maxDim: enumByName(ResultDim.values, j['maxDim'], ResultDim.scalar),
+    maxArray: jInt(j['maxArray'], 10),
+    unc: enumByName(UncDisplay.values, j['unc'], UncDisplay.none),
+    group: enumByName(GroupMode.values, j['group'], GroupMode.byChannels),
+    phase: enumByName(PhaseMode.values, j['phase'], PhaseMode.pmPi),
+    phaseRefChannel: jInt(j['phaseRefChannel']),
+    amplitude: enumByName(AmplitudeMode.values, j['amplitude'], AmplitudeMode.amplitude),
+    resultId: jInt(j['resultId'], -1),
+    variables: jStringList(j['variables']),
+  );
 }
 
 /// Output of qwtb_get_results_info.m.
@@ -235,21 +234,21 @@ class ResultsInfo {
   static const empty = ResultsInfo();
 
   Json toJson() => {
-        'files': files,
-        'exists': exists,
-        'lastAlgorithm': lastAlgorithm,
-        'algorithms': algorithms,
-        'channels': channels,
-        'variables': variables,
-      };
+    'files': files,
+    'exists': exists,
+    'lastAlgorithm': lastAlgorithm,
+    'algorithms': algorithms,
+    'channels': channels,
+    'variables': variables,
+  };
   factory ResultsInfo.fromJson(Json j) => ResultsInfo(
-        files: jStringList(j['files']),
-        exists: jBool(j['exists']),
-        lastAlgorithm: jString(j['lastAlgorithm']),
-        algorithms: jStringList(j['algorithms']),
-        channels: jStringList(j['channels']),
-        variables: jStringList(j['variables']),
-      );
+    files: jStringList(j['files']),
+    exists: jBool(j['exists']),
+    lastAlgorithm: jString(j['lastAlgorithm']),
+    algorithms: jStringList(j['algorithms']),
+    channels: jStringList(j['channels']),
+    variables: jStringList(j['variables']),
+  );
 }
 
 /// Formatted results table (qwtb_get_results.m output).
@@ -271,23 +270,22 @@ class ResultsTable {
   static const empty = ResultsTable();
 
   Json toJson() => {
-        'header': header,
-        'rows': rows,
-        'descriptions': descriptions,
-        'variableNames': variableNames,
-        'channelIndex': channelIndex,
-      };
+    'header': header,
+    'rows': rows,
+    'descriptions': descriptions,
+    'variableNames': variableNames,
+    'channelIndex': channelIndex,
+  };
   factory ResultsTable.fromJson(Json j) => ResultsTable(
-        header: jStringList(j['header']),
-        rows: [for (final r in (j['rows'] as List? ?? [])) jStringList(r)],
-        descriptions: jStringList(j['descriptions']),
-        variableNames: jStringList(j['variableNames']),
-        channelIndex: jIntList(j['channelIndex']),
-      );
+    header: jStringList(j['header']),
+    rows: [for (final r in (j['rows'] as List? ?? [])) jStringList(r)],
+    descriptions: jStringList(j['descriptions']),
+    variableNames: jStringList(j['variableNames']),
+    channelIndex: jIntList(j['channelIndex']),
+  );
 
   /// Tab separated text for clipboard (Excel compatible).
-  String toTsv() =>
-      [header.join('\t'), for (final r in rows) r.join('\t')].join('\n');
+  String toTsv() => [header.join('\t'), for (final r in rows) r.join('\t')].join('\n');
 }
 
 /// Numeric result quantity (for graphs and spectrum view).
@@ -315,28 +313,28 @@ class ResultQuantity {
   });
 
   Json toJson() => {
-        'name': name,
-        'desc': desc,
-        'tag': tag,
-        'value': [for (final v in value) jNum(v)],
-        'unc': [for (final v in unc) jNum(v)],
-        'isPhase': isPhase,
-        'isGraph': isGraph,
-        'graphX': graphX,
-        'text': text,
-      };
+    'name': name,
+    'desc': desc,
+    'tag': tag,
+    'value': [for (final v in value) jNum(v)],
+    'unc': [for (final v in unc) jNum(v)],
+    'isPhase': isPhase,
+    'isGraph': isGraph,
+    'graphX': graphX,
+    'text': text,
+  };
 
   factory ResultQuantity.fromJson(Json j) => ResultQuantity(
-        name: jString(j['name']),
-        desc: jString(j['desc']),
-        tag: jString(j['tag']),
-        value: jDoubleList(j['value']),
-        unc: jDoubleList(j['unc']),
-        isPhase: jBool(j['isPhase']),
-        isGraph: jBool(j['isGraph']),
-        graphX: jString(j['graphX']),
-        text: jString(j['text']),
-      );
+    name: jString(j['name']),
+    desc: jString(j['desc']),
+    tag: jString(j['tag']),
+    value: jDoubleList(j['value']),
+    unc: jDoubleList(j['unc']),
+    isPhase: jBool(j['isPhase']),
+    isGraph: jBool(j['isGraph']),
+    graphX: jString(j['graphX']),
+    text: jString(j['text']),
+  );
 }
 
 class ResultData {
@@ -348,18 +346,17 @@ class ResultData {
   const ResultData({this.resultId = 0, this.count = 0, this.channels = const []});
 
   Json toJson() => {
-        'resultId': resultId,
-        'count': count,
-        'channels': [
-          for (final c in channels) [for (final q in c) q.toJson()]
-        ],
-      };
+    'resultId': resultId,
+    'count': count,
+    'channels': [
+      for (final c in channels) [for (final q in c) q.toJson()],
+    ],
+  };
   factory ResultData.fromJson(Json j) => ResultData(
-        resultId: jInt(j['resultId']),
-        count: jInt(j['count']),
-        channels: [
-          for (final c in (j['channels'] as List? ?? []))
-            [for (final q in jMapList(c)) ResultQuantity.fromJson(q)]
-        ],
-      );
+    resultId: jInt(j['resultId']),
+    count: jInt(j['count']),
+    channels: [
+      for (final c in (j['channels'] as List? ?? [])) [for (final q in jMapList(c)) ResultQuantity.fromJson(q)],
+    ],
+  );
 }

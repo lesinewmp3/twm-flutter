@@ -100,15 +100,12 @@ class SessionWriter {
       'G${group.toString().padLeft(4, '0')}-A${repetition.toString().padLeft(4, '0')}.mat';
 
   /// Relative path as stored in the header (DOS separators like TWM).
-  static String recordRelPath(int group, int repetition) =>
-      'RAW\\${recordName(group, repetition)}';
+  static String recordRelPath(int group, int repetition) => 'RAW\\${recordName(group, repetition)}';
 
-  String recordAbsPath(int group, int repetition) =>
-      p.join(root, 'RAW', recordName(group, repetition));
+  String recordAbsPath(int group, int repetition) => p.join(root, 'RAW', recordName(group, repetition));
 
   Future<RecordFileWriter> openRecord(int group, int repetition, {required bool int16}) =>
-      RecordFileWriter.create(recordAbsPath(group, repetition), channelDescriptors.length,
-          int16: int16);
+      RecordFileWriter.create(recordAbsPath(group, repetition), channelDescriptors.length, int16: int16);
 
   /// Starts a new measurement group; returns its 1-based index.
   int addGroup(GroupSetup g) {
@@ -283,8 +280,7 @@ class SessionWriter {
     i.setMatrix('record sample data offsets [V]', [for (final r in recs) r.offsets]);
     i.comment('relative timestamp of the first sample for each record and channel:');
     i.setMatrix('record relative timestamps [s]', [for (final r in recs) r.timestamps]);
-    i.setTextList('record absolute timestamps',
-        [for (final r in recs) r.absoluteTime.toIso8601String()]);
+    i.setTextList('record absolute timestamps', [for (final r in recs) r.absoluteTime.toIso8601String()]);
     if (recs.isNotEmpty && recs.first.subRecordOffsets.isNotEmpty) {
       i.setMatrix('sub-record sample offsets', [for (final r in recs) r.subRecordOffsets]);
       i.setMatrix('sub-record relative timestamps [s]', [for (final r in recs) r.subRecordTimestamps]);
@@ -331,7 +327,7 @@ class SessionWriter {
     if (!d.existsSync()) return [];
     return [
       for (final e in d.listSync(recursive: true))
-        if (e is File) p.relative(e.path, from: root)
+        if (e is File) p.relative(e.path, from: root),
     ]..sort();
   }
 
@@ -350,18 +346,24 @@ class SessionWriter {
 }
 
 /// Convenience: header scaling info for one record from aux data.
-RecordEntry recordFromAux(String file, int samples, AuxData aux, DateTime when,
-        {double aperture = 0, List<int> subOffsets = const [], List<double> subTimestamps = const []}) =>
-    RecordEntry(
-      file: file,
-      samplesCount: samples,
-      increment: aux.increment,
-      gains: aux.gains,
-      offsets: aux.offsets,
-      timestamps: aux.timestamps,
-      absoluteTime: when,
-      aperture: aperture,
-      temperatures: aux.temperatures,
-      subRecordOffsets: subOffsets,
-      subRecordTimestamps: subTimestamps,
-    );
+RecordEntry recordFromAux(
+  String file,
+  int samples,
+  AuxData aux,
+  DateTime when, {
+  double aperture = 0,
+  List<int> subOffsets = const [],
+  List<double> subTimestamps = const [],
+}) => RecordEntry(
+  file: file,
+  samplesCount: samples,
+  increment: aux.increment,
+  gains: aux.gains,
+  offsets: aux.offsets,
+  timestamps: aux.timestamps,
+  absoluteTime: when,
+  aperture: aperture,
+  temperatures: aux.temperatures,
+  subRecordOffsets: subOffsets,
+  subRecordTimestamps: subTimestamps,
+);

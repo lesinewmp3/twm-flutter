@@ -52,15 +52,12 @@ bool jBool(Object? v, [bool fallback = false]) {
 
 String jString(Object? v, [String fallback = '']) => v is String ? v : fallback;
 
-List<String> jStringList(Object? v) =>
-    v is List ? [for (final e in v) e.toString()] : <String>[];
+List<String> jStringList(Object? v) => v is List ? [for (final e in v) e.toString()] : <String>[];
 
-List<double> jDoubleList(Object? v) =>
-    v is List ? [for (final e in v) jDouble(e)] : <double>[];
+List<double> jDoubleList(Object? v) => v is List ? [for (final e in v) jDouble(e)] : <double>[];
 
 List<int> jIntList(Object? v) => v is List ? [for (final e in v) jInt(e)] : <int>[];
 
 Json jMap(Object? v) => v is Map ? v.cast<String, dynamic>() : <String, dynamic>{};
 
-List<Json> jMapList(Object? v) =>
-    v is List ? [for (final e in v) jMap(e)] : <Json>[];
+List<Json> jMapList(Object? v) => v is List ? [for (final e in v) jMap(e)] : <Json>[];

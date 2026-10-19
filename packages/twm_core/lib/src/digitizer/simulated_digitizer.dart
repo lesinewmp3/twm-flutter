@@ -37,29 +37,26 @@ class SimulatedDigitizer extends VirtualDigitizer {
   Future<void> initialize({bool reset = false}) async {
     _open = true;
     if (!_clock.isRunning) _clock.start();
-    channelIdns = [
-      for (var i = 0; i < _cfg.channels.length; i++)
-        'Simulated ADC, channel ${i + 1}'
-    ];
+    channelIdns = [for (var i = 0; i < _cfg.channels.length; i++) 'Simulated ADC, channel ${i + 1}'];
     auxIdns = [];
     _ranges = [for (final c in _cfg.channels) c.range];
   }
 
   @override
   DigitizerCapabilities capabilities({double? fs, double? aperture}) => DigitizerCapabilities(
-        maxSamplesCount: 100000000,
-        maxFs: _cfg.maxFs,
-        minFs: 1,
-        fsStep: 1e-6,
-        channelsCount: _cfg.channels.length,
-        hasLevelTrig: false,
-        hasExtTrig: false,
-        hasAperture: true,
-        aperMin: 0,
-        aperMax: 1,
-        hasRanges: true,
-        ranges: const [0.1, 1, 10, 100, 1000],
-      );
+    maxSamplesCount: 100000000,
+    maxFs: _cfg.maxFs,
+    minFs: 1,
+    fsStep: 1e-6,
+    channelsCount: _cfg.channels.length,
+    hasLevelTrig: false,
+    hasExtTrig: false,
+    hasAperture: true,
+    aperMin: 0,
+    aperMax: 1,
+    hasRanges: true,
+    ranges: const [0.1, 1, 10, 100, 1000],
+  );
 
   @override
   Future<void> setup({
@@ -77,9 +74,7 @@ class SimulatedDigitizer extends VirtualDigitizer {
     _n = samplesCount;
     _trigger = trigger;
     _aperture = aperture;
-    _ranges = ranges.length == _cfg.channels.length
-        ? ranges
-        : [for (final c in _cfg.channels) c.range];
+    _ranges = ranges.length == _cfg.channels.length ? ranges : [for (final c in _cfg.channels) c.range];
   }
 
   double get _gainLsb => 1.0 / (1 << (_cfg.bits - 1));
@@ -103,17 +98,20 @@ class SimulatedDigitizer extends VirtualDigitizer {
     if (!_armed) throw DigitizerException('Digitizer not armed.');
     final ch = _cfg.channels.length;
     if (_abort) {
-      return FetchResult(done: true, status: DigitizerStatus(done: true, fetched: _pos, total: _n, message: 'aborted'));
+      return FetchResult(
+        done: true,
+        status: DigitizerStatus(done: true, fetched: _pos, total: _n, message: 'aborted'),
+      );
     }
     // how many samples "exist" by now
     final rt = _cfg.realtimeFactor;
-    final avail = rt <= 0
-        ? _n
-        : math.min(_n, (_armClock.elapsedMicroseconds * 1e-6 * _fs / rt).floor());
+    final avail = rt <= 0 ? _n : math.min(_n, (_armClock.elapsedMicroseconds * 1e-6 * _fs / rt).floor());
     var count = math.min(avail - _pos, 200000);
     if (count <= 0) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
-      return FetchResult(status: DigitizerStatus(sampling: true, fetched: _pos, total: _n));
+      return FetchResult(
+        status: DigitizerStatus(sampling: true, fetched: _pos, total: _n),
+      );
     }
     final data = Int32List(count * ch);
     final gains = _gains;
@@ -142,12 +140,7 @@ class SimulatedDigitizer extends VirtualDigitizer {
     final done = _pos >= _n;
     return FetchResult(
       packet: packet,
-      aux: AuxData(
-        gains: gains,
-        offsets: List.filled(ch, 0),
-        timestamps: List.filled(ch, _t0),
-        increment: ts,
-      ),
+      aux: AuxData(gains: gains, offsets: List.filled(ch, 0), timestamps: List.filled(ch, _t0), increment: ts),
       done: done,
       status: DigitizerStatus(sampling: !done, done: done, fetched: _pos, total: _n),
     );
@@ -173,29 +166,32 @@ class SimulatedDigitizer extends VirtualDigitizer {
   Future<void> close({bool resetToPreset = true}) async => _open = false;
 
   @override
-  Future<void> selfCalibrate() async =>
-      Future<void>.delayed(const Duration(milliseconds: 500));
+  Future<void> selfCalibrate() async => Future<void>.delayed(const Duration(milliseconds: 500));
 
   @override
   DigitizerSetup currentSetup() => DigitizerSetup(
-        samplesCount: _n,
-        channelsCount: _cfg.channels.length,
-        fs: _fs,
-        ranges: _ranges,
-        trigger: _trigger,
-        aperture: _aperture,
-        isInt16: _cfg.bits <= 16,
-        bitResolution: _cfg.bits,
-      );
+    samplesCount: _n,
+    channelsCount: _cfg.channels.length,
+    fs: _fs,
+    ranges: _ranges,
+    trigger: _trigger,
+    aperture: _aperture,
+    isInt16: _cfg.bits <= 16,
+    bitResolution: _cfg.bits,
+  );
 
   @override
   String info() {
-    final sb = StringBuffer('Simulated digitizer, ${_cfg.bits} bit, '
-        '${_cfg.channels.length} channel(s).\n');
+    final sb = StringBuffer(
+      'Simulated digitizer, ${_cfg.bits} bit, '
+      '${_cfg.channels.length} channel(s).\n',
+    );
     for (var i = 0; i < _cfg.channels.length; i++) {
       final c = _cfg.channels[i];
-      sb.writeln('#${i + 1} ${c.name}: range ${c.range} V, '
-          '${c.harmonics.length} harmonic(s), noise ${c.noiseRms} V rms');
+      sb.writeln(
+        '#${i + 1} ${c.name}: range ${c.range} V, '
+        '${c.harmonics.length} harmonic(s), noise ${c.noiseRms} V rms',
+      );
     }
     return sb.toString();
   }

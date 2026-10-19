@@ -8,8 +8,7 @@ import 'package:twm_model/twm_model.dart';
 
 const twmRepo = '/home/e/papka_dlya_claude/src/TWM';
 
-double rms(List<double> x) =>
-    math.sqrt(x.fold<double>(0, (s, v) => s + v * v) / x.length);
+double rms(List<double> x) => math.sqrt(x.fold<double>(0, (s, v) => s + v * v) / x.length);
 
 void main() {
   late Directory tmp;
@@ -35,19 +34,20 @@ void main() {
       digitizerPath: '',
       transducers: [
         TransducerConfig(
-            path: '$twmRepo/data/corrections/transducers/dummy.vd/dummy.info',
-            type: TransducerType.divider,
-            highChannel: 1),
+          path: '$twmRepo/data/corrections/transducers/dummy.vd/dummy.info',
+          type: TransducerType.divider,
+          highChannel: 1,
+        ),
         TransducerConfig(
-            path: '$twmRepo/data/corrections/transducers/dummy.cs/dummy.info',
-            type: TransducerType.shunt,
-            highChannel: 2),
+          path: '$twmRepo/data/corrections/transducers/dummy.cs/dummy.info',
+          type: TransducerType.shunt,
+          highChannel: 2,
+        ),
       ],
     );
     expect(corr.validate(2), isEmpty);
     final dig = SimulatedDigitizer(dc);
-    final engine = MeasurementEngine(
-        digitizer: dig, digitizerConfig: dc, config: mc, corrections: corr);
+    final engine = MeasurementEngine(digitizer: dig, digitizerConfig: dc, config: mc, corrections: corr);
     final events = <MeasEvent>[];
     engine.events.listen(events.add);
     final session = await engine.run();
@@ -71,14 +71,12 @@ void main() {
     expect(g.matrix('record sample data gains [V]').first.length, 2);
     expect(g.vector('aperture [s]').length, 3);
     final c = h.section('measurement setup configuration');
-    expect(c.textList('transducer paths'),
-        ['TRANSDUCERS\\T01\\dummy.info', 'TRANSDUCERS\\T02\\dummy.info']);
+    expect(c.textList('transducer paths'), ['TRANSDUCERS\\T01\\dummy.info', 'TRANSDUCERS\\T02\\dummy.info']);
     expect(c.matrix('transducer to digitizer channels mapping'), [
       [1, 0],
-      [2, 0]
+      [2, 0],
     ]);
-    expect(File(p.join(tmp.path, 'meas_007', 'TRANSDUCERS', 'T02', 'dummy.info')).existsSync(),
-        isTrue);
+    expect(File(p.join(tmp.path, 'meas_007', 'TRANSDUCERS', 'T02', 'dummy.info')).existsSync(), isTrue);
 
     // data read back
     final rd = await SessionReader.open(session);
@@ -98,36 +96,45 @@ void main() {
       ..multiplexer.delayAfterSwitch = 0
       ..multiplexer.delayBeforeSwitch = 0;
     final mc = MeasurementConfig(
-        fs: 1000, samplesCount: 100, recordsCount: 1, subRecordsCount: 2,
-        folder: tmp.path, nameBase: 'mux');
+      fs: 1000,
+      samplesCount: 100,
+      recordsCount: 1,
+      subRecordsCount: 2,
+      folder: tmp.path,
+      nameBase: 'mux',
+    );
     final mux = DummyMultiplexer(dc.multiplexer);
     final engine = MeasurementEngine(
-        digitizer: SimulatedDigitizer(dc),
-        digitizerConfig: dc,
-        config: mc,
-        corrections: CorrectionsConfig(),
-        multiplexer: mux);
+      digitizer: SimulatedDigitizer(dc),
+      digitizerConfig: dc,
+      config: mc,
+      corrections: CorrectionsConfig(),
+      multiplexer: mux,
+    );
     final session = await engine.run();
     final h = Info.parse(File(session).readAsStringSync());
     expect(h.number('multiplexer enabled'), 1);
     expect(h.number('multiplexer sequence cycles'), 2);
     final g = h.section('measurement group 1');
     expect(g.matrix('sub-record sample offsets'), [
-      [0, 100, 200, 300]
+      [0, 100, 200, 300],
     ]);
     expect(g.vector('record samples counts'), [400]);
     expect(mux.selected, 'B');
   });
 
   test('qwtb.info processing header', () async {
-    final ps = ProcessingSetup(algorithmId: 'TWM-PWRTDI', parameters: [
-      AlgorithmParameter('f_est', ['50']),
-      AlgorithmParameter('window', ['flattop']),
-      AlgorithmParameter('empty', ['']),
-    ], uncertainty: UncertaintyMode.guf);
+    final ps = ProcessingSetup(
+      algorithmId: 'TWM-PWRTDI',
+      parameters: [
+        AlgorithmParameter('f_est', ['50']),
+        AlgorithmParameter('window', ['flattop']),
+        AlgorithmParameter('empty', ['']),
+      ],
+      uncertainty: UncertaintyMode.guf,
+    );
     await SessionWriter.writeQwtbSetup(tmp.path, ps);
-    final q = Info.parse(File(p.join(tmp.path, 'qwtb.info')).readAsStringSync())
-        .section('QWTB processing setup');
+    final q = Info.parse(File(p.join(tmp.path, 'qwtb.info')).readAsStringSync()).section('QWTB processing setup');
     expect(q.text('algorithm id'), 'TWM-PWRTDI');
     expect(q.text('uncertainty mode'), 'guf');
     expect(q.textList('list of parameter names'), ['f_est', 'window']);
@@ -136,11 +143,13 @@ void main() {
 
   test('stop aborts continuous acquisition', () async {
     final dc = simConfig()..simulated.realtimeFactor = 1;
-    final mc = MeasurementConfig(
-        fs: 1000, samplesCount: 100, continuous: true, saveRecords: false, folder: tmp.path);
+    final mc = MeasurementConfig(fs: 1000, samplesCount: 100, continuous: true, saveRecords: false, folder: tmp.path);
     final engine = MeasurementEngine(
-        digitizer: SimulatedDigitizer(dc), digitizerConfig: dc, config: mc,
-        corrections: CorrectionsConfig());
+      digitizer: SimulatedDigitizer(dc),
+      digitizerConfig: dc,
+      config: mc,
+      corrections: CorrectionsConfig(),
+    );
     var n = 0;
     engine.events.listen((e) {
       if (e is MeasRecordData && ++n == 3) engine.stop();

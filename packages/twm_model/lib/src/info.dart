@@ -62,10 +62,7 @@ class Info {
   // ---------------------------------------------------------------- parse --
 
   factory Info.parse(String text) {
-    final lines = text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .split('\n');
+    final lines = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
     var pos = 0;
     Info parseBlock(String? sectionName) {
       final info = Info();
@@ -83,8 +80,7 @@ class Info {
           final name = _tagName(line);
           if (name != null) {
             if (name != sectionName) {
-              throw InfoException(
-                  "'#endsection:: $name' does not match '#startsection:: $sectionName'");
+              throw InfoException("'#endsection:: $name' does not match '#startsection:: $sectionName'");
             }
             return info;
           }
@@ -113,8 +109,7 @@ class Info {
         } else {
           final qi = line.indexOf('::');
           if (qi > 0 && !line.startsWith('//')) {
-            info.items.add(
-                InfoScalar(line.substring(0, qi).trim(), line.substring(qi + 2).trim()));
+            info.items.add(InfoScalar(line.substring(0, qi).trim(), line.substring(qi + 2).trim()));
           } else {
             info.items.add(InfoComment(raw));
           }
@@ -186,13 +181,11 @@ class Info {
     endRow();
     // remove trailing columns that are empty in all rows
     var cols = rows.fold<int>(0, (m, r) => r.length > m ? r.length : m);
-    while (cols > 0 &&
-        rows.every((r) => r.length < cols || r[cols - 1].isEmpty)) {
+    while (cols > 0 && rows.every((r) => r.length < cols || r[cols - 1].isEmpty)) {
       cols--;
     }
     return [
-      for (final r in rows)
-        [for (var c = 0; c < cols; c++) c < r.length ? r[c] : '']
+      for (final r in rows) [for (var c = 0; c < cols; c++) c < r.length ? r[c] : ''],
     ];
   }
 
@@ -221,8 +214,7 @@ class Info {
     return v;
   }
 
-  double? numberOrNull(String key) =>
-      hasKey(key) ? parseNumber(text(key)) : null;
+  double? numberOrNull(String key) => hasKey(key) ? parseNumber(text(key)) : null;
 
   List<List<String>> textMatrix(String name) {
     for (final m in matrices) {
@@ -231,19 +223,16 @@ class Info {
     throw InfoException("matrix '$name' not found");
   }
 
-  List<List<String>>? textMatrixOrNull(String name) =>
-      hasMatrix(name) ? textMatrix(name) : null;
+  List<List<String>>? textMatrixOrNull(String name) => hasMatrix(name) ? textMatrix(name) : null;
 
   /// Text matrix flattened column-wise (Matlab `(:)` order). Most of the
   /// TWM text matrices are column vectors.
   List<String> textList(String name) => _flatten(textMatrix(name));
 
-  List<List<double>> matrix(String name) => textMatrix(name)
-      .map((r) => r.map((c) => parseNumber(c) ?? double.nan).toList())
-      .toList();
+  List<List<double>> matrix(String name) =>
+      textMatrix(name).map((r) => r.map((c) => parseNumber(c) ?? double.nan).toList()).toList();
 
-  List<List<double>>? matrixOrNull(String name) =>
-      hasMatrix(name) ? matrix(name) : null;
+  List<List<double>>? matrixOrNull(String name) => hasMatrix(name) ? matrix(name) : null;
 
   List<double> vector(String name) => _flatten(matrix(name));
 
@@ -253,7 +242,7 @@ class Info {
     return [
       for (var c = 0; c < cols; c++)
         for (final r in m)
-          if (c < r.length) r[c]
+          if (c < r.length) r[c],
     ];
   }
 
@@ -302,15 +291,18 @@ class Info {
   }
 
   /// Column vector of strings.
-  void setTextList(String name, List<String> values) =>
-      setTextMatrix(name, [for (final v in values) [v]]);
+  void setTextList(String name, List<String> values) => setTextMatrix(name, [
+    for (final v in values) [v],
+  ]);
 
-  void setMatrix(String name, List<List<num>> values) => setTextMatrix(
-      name, [for (final r in values) [for (final v in r) formatNumber(v)]]);
+  void setMatrix(String name, List<List<num>> values) => setTextMatrix(name, [
+    for (final r in values) [for (final v in r) formatNumber(v)],
+  ]);
 
   /// Column vector of numbers.
-  void setVector(String name, List<num> values) =>
-      setMatrix(name, [for (final v in values) [v]]);
+  void setVector(String name, List<num> values) => setMatrix(name, [
+    for (final v in values) [v],
+  ]);
 
   /// Row vector of numbers.
   void setRowVector(String name, List<num> values) => setMatrix(name, [values]);
@@ -328,10 +320,12 @@ class Info {
 
   void blank() => items.add(const InfoComment(''));
 
-  void remove(String name) => items.removeWhere((e) =>
-      (e is InfoScalar && e.key == name) ||
-      (e is InfoMatrix && e.name == name) ||
-      (e is InfoSection && e.name == name));
+  void remove(String name) => items.removeWhere(
+    (e) =>
+        (e is InfoScalar && e.key == name) ||
+        (e is InfoMatrix && e.name == name) ||
+        (e is InfoSection && e.name == name),
+  );
 
   // ------------------------------------------------------------ serialize --
 

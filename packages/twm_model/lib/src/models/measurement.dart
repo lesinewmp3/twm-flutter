@@ -49,30 +49,30 @@ class TransducerConfig {
   bool get isDifferential => lowChannel > 0;
 
   Json toJson() => {
-        'path': path,
-        'type': type.name,
-        'name': name,
-        'serial': serial,
-        'nominalRatio': nominalRatio,
-        'phaseIndex': phaseIndex,
-        'highChannel': highChannel,
-        'lowChannel': lowChannel,
-        'multiplexerPath': multiplexerPath,
-        'inverted': inverted,
-      };
+    'path': path,
+    'type': type.name,
+    'name': name,
+    'serial': serial,
+    'nominalRatio': nominalRatio,
+    'phaseIndex': phaseIndex,
+    'highChannel': highChannel,
+    'lowChannel': lowChannel,
+    'multiplexerPath': multiplexerPath,
+    'inverted': inverted,
+  };
 
   factory TransducerConfig.fromJson(Json j) => TransducerConfig(
-        path: jString(j['path']),
-        type: enumByName(TransducerType.values, j['type'], TransducerType.divider),
-        name: jString(j['name']),
-        serial: jString(j['serial']),
-        nominalRatio: jDouble(j['nominalRatio'], 1),
-        phaseIndex: jInt(j['phaseIndex'], 1),
-        highChannel: jInt(j['highChannel'], 1),
-        lowChannel: jInt(j['lowChannel']),
-        multiplexerPath: jString(j['multiplexerPath']),
-        inverted: jBool(j['inverted']),
-      );
+    path: jString(j['path']),
+    type: enumByName(TransducerType.values, j['type'], TransducerType.divider),
+    name: jString(j['name']),
+    serial: jString(j['serial']),
+    nominalRatio: jDouble(j['nominalRatio'], 1),
+    phaseIndex: jInt(j['phaseIndex'], 1),
+    highChannel: jInt(j['highChannel'], 1),
+    lowChannel: jInt(j['lowChannel']),
+    multiplexerPath: jString(j['multiplexerPath']),
+    inverted: jBool(j['inverted']),
+  );
 }
 
 class CorrectionsConfig {
@@ -123,18 +123,18 @@ class CorrectionsConfig {
   }
 
   Json toJson() => {
-        'transducersRoot': transducersRoot,
-        'transducers': [for (final t in transducers) t.toJson()],
-        'digitizerPath': digitizerPath,
-        'digitizerName': digitizerName,
-      };
+    'transducersRoot': transducersRoot,
+    'transducers': [for (final t in transducers) t.toJson()],
+    'digitizerPath': digitizerPath,
+    'digitizerName': digitizerName,
+  };
 
   factory CorrectionsConfig.fromJson(Json j) => CorrectionsConfig(
-        transducersRoot: jString(j['transducersRoot']),
-        transducers: [for (final t in jMapList(j['transducers'])) TransducerConfig.fromJson(t)],
-        digitizerPath: jString(j['digitizerPath']),
-        digitizerName: jString(j['digitizerName']),
-      );
+    transducersRoot: jString(j['transducersRoot']),
+    transducers: [for (final t in jMapList(j['transducers'])) TransducerConfig.fromJson(t)],
+    digitizerPath: jString(j['digitizerPath']),
+    digitizerName: jString(j['digitizerName']),
+  );
 }
 
 // -------------------------------------------------------------- processing --
@@ -171,8 +171,7 @@ class AlgorithmParameter {
   AlgorithmParameter(this.name, [List<String>? values]) : values = values ?? [];
 
   Json toJson() => {'name': name, 'values': values};
-  factory AlgorithmParameter.fromJson(Json j) =>
-      AlgorithmParameter(jString(j['name']), jStringList(j['values']));
+  factory AlgorithmParameter.fromJson(Json j) => AlgorithmParameter(jString(j['name']), jStringList(j['values']));
 }
 
 class ProcessingSetup {
@@ -221,44 +220,44 @@ class ProcessingSetup {
   }) : parameters = parameters ?? [];
 
   Json toJson() => {
-        'mode': mode.name,
-        'rawCode': rawCode,
-        'algorithmId': algorithmId,
-        'parameters': [for (final p in parameters) p.toJson()],
-        'sampleOffset': sampleOffset,
-        'sampleLimit': sampleLimit,
-        'wholeAverageAtOnce': wholeAverageAtOnce,
-        'uncertaintyOnce': uncertaintyOnce,
-        'timeStampMode': timeStampMode.name,
-        'uncertainty': uncertainty.name,
-        'levelOfConfidence': levelOfConfidence,
-        'monteCarloCycles': monteCarloCycles,
-        'timeout': timeout,
-        'execution': execution.name,
-        'parallel': parallel.name,
-        'cores': cores,
-        'jobsFolder': jobsFolder,
-      };
+    'mode': mode.name,
+    'rawCode': rawCode,
+    'algorithmId': algorithmId,
+    'parameters': [for (final p in parameters) p.toJson()],
+    'sampleOffset': sampleOffset,
+    'sampleLimit': sampleLimit,
+    'wholeAverageAtOnce': wholeAverageAtOnce,
+    'uncertaintyOnce': uncertaintyOnce,
+    'timeStampMode': timeStampMode.name,
+    'uncertainty': uncertainty.name,
+    'levelOfConfidence': levelOfConfidence,
+    'monteCarloCycles': monteCarloCycles,
+    'timeout': timeout,
+    'execution': execution.name,
+    'parallel': parallel.name,
+    'cores': cores,
+    'jobsFolder': jobsFolder,
+  };
 
   factory ProcessingSetup.fromJson(Json j) => ProcessingSetup(
-        mode: enumByName(ProcessingMode.values, j['mode'], ProcessingMode.qwtb),
-        rawCode: jString(j['rawCode']),
-        algorithmId: jString(j['algorithmId'], 'TWM-PSFE'),
-        parameters: [for (final p in jMapList(j['parameters'])) AlgorithmParameter.fromJson(p)],
-        sampleOffset: jInt(j['sampleOffset']),
-        sampleLimit: jInt(j['sampleLimit']),
-        wholeAverageAtOnce: jBool(j['wholeAverageAtOnce']),
-        uncertaintyOnce: jBool(j['uncertaintyOnce']),
-        timeStampMode: enumByName(TimeStampMode.values, j['timeStampMode'], TimeStampMode.enable),
-        uncertainty: enumByName(UncertaintyMode.values, j['uncertainty'], UncertaintyMode.none),
-        levelOfConfidence: jDouble(j['levelOfConfidence'], 0.95),
-        monteCarloCycles: jInt(j['monteCarloCycles'], 1000),
-        timeout: jDouble(j['timeout'], 600),
-        execution: enumByName(ExecutionMode.values, j['execution'], ExecutionMode.singleCore),
-        parallel: enumByName(ParallelMode.values, j['parallel'], ParallelMode.singlecore),
-        cores: jInt(j['cores'], 4),
-        jobsFolder: jString(j['jobsFolder']),
-      );
+    mode: enumByName(ProcessingMode.values, j['mode'], ProcessingMode.qwtb),
+    rawCode: jString(j['rawCode']),
+    algorithmId: jString(j['algorithmId'], 'TWM-PSFE'),
+    parameters: [for (final p in jMapList(j['parameters'])) AlgorithmParameter.fromJson(p)],
+    sampleOffset: jInt(j['sampleOffset']),
+    sampleLimit: jInt(j['sampleLimit']),
+    wholeAverageAtOnce: jBool(j['wholeAverageAtOnce']),
+    uncertaintyOnce: jBool(j['uncertaintyOnce']),
+    timeStampMode: enumByName(TimeStampMode.values, j['timeStampMode'], TimeStampMode.enable),
+    uncertainty: enumByName(UncertaintyMode.values, j['uncertainty'], UncertaintyMode.none),
+    levelOfConfidence: jDouble(j['levelOfConfidence'], 0.95),
+    monteCarloCycles: jInt(j['monteCarloCycles'], 1000),
+    timeout: jDouble(j['timeout'], 600),
+    execution: enumByName(ExecutionMode.values, j['execution'], ExecutionMode.singleCore),
+    parallel: enumByName(ParallelMode.values, j['parallel'], ParallelMode.singlecore),
+    cores: jInt(j['cores'], 4),
+    jobsFolder: jString(j['jobsFolder']),
+  );
 
   ProcessingSetup copy() => ProcessingSetup.fromJson(toJson());
 }
@@ -319,8 +318,8 @@ class MeasurementConfig {
     ProcessingSetup? processing,
     this.continuous = false,
     this.saveRecords = true,
-  })  : trigger = trigger ?? TriggerConfig(),
-        processing = processing ?? ProcessingSetup();
+  }) : trigger = trigger ?? TriggerConfig(),
+       processing = processing ?? ProcessingSetup();
 
   double get measurementTime => samplesCount / fs;
 
@@ -335,57 +334,54 @@ class MeasurementConfig {
 
   /// Ranges for each physical channel.
   List<double> ranges(List<double> defaults) => switch (rangeMode) {
-        RangeMode.keepDefaults => defaults,
-        RangeMode.allSame => List.filled(defaults.length, rangeAll),
-        RangeMode.oddEven => [
-            for (var i = 0; i < defaults.length; i++) i.isEven ? rangeOdd : rangeEven
-          ],
-      };
+    RangeMode.keepDefaults => defaults,
+    RangeMode.allSame => List.filled(defaults.length, rangeAll),
+    RangeMode.oddEven => [for (var i = 0; i < defaults.length; i++) i.isEven ? rangeOdd : rangeEven],
+  };
 
   Json toJson() => {
-        'fs': fs,
-        'aperture': aperture,
-        'samplesCount': samplesCount,
-        'recordsCount': recordsCount,
-        'preRecordDelay': preRecordDelay,
-        'subRecordsCount': subRecordsCount,
-        'trigger': trigger.toJson(),
-        'rangeMode': rangeMode.name,
-        'rangeAll': rangeAll,
-        'rangeOdd': rangeOdd,
-        'rangeEven': rangeEven,
-        'folder': folder,
-        'nameBase': nameBase,
-        'measurementId': measurementId,
-        'comment': comment,
-        'processingEnabled': processingEnabled,
-        'processing': processing.toJson(),
-        'continuous': continuous,
-        'saveRecords': saveRecords,
-      };
+    'fs': fs,
+    'aperture': aperture,
+    'samplesCount': samplesCount,
+    'recordsCount': recordsCount,
+    'preRecordDelay': preRecordDelay,
+    'subRecordsCount': subRecordsCount,
+    'trigger': trigger.toJson(),
+    'rangeMode': rangeMode.name,
+    'rangeAll': rangeAll,
+    'rangeOdd': rangeOdd,
+    'rangeEven': rangeEven,
+    'folder': folder,
+    'nameBase': nameBase,
+    'measurementId': measurementId,
+    'comment': comment,
+    'processingEnabled': processingEnabled,
+    'processing': processing.toJson(),
+    'continuous': continuous,
+    'saveRecords': saveRecords,
+  };
 
   factory MeasurementConfig.fromJson(Json j) => MeasurementConfig(
-        fs: jDouble(j['fs'], 10000),
-        aperture: jDouble(j['aperture']),
-        samplesCount: jInt(j['samplesCount'], 10000),
-        recordsCount: jInt(j['recordsCount'], 1),
-        preRecordDelay: jDouble(j['preRecordDelay']),
-        subRecordsCount: jInt(j['subRecordsCount'], 1),
-        trigger: j['trigger'] == null ? null : TriggerConfig.fromJson(jMap(j['trigger'])),
-        rangeMode: enumByName(RangeMode.values, j['rangeMode'], RangeMode.keepDefaults),
-        rangeAll: jDouble(j['rangeAll'], 1),
-        rangeOdd: jDouble(j['rangeOdd'], 1),
-        rangeEven: jDouble(j['rangeEven'], 1),
-        folder: jString(j['folder']),
-        nameBase: jString(j['nameBase'], 'meas_%id%'),
-        measurementId: jInt(j['measurementId'], 1),
-        comment: jString(j['comment']),
-        processingEnabled: jBool(j['processingEnabled']),
-        processing:
-            j['processing'] == null ? null : ProcessingSetup.fromJson(jMap(j['processing'])),
-        continuous: jBool(j['continuous']),
-        saveRecords: jBool(j['saveRecords'], true),
-      );
+    fs: jDouble(j['fs'], 10000),
+    aperture: jDouble(j['aperture']),
+    samplesCount: jInt(j['samplesCount'], 10000),
+    recordsCount: jInt(j['recordsCount'], 1),
+    preRecordDelay: jDouble(j['preRecordDelay']),
+    subRecordsCount: jInt(j['subRecordsCount'], 1),
+    trigger: j['trigger'] == null ? null : TriggerConfig.fromJson(jMap(j['trigger'])),
+    rangeMode: enumByName(RangeMode.values, j['rangeMode'], RangeMode.keepDefaults),
+    rangeAll: jDouble(j['rangeAll'], 1),
+    rangeOdd: jDouble(j['rangeOdd'], 1),
+    rangeEven: jDouble(j['rangeEven'], 1),
+    folder: jString(j['folder']),
+    nameBase: jString(j['nameBase'], 'meas_%id%'),
+    measurementId: jInt(j['measurementId'], 1),
+    comment: jString(j['comment']),
+    processingEnabled: jBool(j['processingEnabled']),
+    processing: j['processing'] == null ? null : ProcessingSetup.fromJson(jMap(j['processing'])),
+    continuous: jBool(j['continuous']),
+    saveRecords: jBool(j['saveRecords'], true),
+  );
 
   MeasurementConfig copy() => MeasurementConfig.fromJson(toJson());
 }
@@ -416,24 +412,24 @@ class OctaveConfig {
   }) : packages = packages ?? ['signal', 'statistics', 'optim'];
 
   Json toJson() => {
-        'engine': engine.name,
-        'octavePath': octavePath,
-        'matlabPath': matlabPath,
-        'qwtbPath': qwtbPath,
-        'octprogPath': octprogPath,
-        'clearCache': clearCache,
-        'showConsole': showConsole,
-        'packages': packages,
-      };
+    'engine': engine.name,
+    'octavePath': octavePath,
+    'matlabPath': matlabPath,
+    'qwtbPath': qwtbPath,
+    'octprogPath': octprogPath,
+    'clearCache': clearCache,
+    'showConsole': showConsole,
+    'packages': packages,
+  };
 
   factory OctaveConfig.fromJson(Json j) => OctaveConfig(
-        engine: enumByName(CalcEngine.values, j['engine'], CalcEngine.octave),
-        octavePath: jString(j['octavePath']),
-        matlabPath: jString(j['matlabPath']),
-        qwtbPath: jString(j['qwtbPath']),
-        octprogPath: jString(j['octprogPath']),
-        clearCache: jBool(j['clearCache']),
-        showConsole: jBool(j['showConsole']),
-        packages: j['packages'] == null ? null : jStringList(j['packages']),
-      );
+    engine: enumByName(CalcEngine.values, j['engine'], CalcEngine.octave),
+    octavePath: jString(j['octavePath']),
+    matlabPath: jString(j['matlabPath']),
+    qwtbPath: jString(j['qwtbPath']),
+    octprogPath: jString(j['octprogPath']),
+    clearCache: jBool(j['clearCache']),
+    showConsole: jBool(j['showConsole']),
+    packages: j['packages'] == null ? null : jStringList(j['packages']),
+  );
 }

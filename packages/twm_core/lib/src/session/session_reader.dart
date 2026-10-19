@@ -51,13 +51,7 @@ class SessionReader {
       final full = v.row(c, gain: gains[c], offset: offs[c]);
       ch.add(step == 1 ? full : _decimate(full, step));
     }
-    return RecordData(
-      channels: ch,
-      ts: ts * step,
-      fullLength: v.cols,
-      timestamps: tstamps,
-      names: channelDescriptors,
-    );
+    return RecordData(channels: ch, ts: ts * step, fullLength: v.cols, timestamps: tstamps, names: channelDescriptors);
   }
 
   static Float64List _decimate(Float64List x, int step) {

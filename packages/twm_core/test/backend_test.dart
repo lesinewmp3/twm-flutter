@@ -13,8 +13,9 @@ void main() {
   late LocalBackend b;
   setUp(() {
     tmp = Directory.systemTemp.createTempSync('twm_be');
-    b = LocalBackend(AppPaths.resolve(
-        home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: p.join(tmp.path, 's.json')));
+    b = LocalBackend(
+      AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: p.join(tmp.path, 's.json')),
+    );
   });
   tearDown(() async {
     await b.dispose();
@@ -43,8 +44,7 @@ void main() {
     final dummy = p.join(b.paths.corrections, 'transducers');
     s.corrections.transducers = [
       TransducerConfig(path: p.join(dummy, 'dummy.vd', 'dummy.info'), highChannel: 1),
-      TransducerConfig(
-          path: p.join(dummy, 'dummy.cs', 'dummy.info'), type: TransducerType.shunt, highChannel: 2),
+      TransducerConfig(path: p.join(dummy, 'dummy.cs', 'dummy.info'), type: TransducerType.shunt, highChannel: 2),
     ];
     final events = <BackendEvent>[];
     final sub = b.events.listen(events.add);

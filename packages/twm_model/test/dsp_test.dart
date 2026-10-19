@@ -7,7 +7,7 @@ import 'package:twm_model/twm_model.dart';
 Float64List sine(int n, double fs, List<(double f, double a, double ph)> comps, {double dc = 0}) =>
     Float64List.fromList([
       for (var i = 0; i < n; i++)
-        dc + comps.fold(0.0, (s, c) => s + c.$2 * math.sin(2 * math.pi * c.$1 * i / fs + c.$3))
+        dc + comps.fold(0.0, (s, c) => s + c.$2 * math.sin(2 * math.pi * c.$1 * i / fs + c.$3)),
     ]);
 
 void main() {

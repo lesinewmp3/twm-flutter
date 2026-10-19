@@ -90,8 +90,7 @@ class MeasurementEngine {
   bool get running => _running;
 
   /// Session folder for [config] at time [now].
-  static String sessionRoot(MeasurementConfig c, DateTime now) =>
-      p.join(c.folder, c.resolveName(now));
+  static String sessionRoot(MeasurementConfig c, DateTime now) => p.join(c.folder, c.resolveName(now));
 
   void stop() {
     _stop = true;
@@ -124,7 +123,8 @@ class MeasurementEngine {
       final ranges = config.ranges(digitizerConfig.defaultRanges);
       if (config.samplesCount > caps.maxSamplesCount) {
         throw DigitizerException(
-            'Samples count ${config.samplesCount} exceeds digitizer limit ${caps.maxSamplesCount}.');
+          'Samples count ${config.samplesCount} exceeds digitizer limit ${caps.maxSamplesCount}.',
+        );
       }
 
       _status('Configuring digitizer...');
@@ -144,30 +144,33 @@ class MeasurementEngine {
           root: root,
           channelDescriptors: digitizer.channelIdns,
           auxDescriptors: digitizer.auxIdns,
-          temperatureAvailable: caps.hasTemperature &&
+          temperatureAvailable:
+              caps.hasTemperature &&
               digitizerConfig.type == DigitizerType.hp3458a &&
               digitizerConfig.hp3458a.measureTemperature,
           temperatureLogAvailable: caps.hasTemperatureLog,
           sessionAttributes: [
             for (final a in setup.deviceAttributes)
-              if (a.constPerGroup) a
+              if (a.constPerGroup) a,
           ],
           multiplexer: mux,
           comment: config.comment,
         );
         await writer.storeCorrections(corrections, adcChannels: digitizer.channelIdns.length);
-        group = writer.addGroup(GroupSetup(
-          samplesCount: config.samplesCount,
-          fs: setup.fs,
-          ranges: setup.ranges,
-          trigger: config.trigger,
-          bitResolution: setup.bitResolution,
-          subRecordsCount: subs,
-          attributes: [
-            for (final a in setup.deviceAttributes)
-              if (!a.constPerGroup) a
-          ],
-        ));
+        group = writer.addGroup(
+          GroupSetup(
+            samplesCount: config.samplesCount,
+            fs: setup.fs,
+            ranges: setup.ranges,
+            trigger: config.trigger,
+            bitResolution: setup.bitResolution,
+            subRecordsCount: subs,
+            attributes: [
+              for (final a in setup.deviceAttributes)
+                if (!a.constPerGroup) a,
+            ],
+          ),
+        );
         if (config.processingEnabled && config.processing.mode == ProcessingMode.qwtb) {
           await SessionWriter.writeQwtbSetup(root, config.processing);
         }
@@ -221,11 +224,17 @@ class MeasurementEngine {
         if (save) {
           final hasSub = subs > 1 || mux.enabled;
           writer!.addRecord(
-              group,
-              recordFromAux(SessionWriter.recordRelPath(group, r), rf!.samplesWritten, aux, when,
-                  aperture: setup.aperture,
-                  subOffsets: hasSub ? subOffsets : const [],
-                  subTimestamps: hasSub ? subStamps : const []));
+            group,
+            recordFromAux(
+              SessionWriter.recordRelPath(group, r),
+              rf!.samplesWritten,
+              aux,
+              when,
+              aperture: setup.aperture,
+              subOffsets: hasSub ? subOffsets : const [],
+              subTimestamps: hasSub ? subStamps : const [],
+            ),
+          );
           await writer.save();
           _events.add(MeasRecordStored(sessionFile, group, r));
           if (config.processingEnabled && processor != null) {
@@ -250,8 +259,14 @@ class MeasurementEngine {
     return sessionFile;
   }
 
-  Future<AuxData?> _acquire(RecordFileWriter? rf, List<List<Float64List>> preview, int r,
-      int records, int sub, int subCount) async {
+  Future<AuxData?> _acquire(
+    RecordFileWriter? rf,
+    List<List<Float64List>> preview,
+    int r,
+    int records,
+    int sub,
+    int subCount,
+  ) async {
     await digitizer.initiate();
     AuxData? aux;
     final chunks = <DataPacket>[];
@@ -266,8 +281,12 @@ class MeasurementEngine {
         chunks.add(pk);
       }
       final prog = (sub + fetched / math.max(1, config.samplesCount)) / subCount;
-      _status('Digitizing record $r${records > 0 ? '/$records' : ''}...',
-          progress: prog.clamp(0, 1).toDouble(), record: r, records: records);
+      _status(
+        'Digitizing record $r${records > 0 ? '/$records' : ''}...',
+        progress: prog.clamp(0, 1).toDouble(),
+        record: r,
+        records: records,
+      );
       if (res.done) break;
       if (_stop) {
         await digitizer.abort();
@@ -303,13 +322,18 @@ class MeasurementEngine {
     final n = full.first.length;
     final step = n > previewPoints ? (n / previewPoints).ceil() : 1;
     final dec = [
-      for (final c in full)
-        step == 1
-            ? c
-            : Float64List.fromList([for (var i = 0; i < n; i += step) c[i]])
+      for (final c in full) step == 1 ? c : Float64List.fromList([for (var i = 0; i < n; i += step) c[i]]),
     ];
-    _events.add(MeasRecordData(r, dec, aux.increment * step, digitizer.channelIdns,
-        n <= fullDataLimit ? full : null, aux.increment));
+    _events.add(
+      MeasRecordData(
+        r,
+        dec,
+        aux.increment * step,
+        digitizer.channelIdns,
+        n <= fullDataLimit ? full : null,
+        aux.increment,
+      ),
+    );
   }
 
   Future<void> _sleep(double s) async {

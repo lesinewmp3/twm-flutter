@@ -19,8 +19,10 @@ void main() {
   late Directory tmp;
 
   setUpAll(() async {
-    oct = OctaveBridge(OctaveConfig(octprogPath: '$twmRepo/octprog', packages: ['io', 'signal', 'statistics', 'optim']),
-        apiRoot: apiRoot);
+    oct = OctaveBridge(
+      OctaveConfig(octprogPath: '$twmRepo/octprog', packages: ['io', 'signal', 'statistics', 'optim']),
+      apiRoot: apiRoot,
+    );
     q = QwtbService(oct);
     tmp = Directory.systemTemp.createTempSync('twm_oct');
   });
@@ -52,16 +54,24 @@ void main() {
   test('measure with simulator, process TWM-PWRTDI, read results', () async {
     final dc = DigitizerConfig()..simulated.realtimeFactor = 0;
     final mc = MeasurementConfig(
-      fs: 10000, samplesCount: 20000, recordsCount: 2, folder: tmp.path, nameBase: 'pwr',
+      fs: 10000,
+      samplesCount: 20000,
+      recordsCount: 2,
+      folder: tmp.path,
+      nameBase: 'pwr',
       processingEnabled: true,
       processing: ProcessingSetup(algorithmId: 'TWM-PWRTDI'),
     );
-    final corr = CorrectionsConfig(transducers: [
-      TransducerConfig(path: '$twmRepo/data/corrections/transducers/dummy.vd/dummy.info', highChannel: 1),
-      TransducerConfig(
+    final corr = CorrectionsConfig(
+      transducers: [
+        TransducerConfig(path: '$twmRepo/data/corrections/transducers/dummy.vd/dummy.info', highChannel: 1),
+        TransducerConfig(
           path: '$twmRepo/data/corrections/transducers/dummy.cs/dummy.info',
-          type: TransducerType.shunt, highChannel: 2),
-    ]);
+          type: TransducerType.shunt,
+          highChannel: 2,
+        ),
+      ],
+    );
     final session = await MeasurementEngine(
       digitizer: SimulatedDigitizer(dc),
       digitizerConfig: dc,

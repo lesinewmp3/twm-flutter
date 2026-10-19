@@ -23,8 +23,7 @@ class CsvSheet {
   int get rows => cells.length;
   int get cols => cells.fold(0, (m, r) => r.length > m ? r.length : m);
 
-  String cell(int r, int c) =>
-      r < cells.length && c < cells[r].length ? cells[r][c] : '';
+  String cell(int r, int c) => r < cells.length && c < cells[r].length ? cells[r][c] : '';
 
   void setCell(int r, int c, String v) {
     while (cells.length <= r) {
@@ -84,12 +83,16 @@ class CsvSheet {
   String toString() {
     normalize();
     return cells
-        .map((r) => r.map((c) {
-              if (c.contains(';') || c.contains('"') || c.contains('\n')) {
-                return '"${c.replaceAll('"', '""')}"';
-              }
-              return c;
-            }).join(';'))
+        .map(
+          (r) => r
+              .map((c) {
+                if (c.contains(';') || c.contains('"') || c.contains('\n')) {
+                  return '"${c.replaceAll('"', '""')}"';
+                }
+                return c;
+              })
+              .join(';'),
+        )
         .join('\n');
   }
 

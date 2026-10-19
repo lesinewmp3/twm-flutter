@@ -19,13 +19,11 @@ class RecordFileWriter {
 
   RecordFileWriter._(this.path, this.channels, this.int16, this.varName);
 
-  static Future<RecordFileWriter> create(String path, int channels,
-      {bool int16 = false, String varName = 'y'}) async {
+  static Future<RecordFileWriter> create(String path, int channels, {bool int16 = false, String varName = 'y'}) async {
     final w = RecordFileWriter._(path, channels, int16, varName);
     await File(path).parent.create(recursive: true);
     w._f = await File(path).open(mode: FileMode.write);
-    await w._f.writeFrom(MatV4.headerBytes(
-        varName, channels, 0, int16 ? MatPrecision.int16 : MatPrecision.int32));
+    await w._f.writeFrom(MatV4.headerBytes(varName, channels, 0, int16 ? MatPrecision.int16 : MatPrecision.int32));
     return w;
   }
 

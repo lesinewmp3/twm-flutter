@@ -27,22 +27,22 @@ class OnlineAnalysisConfig {
   });
 
   Json toJson() => {
-        'enabled': enabled,
-        'harmonicAnalyzer': harmonicAnalyzer,
-        'harmonics': harmonics,
-        'window': window.name,
-        'statistics': statistics,
-        'averageCycles': averageCycles,
-      };
+    'enabled': enabled,
+    'harmonicAnalyzer': harmonicAnalyzer,
+    'harmonics': harmonics,
+    'window': window.name,
+    'statistics': statistics,
+    'averageCycles': averageCycles,
+  };
 
   factory OnlineAnalysisConfig.fromJson(Json j) => OnlineAnalysisConfig(
-        enabled: jBool(j['enabled'], true),
-        harmonicAnalyzer: jBool(j['harmonicAnalyzer'], true),
-        harmonics: jInt(j['harmonics'], 20),
-        window: enumByName(WindowType.values, j['window'], WindowType.hann),
-        statistics: jBool(j['statistics']),
-        averageCycles: jInt(j['averageCycles'], 10),
-      );
+    enabled: jBool(j['enabled'], true),
+    harmonicAnalyzer: jBool(j['harmonicAnalyzer'], true),
+    harmonics: jInt(j['harmonics'], 20),
+    window: enumByName(WindowType.values, j['window'], WindowType.hann),
+    statistics: jBool(j['statistics']),
+    averageCycles: jInt(j['averageCycles'], 10),
+  );
 }
 
 /// One line of the on-line results grid.
@@ -55,33 +55,37 @@ class OnlineQuantity {
   final double uA;
   final double errorPercent;
   final int count;
-  const OnlineQuantity(this.name, this.unit, this.value,
-      {this.mean = double.nan,
-      this.std = double.nan,
-      this.uA = double.nan,
-      this.errorPercent = double.nan,
-      this.count = 0});
+  const OnlineQuantity(
+    this.name,
+    this.unit,
+    this.value, {
+    this.mean = double.nan,
+    this.std = double.nan,
+    this.uA = double.nan,
+    this.errorPercent = double.nan,
+    this.count = 0,
+  });
 
   Json toJson() => {
-        'name': name,
-        'unit': unit,
-        'value': jNum(value),
-        'mean': jNum(mean),
-        'std': jNum(std),
-        'uA': jNum(uA),
-        'err': jNum(errorPercent),
-        'count': count,
-      };
+    'name': name,
+    'unit': unit,
+    'value': jNum(value),
+    'mean': jNum(mean),
+    'std': jNum(std),
+    'uA': jNum(uA),
+    'err': jNum(errorPercent),
+    'count': count,
+  };
   factory OnlineQuantity.fromJson(Json j) => OnlineQuantity(
-        jString(j['name']),
-        jString(j['unit']),
-        jDouble(j['value'], double.nan),
-        mean: jDouble(j['mean'], double.nan),
-        std: jDouble(j['std'], double.nan),
-        uA: jDouble(j['uA'], double.nan),
-        errorPercent: jDouble(j['err'], double.nan),
-        count: jInt(j['count']),
-      );
+    jString(j['name']),
+    jString(j['unit']),
+    jDouble(j['value'], double.nan),
+    mean: jDouble(j['mean'], double.nan),
+    std: jDouble(j['std'], double.nan),
+    uA: jDouble(j['uA'], double.nan),
+    errorPercent: jDouble(j['err'], double.nan),
+    count: jInt(j['count']),
+  );
 }
 
 class OnlineResult {
@@ -93,15 +97,15 @@ class OnlineResult {
   const OnlineResult(this.quantities, this.harmonics, this.f0);
 
   Json toJson() => {
-        'quantities': [for (final q in quantities) q.toJson()],
-        'harmonics': harmonics,
-        'f0': jNum(f0),
-      };
+    'quantities': [for (final q in quantities) q.toJson()],
+    'harmonics': harmonics,
+    'f0': jNum(f0),
+  };
   factory OnlineResult.fromJson(Json j) => OnlineResult(
-        [for (final q in jMapList(j['quantities'])) OnlineQuantity.fromJson(q)],
-        {for (final e in jMap(j['harmonics']).entries) e.key: jDoubleList(e.value)},
-        jDouble(j['f0'], double.nan),
-      );
+    [for (final q in jMapList(j['quantities'])) OnlineQuantity.fromJson(q)],
+    {for (final e in jMap(j['harmonics']).entries) e.key: jDoubleList(e.value)},
+    jDouble(j['f0'], double.nan),
+  );
 }
 
 class OnlineAnalyzer {
@@ -147,8 +151,12 @@ class OnlineAnalyzer {
     for (final tag in tags) {
       final x = sig[tag]!;
       final unit = tag.startsWith('i') ? 'A' : 'V';
-      final h = HarmonicAnalysis.of(x, fs,
-          harmonics: config.harmonicAnalyzer ? config.harmonics : 1, window: config.window);
+      final h = HarmonicAnalysis.of(
+        x,
+        fs,
+        harmonics: config.harmonicAnalyzer ? config.harmonics : 1,
+        window: config.window,
+      );
       if (f0.isNaN) f0 = h.f0;
       q.add(_q('RMS $tag', unit, h.rms));
       q.add(_q('DC $tag', unit, h.dc));
@@ -178,7 +186,15 @@ class OnlineAnalyzer {
     if (!config.statistics) return OnlineQuantity(name, unit, v);
     final s = _stats.putIfAbsent(name, () => RunningStat(config.averageCycles));
     s.add(v);
-    return OnlineQuantity(name, unit, v,
-        mean: s.average, std: s.std, uA: s.uA, errorPercent: s.errorPercent, count: s.values.length);
+    return OnlineQuantity(
+      name,
+      unit,
+      v,
+      mean: s.average,
+      std: s.std,
+      uA: s.uA,
+      errorPercent: s.errorPercent,
+      count: s.values.length,
+    );
   }
 }

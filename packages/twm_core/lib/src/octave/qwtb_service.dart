@@ -24,21 +24,22 @@ class QwtbService {
   }
 
   /// Executes the processing setup stored in `qwtb.info` of the session.
-  Future<void> exec(String sessionFile,
-      {String uncertainty = '',
-      bool isLast = true,
-      int record = -1,
-      int group = -1,
-      ProcessingSetup? setup,
-      Duration? timeout}) async {
+  Future<void> exec(
+    String sessionFile, {
+    String uncertainty = '',
+    bool isLast = true,
+    int record = -1,
+    int group = -1,
+    ProcessingSetup? setup,
+    Duration? timeout,
+  }) async {
     await octave.start();
     final cfg = <String, Object?>{
       'mc_method': setup?.parallel.name ?? 'singlecore',
       'mc_procno': setup?.cores ?? 1,
       if (setup != null && setup.jobsFolder.isNotEmpty) 'mc_tmpdir': setup.jobsFolder,
     };
-    await octave.call('exec', [sessionFile, uncertainty, isLast, record, group, cfg],
-        timeout: timeout);
+    await octave.call('exec', [sessionFile, uncertainty, isLast, record, group, cfg], timeout: timeout);
   }
 
   Future<ResultsInfo> resultsInfo(String measRoot, {String algorithm = ''}) async {
@@ -66,12 +67,11 @@ class QwtbService {
 
   Future<ResultsTable> results(String measRoot, String algorithm, ResultViewConfig v) async {
     await octave.start();
-    final r = await octave.call('results',
-        [_root(measRoot), v.resultId, algorithm, v.toCfg(), v.variables]);
+    final r = await octave.call('results', [_root(measRoot), v.resultId, algorithm, v.toCfg(), v.variables]);
     final txt = r['txt'] is String ? r['txt'] as String : '';
     final table = [
       for (final l in txt.split('\n'))
-        if (l.trim().isNotEmpty) l.split('\t')
+        if (l.trim().isNotEmpty) l.split('\t'),
     ];
     return ResultsTable(
       header: table.isNotEmpty ? table.first : const [],
@@ -80,7 +80,7 @@ class QwtbService {
       variableNames: _split(r['var_names'], '\t', keepEmpty: true),
       channelIndex: [
         for (final v in (r['chn_index'] is List ? r['chn_index'] as List : [r['chn_index']]))
-          if (v is num) v.round()
+          if (v is num) v.round(),
       ],
     );
   }
@@ -108,15 +108,21 @@ class QwtbService {
                   isGraph: q['is_graph'] == true,
                   graphX: q['graph_x'] is String ? q['graph_x'] as String : '',
                   text: q['val'] is String ? q['val'] as String : '',
-                )
-          ]
+                ),
+          ],
       ],
     );
   }
 
   /// Coherent sampling search (Sampling Setup Assistant).
   Future<({double fs, int n, double err})> findCoherent(
-      double f0, double tMin, double tMax, double rate, double maxErr, double timeout) async {
+    double f0,
+    double tMin,
+    double tMax,
+    Map<String, Object?> rate,
+    double maxErr,
+    double timeout,
+  ) async {
     await octave.start();
     final r = await octave.call('find_coherent', [f0, tMin, tMax, rate, maxErr, timeout]);
     return (
@@ -138,8 +144,7 @@ class QwtbService {
     return r.endsWith(p.separator) ? r : '$r${p.separator}';
   }
 
-  static List<String> _strings(Object? v) =>
-      v is List ? [for (final e in v) '$e'] : (v == null ? const [] : ['$v']);
+  static List<String> _strings(Object? v) => v is List ? [for (final e in v) '$e'] : (v == null ? const [] : ['$v']);
 
   static List<String> _split(Object? v, String sep, {bool keepEmpty = false}) {
     if (v == null) return const [];
@@ -155,7 +160,7 @@ class QwtbService {
     if (v is List) {
       return [
         for (final e in v)
-          if (e is List) ..._flatNum(e) else if (e is num) e.toDouble() else double.nan
+          if (e is List) ..._flatNum(e) else if (e is num) e.toDouble() else double.nan,
       ];
     }
     return const [];

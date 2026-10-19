@@ -13,3 +13,4 @@ export 'src/api/backend.dart';
 export 'src/api/events.dart';
 export 'src/dsp/dsp.dart';
 export 'src/dsp/online_analyzer.dart';
+export 'src/models/correction_catalog.dart';

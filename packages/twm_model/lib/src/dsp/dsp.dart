@@ -131,11 +131,12 @@ enum WindowType {
         WindowType.blackman => 0.42 - 0.5 * math.cos(x) + 0.08 * math.cos(2 * x),
         WindowType.blackmanHarris =>
           0.35875 - 0.48829 * math.cos(x) + 0.14128 * math.cos(2 * x) - 0.01168 * math.cos(3 * x),
-        WindowType.flatTop => 0.21557895 -
-            0.41663158 * math.cos(x) +
-            0.277263158 * math.cos(2 * x) -
-            0.083578947 * math.cos(3 * x) +
-            0.006947368 * math.cos(4 * x),
+        WindowType.flatTop =>
+          0.21557895 -
+              0.41663158 * math.cos(x) +
+              0.277263158 * math.cos(2 * x) -
+              0.083578947 * math.cos(3 * x) +
+              0.006947368 * math.cos(4 * x),
       };
     }
     return w;
@@ -175,10 +176,7 @@ class Spectrum {
   List<double> forDisplay(int maxPoints) {
     if (amp.length <= maxPoints) return amp.toList();
     final step = (amp.length / maxPoints).ceil();
-    return [
-      for (var i = 0; i < amp.length; i += step)
-        amp.sublist(i, math.min(i + step, amp.length)).reduce(math.max)
-    ];
+    return [for (var i = 0; i < amp.length; i += step) amp.sublist(i, math.min(i + step, amp.length)).reduce(math.max)];
   }
 }
 
@@ -214,8 +212,7 @@ class HarmonicAnalysis {
   /// Fundamental is located as the spectrum maximum (above DC) and refined
   /// by parabolic interpolation of the windowed spectrum; harmonics are read
   /// at k*f0 bins (picks the max within +-1 bin).
-  static HarmonicAnalysis of(Float64List x, double fs,
-      {int harmonics = 10, WindowType window = WindowType.hann}) {
+  static HarmonicAnalysis of(Float64List x, double fs, {int harmonics = 10, WindowType window = WindowType.hann}) {
     final n = x.length;
     final sp = Spectrum.of(x, fs, window: window);
     final a = sp.amp;
@@ -230,9 +227,7 @@ class HarmonicAnalysis {
       final al = (right ? a[kmax + 1] : a[kmax - 1]) / a[kmax];
       delta = (2 * al - 1) / (al + 1) * (right ? 1 : -1);
     } else if (kmax > 0 && kmax < a.length - 1) {
-      final y1 = math.log(a[kmax - 1] + 1e-300),
-          y2 = math.log(a[kmax] + 1e-300),
-          y3 = math.log(a[kmax + 1] + 1e-300);
+      final y1 = math.log(a[kmax - 1] + 1e-300), y2 = math.log(a[kmax] + 1e-300), y3 = math.log(a[kmax + 1] + 1e-300);
       final d = y1 - 2 * y2 + y3;
       if (d != 0) delta = 0.5 * (y1 - y3) / d;
     }

@@ -13,3 +13,5 @@ export 'src/octave/octave_bridge.dart';
 export 'src/octave/qwtb_service.dart';
 export 'src/digitizer/digitizer_factory.dart';
 export 'src/backend/local_backend.dart';
+export 'src/drivers/drivers.dart';
+export 'src/server/twm_server.dart';

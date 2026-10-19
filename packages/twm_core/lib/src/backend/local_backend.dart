@@ -91,8 +91,10 @@ class LocalBackend implements TwmBackend {
     s.octave.octprogPath = paths.octprog;
     s.octave.qwtbPath = p.join(paths.octprog, 'qwtb');
     s.octave.packages = ['io', 'signal', 'statistics', 'optim'];
-    s.measurement.folder = p.join(Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.',
-        'TWM measurements');
+    s.measurement.folder = p.join(
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.',
+      'TWM measurements',
+    );
     s.corrections.transducersRoot = p.join(paths.corrections, 'transducers');
     return s;
   }
@@ -132,9 +134,7 @@ class LocalBackend implements TwmBackend {
       final name = p.basename(e.path);
       if (name.startsWith('.')) continue;
       final isDir = e is Directory;
-      if (!isDir &&
-          extensions.isNotEmpty &&
-          !extensions.any((x) => name.toLowerCase().endsWith(x.toLowerCase()))) {
+      if (!isDir && extensions.isNotEmpty && !extensions.any((x) => name.toLowerCase().endsWith(x.toLowerCase()))) {
         continue;
       }
       FileStat? st;
@@ -143,18 +143,16 @@ class LocalBackend implements TwmBackend {
       } catch (_) {}
       entries.add(FileEntry(name, e.path, isDir, size: st?.size ?? 0, modified: st?.modified));
     }
-    entries.sort((a, b) => a.isDir != b.isDir
-        ? (a.isDir ? -1 : 1)
-        : a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    entries.sort(
+      (a, b) => a.isDir != b.isDir ? (a.isDir ? -1 : 1) : a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     final roots = <String>[
       if (Platform.environment['HOME'] != null) Platform.environment['HOME']!,
       if (Platform.environment['USERPROFILE'] != null) Platform.environment['USERPROFILE']!,
       paths.corrections,
       if (Platform.isWindows)
         for (final l in 'CDEFGH'.split(''))
-          if (Directory('$l:\\').existsSync()) '$l:\\'
-      else
-        '/',
+          if (Directory('$l:\\').existsSync()) '$l:\\' else '/',
     ];
     return DirListing(p.normalize(dir), p.dirname(dir), p.separator, entries, roots);
   }
@@ -170,8 +168,7 @@ class LocalBackend implements TwmBackend {
   }
 
   @override
-  Future<bool> exists(String path) async =>
-      await File(path).exists() || await Directory(path).exists();
+  Future<bool> exists(String path) async => await File(path).exists() || await Directory(path).exists();
 
   // ----------------------------------------------------------- digitizer --
 
@@ -214,11 +211,12 @@ class LocalBackend implements TwmBackend {
       final caps = d.capabilities();
       _scheduleClose(cfg);
       return DigitizerTestResult(
-          ok: true,
-          channelIdns: d.channelIdns,
-          auxIdns: d.auxIdns,
-          capabilities: caps,
-          message: 'OK - ${d.channelIdns.length} channel(s) found.');
+        ok: true,
+        channelIdns: d.channelIdns,
+        auxIdns: d.auxIdns,
+        capabilities: caps,
+        message: 'OK - ${d.channelIdns.length} channel(s) found.',
+      );
     } catch (e) {
       return DigitizerTestResult(ok: false, message: '$e');
     }
@@ -344,8 +342,17 @@ class LocalBackend implements TwmBackend {
             onl = online.analyze(full, 1 / e.fullTs, s.corrections.transducers).toJson();
           } catch (_) {}
         }
-        _emit(WaveformEvent(e.record, e.names, [for (final c in e.channels) c.toList()], e.ts,
-            spectra: spectra, df: df, online: onl));
+        _emit(
+          WaveformEvent(
+            e.record,
+            e.names,
+            [for (final c in e.channels) c.toList()],
+            e.ts,
+            spectra: spectra,
+            df: df,
+            online: onl,
+          ),
+        );
       case MeasRecordStored():
         _emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
       case MeasFinished():
@@ -386,17 +393,14 @@ class LocalBackend implements TwmBackend {
       channels: r.channelDescriptors,
       recordsPerGroup: recs,
       transducerTags: tags,
-      comment: h.textMatrixOrNull('measurement comment') == null
-          ? ''
-          : h.textList('measurement comment').join('\n'),
+      comment: h.textMatrixOrNull('measurement comment') == null ? '' : h.textList('measurement comment').join('\n'),
       fs: g1.numberOrNull('sampling rate [Sa/s]') ?? 0,
       samplesCount: (g1.numberOrNull('samples count') ?? 0).round(),
     );
   }
 
   @override
-  Future<WaveformData> readRecord(String sessionPath, int group, int record,
-      {int maxPoints = 5000}) async {
+  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) async {
     final r = await SessionReader.open(sessionPath);
     final d = await r.readRecord(group, record, maxPoints: maxPoints);
     return WaveformData(d.names, [for (final c in d.channels) c.toList()], d.ts, d.fullLength);
@@ -408,8 +412,7 @@ class LocalBackend implements TwmBackend {
     var o = _octave;
     if (o == null) {
       o = OctaveBridge(cfg, apiRoot: paths.octaveRoot);
-      _consoleSub = o.console.listen(
-          (l) => _emit(ConsoleEvent(l.text, isError: l.isError, isCommand: l.isCommand)));
+      _consoleSub = o.console.listen((l) => _emit(ConsoleEvent(l.text, isError: l.isError, isCommand: l.isCommand)));
       _octave = o;
       _qwtb = QwtbService(o);
     } else {
@@ -489,8 +492,14 @@ class LocalBackend implements TwmBackend {
   @override
   Future<AlgorithmInfo> algorithmInfo(String id) async => (await _ensureQwtb()).algorithm(id);
 
-  Future<void> _processRecord(String session, ProcessingSetup ps, OctaveConfig oc, int group,
-      int record, bool last) async {
+  Future<void> _processRecord(
+    String session,
+    ProcessingSetup ps,
+    OctaveConfig oc,
+    int group,
+    int record,
+    bool last,
+  ) async {
     _bridge(oc);
     _emit(ProcessingEvent(session, record: record, busy: true));
     try {
@@ -499,13 +508,15 @@ class LocalBackend implements TwmBackend {
         _emit(ConsoleEvent(out));
       } else {
         final unc = ps.uncertaintyOnce && record > 1 ? 'none' : '';
-        await _q.exec(session,
-            record: record,
-            group: group,
-            isLast: last,
-            uncertainty: unc,
-            setup: ps,
-            timeout: Duration(seconds: ps.timeout.round()));
+        await _q.exec(
+          session,
+          record: record,
+          group: group,
+          isLast: last,
+          uncertainty: unc,
+          setup: ps,
+          timeout: Duration(seconds: ps.timeout.round()),
+        );
       }
       _emit(ProcessingEvent(session, record: record));
     } catch (e) {
@@ -514,8 +525,12 @@ class LocalBackend implements TwmBackend {
   }
 
   @override
-  Future<void> processRecords(String sessionPath, ProcessingSetup setup,
-      {required int group, required List<int> records}) async {
+  Future<void> processRecords(
+    String sessionPath,
+    ProcessingSetup setup, {
+    required int group,
+    required List<int> records,
+  }) async {
     final s = await loadSettings();
     await _ensureQwtb();
     final root = p.dirname(sessionPath);
@@ -525,8 +540,14 @@ class LocalBackend implements TwmBackend {
     _stopProcessing = false;
     for (var k = 0; k < records.length; k++) {
       if (_stopProcessing) break;
-      _emit(StatusEvent('Processing record ${records[k]} (${k + 1}/${records.length})...',
-          progress: k / records.length, record: k + 1, records: records.length));
+      _emit(
+        StatusEvent(
+          'Processing record ${records[k]} (${k + 1}/${records.length})...',
+          progress: k / records.length,
+          record: k + 1,
+          records: records.length,
+        ),
+      );
       await _processRecord(sessionPath, setup, s.octave, group, records[k], k == records.length - 1);
     }
     _emit(StatusEvent(_stopProcessing ? 'Processing stopped' : 'Processing done', progress: 1));
@@ -555,8 +576,13 @@ class LocalBackend implements TwmBackend {
 
   @override
   Future<({double fs, int n, double err})> findCoherent(
-          double f0, double tMin, double tMax, double rate, double maxErr, double timeout) async =>
-      (await _ensureQwtb()).findCoherent(f0, tMin, tMax, rate, maxErr, timeout);
+    double f0,
+    double tMin,
+    double tMax,
+    Map<String, Object?> rate,
+    double maxErr,
+    double timeout,
+  ) async => (await _ensureQwtb()).findCoherent(f0, tMin, tMax, rate, maxErr, timeout);
 
   Future<void> dispose() async {
     _closeTimer?.cancel();

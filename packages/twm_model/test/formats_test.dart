@@ -30,11 +30,10 @@ name:: Two HP3458A dmms test
 ''';
       final i = Info.parse(s);
       expect(i.text('type'), 'digitizer');
-      expect(i.textList('channel identifiers'),
-          ['HP3458A, channel 1', 'HP3458A, channel 2']);
+      expect(i.textList('channel identifiers'), ['HP3458A, channel 1', 'HP3458A, channel 2']);
       final ts = i.section('interchannel timeshift');
       expect(ts.matrix('value'), [
-        [0.0, 1.37244e-6]
+        [0.0, 1.37244e-6],
       ]);
       expect(ts.section('primary parameter').text('name'), 'synchronization mode');
       // keys of subsections are not visible at top level
@@ -54,7 +53,7 @@ name:: Two HP3458A dmms test
 ''');
       expect(i.textList('files'), ['RAW\\G0001-A0001.mat', 'RAW\\G0001-A0002.mat']);
       expect(i.textMatrix('q'), [
-        ['a;b', 'say "hi"']
+        ['a;b', 'say "hi"'],
       ]);
     });
 
@@ -63,7 +62,7 @@ name:: Two HP3458A dmms test
         ..setNumber('repetitions count', 3)
         ..setMatrix('gains', [
           [1e-9, 2.5e-9],
-          [1.0, 0.5]
+          [1.0, 0.5],
         ])
         ..setTextList('files', ['RAW\\a.mat', 'x;y']);
       final root = Info()
@@ -74,21 +73,19 @@ name:: Two HP3458A dmms test
       expect(bg.number('repetitions count'), 3);
       expect(bg.matrix('gains'), [
         [1e-9, 2.5e-9],
-        [1.0, 0.5]
+        [1.0, 0.5],
       ]);
       expect(bg.textList('files'), ['RAW\\a.mat', 'x;y']);
     });
 
     test('parses all correction files of TWM repository', () {
-      final files = Directory('$twmRepo/data/corrections')
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.info'));
+      final files = Directory(
+        '$twmRepo/data/corrections',
+      ).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.info'));
       expect(files, isNotEmpty);
       for (final f in files) {
         final i = Info.parse(f.readAsStringSync(encoding: latin1));
-        expect(i.text('type'), isIn(['shunt', 'divider', 'digitizer', 'channel']),
-            reason: f.path);
+        expect(i.text('type'), isIn(['shunt', 'divider', 'digitizer', 'channel']), reason: f.path);
         // serialization must be parseable again with the same content
         final again = Info.parse(i.toString());
         expect(again.text('type'), i.text('type'));
@@ -104,9 +101,9 @@ name:: Two HP3458A dmms test
 
   group('CSV', () {
     test('repository table', () {
-      final s = CsvSheet.parse(File(
-              '$twmRepo/data/corrections/transducers/shunt_100mA113/csv/tfer_gain.csv')
-          .readAsStringSync());
+      final s = CsvSheet.parse(
+        File('$twmRepo/data/corrections/transducers/shunt_100mA113/csv/tfer_gain.csv').readAsStringSync(),
+      );
       expect(s.cell(0, 0), 'Gain tfer');
       expect(s.cell(1, 1), 'gain');
       expect(s.cell(3, 0), '0');
@@ -115,11 +112,12 @@ name:: Two HP3458A dmms test
 
     test('template 2D', () {
       final t = CsvSheet.template(
-          description: 'amp tfer',
-          yAxis: 'f',
-          xAxis: 'rms',
-          quantities: ['gain', 'u(gain)'],
-          xCount: 2);
+        description: 'amp tfer',
+        yAxis: 'f',
+        xAxis: 'rms',
+        quantities: ['gain', 'u(gain)'],
+        xCount: 2,
+      );
       expect(t.cells[1], ['', 'gain', 'gain', 'u(gain)', 'u(gain)']);
       expect(t.cell(2, 0), 'f \\ rms');
       expect(CsvSheet.parse(t.toString()).cell(1, 3), 'u(gain)');
@@ -127,7 +125,7 @@ name:: Two HP3458A dmms test
 
     test('decimal comma fix', () {
       final s = CsvSheet([
-        ['1,5', 'a,b', '2']
+        ['1,5', 'a,b', '2'],
       ])..fixDecimalSeparators();
       expect(s.cells.first, ['1.5', 'a,b', '2']);
     });

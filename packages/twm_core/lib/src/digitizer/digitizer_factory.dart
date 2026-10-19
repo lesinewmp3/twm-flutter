@@ -11,8 +11,7 @@ class DigitizerFactory {
     DigitizerType.simulated: SimulatedDigitizer.new,
   };
 
-  static void register(DigitizerType t, VirtualDigitizer Function(DigitizerConfig) ctor) =>
-      _drivers[t] = ctor;
+  static void register(DigitizerType t, VirtualDigitizer Function(DigitizerConfig) ctor) => _drivers[t] = ctor;
 
   static bool isAvailable(DigitizerType t) => _drivers.containsKey(t);
 

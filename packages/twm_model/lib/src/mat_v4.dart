@@ -14,8 +14,7 @@ enum MatPrecision {
   const MatPrecision(this.code, this.size);
 
   static MatPrecision fromCode(int c) =>
-      values.firstWhere((p) => p.code == c,
-          orElse: () => throw FormatException('MAT v4: unsupported precision $c'));
+      values.firstWhere((p) => p.code == c, orElse: () => throw FormatException('MAT v4: unsupported precision $c'));
 }
 
 /// One real numeric matrix of a MAT v4 file. Data is stored column-major
@@ -97,8 +96,7 @@ class MatV4 {
       if (m > 1 || t != 0 && t != 1) {
         throw FormatException('MAT v4: unsupported type $type');
       }
-      final name = String.fromCharCodes(
-          bytes.sublist(pos + 20, pos + 20 + namlen).takeWhile((c) => c != 0));
+      final name = String.fromCharCodes(bytes.sublist(pos + 20, pos + 20 + namlen).takeWhile((c) => c != 0));
       pos += 20 + namlen;
       final prec = MatPrecision.fromCode(p);
       final n = rows * cols;
@@ -147,8 +145,7 @@ class MatV4 {
         }
         return l;
       case MatPrecision.uint8:
-        return Uint8List.fromList(
-            bd.buffer.asUint8List(bd.offsetInBytes + pos, n));
+        return Uint8List.fromList(bd.buffer.asUint8List(bd.offsetInBytes + pos, n));
     }
   }
 }
