@@ -9,3 +9,5 @@ export 'src/session/record_file.dart';
 export 'src/session/session_writer.dart';
 export 'src/session/session_reader.dart';
 export 'src/measurement/measurement_engine.dart';
+export 'src/octave/octave_bridge.dart';
+export 'src/octave/qwtb_service.dart';

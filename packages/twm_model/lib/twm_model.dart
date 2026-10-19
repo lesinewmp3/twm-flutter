@@ -8,3 +8,4 @@ export 'src/mat_v4.dart';
 export 'src/models/digitizer.dart';
 export 'src/models/digitizer_config.dart';
 export 'src/models/measurement.dart';
+export 'src/models/qwtb.dart';

@@ -186,9 +186,6 @@ class SimulatedDigitizer extends VirtualDigitizer {
         aperture: _aperture,
         isInt16: _cfg.bits <= 16,
         bitResolution: _cfg.bits,
-        deviceAttributes: [
-          DeviceAttribute('aperture [s]', [Info.formatNumber(_aperture)], constPerGroup: false),
-        ],
       );
 
   @override
