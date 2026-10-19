@@ -1,0 +1,2 @@
+5269046b7be472bf227e048b14e38b586ec7adec Wed Jul 15 14:51:21 2026 +0200
+https://github.com/smaslan/TWM octprog/ (unmodified copy)

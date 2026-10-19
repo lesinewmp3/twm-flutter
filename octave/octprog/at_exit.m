@@ -1,0 +1,1 @@
+% place here command sequence to be executed before closing GNU Octave/Matlab:

@@ -1,0 +1,604 @@
+function alginfo = alg_info() %<<<1
+% Part of QWTB. Info script for algorithm InpZ.
+%
+% See also qwtb
+
+    alginfo.id = 'TWM-InpZ';
+    alginfo.name = 'TWM tool wrapper: Input impedance estimator';
+    alginfo.desc = 'An algorithm for measurement of input impedance of digitizer channel or simple 1-port VNA impedance measurements.';
+    alginfo.citation = 'no';
+    alginfo.remarks = 'Set analyzed digitizer channel as current and some auxiliary channel as voltage. Both corrections should be unity transfer transducers. Connect current channel via known reference impedance standard of comparable impedance value to the expected input impedance. Connect voltage channel to input of the reference impedance (to signal source). Reference impedance value can be entered using Rp-Cp or Cp-D user parameters (simple frequency independent values) or can be taken from current transducer gain-phase data ''i_tr_gain'' and ''i_tr_phi'' when Rp, Cp and D are not provided. Algorithm can perform simple open correction by subtracting ''i_adc_Yin'' admittance from measured impedance. It can also perform input cable series and shunting impedance correction by cable model provided in ''i_Zcb'' and ''i_Ycb'' impedances. For low frequencies, the ''i_Ycb'' value can be combined with ''i_adc_Yin'' and ''i_Ycb'' can be set to zero. ''i_Zcb'' value can be used as short correction when ''cable=1''. For high frequencies (VNA mode of operation), all three values ''i_adc_Yin'', ''i_Ycb'' and ''i_Zcb'' must be provided for any meaningful results. With ''cable=1'', the ''i_adc_Yin'' can be replaced by tranducer correction ''i_tr_Yca'', so all three corrections are in transducer data set. Note the ''i_Ycb'', ''i_Zcb'' and ''i_tr_Yca'', values with ''cable=1'' will work correctly only with ''fast=1'' option, otherwise the algorithm would apply usual transducer corrections scheme. ';
+    alginfo.license = 'MIT License';
+
+    
+    
+    pid = 1;
+    % sample data
+    alginfo.inputs(pid).name = 'fs';
+    alginfo.inputs(pid).desc = 'Sampling frequency';
+    alginfo.inputs(pid).alternative = 1;
+    alginfo.inputs(pid).optional = 0;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    
+    alginfo.inputs(pid).name = 'Ts';
+    alginfo.inputs(pid).desc = 'Sampling time';
+    alginfo.inputs(pid).alternative = 1;
+    alginfo.inputs(pid).optional = 0;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    
+    alginfo.inputs(pid).name = 't';
+    alginfo.inputs(pid).desc = 'Time series';
+    alginfo.inputs(pid).alternative = 1;
+    alginfo.inputs(pid).optional = 0;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    
+    alginfo.inputs(pid).name = 'u';
+    alginfo.inputs(pid).desc = 'Sampled voltage';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 0;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    % Algorithm does not support differential inputs.
+    
+    alginfo.inputs(pid).name = 'i';
+    alginfo.inputs(pid).desc = 'Sampled current';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 0;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    % Algorithm does not support differential inputs.
+    
+    alginfo.inputs(pid).name = 'time_shift';
+    alginfo.inputs(pid).desc = 'u/i channel timeshift';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    
+    % --- configuration:
+    % initial frequency estimate
+    alginfo.inputs(pid).name = 'f_est';
+    alginfo.inputs(pid).desc = 'Fundamental frequency estimate (exact for WFFT) [Hz] or empty to auto';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    % harmonic estimation mode
+    alginfo.inputs(pid).name = 'mode';
+    alginfo.inputs(pid).desc = 'Harmonic estimation mode {WFFT (default), PSFE, FPNLSF}';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    alginfo.inputs(pid).enum = {'WFFT','PSFE','FPNLSF'};
+    pid = pid + 1;
+    % window function:
+    alginfo.inputs(pid).name = 'window';
+    alginfo.inputs(pid).desc = 'Window function name for WFFT mode';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    alginfo.inputs(pid).enum = window_coeff();
+    pid = pid + 1;
+    % equivalent circuit mode:
+    ers = z_to_equivalent();    
+    alginfo.inputs(pid).name = 'equ';    
+    alginfo.inputs(pid).desc = sprintf('Output equivalent circuit of DUT (%s)',catcellcsv(ers.tags',', '));
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    alginfo.inputs(pid).enum = ers.tags;
+    pid = pid + 1;
+    
+    % sub-records mode:
+    alginfo.inputs(pid).name = 'vector';
+    alginfo.inputs(pid).desc = 'Process each sub-record as reading, return vector of results (default 0)';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    % sub-records mode:
+    alginfo.inputs(pid).name = 'fast';
+    alginfo.inputs(pid).desc = 'Use faster calculation (default 1: no transducer corrections)';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    % open correction:
+    alginfo.inputs(pid).name = 'open';
+    alginfo.inputs(pid).desc = 'Enable open correction by ADC input admittance ''i_adc_Yin'' value (default 0)';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    % open correction:
+    alginfo.inputs(pid).name = 'cable';
+    alginfo.inputs(pid).desc = 'Enable input cable correction by ''i_Zcb'' and ''i_Ycb'' values for VNA mode (default 0)';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+      
+    
+    % reference impedance:
+    alginfo.inputs(pid).name = 'Rp';
+    alginfo.inputs(pid).desc = 'Reference impedance - parallel resistance (alternative to D)';
+    alginfo.inputs(pid).alternative = 1;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    alginfo.inputs(pid).name = 'Cp';
+    alginfo.inputs(pid).desc = 'Reference impedance - parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    alginfo.inputs(pid).name = 'D';
+    alginfo.inputs(pid).desc = 'Reference impedance - Cp loss tangent (alternative to Rp)';
+    alginfo.inputs(pid).alternative = 1;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 1;
+    pid = pid + 1;
+    
+    
+    % --- flags:
+    % note: presence of these parameters signalizes caller capabilities of the algorithm
+    % Algorithm does not support processing of multiple records at once.
+    
+    % multiple sub-records processing allowed (for WFFT) or vector of results for all others
+    alginfo.inputs(pid).name = 'support_multi_records';
+    alginfo.inputs(pid).desc = 'Algorithm supports processing of a multiple records at once';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+
+    % --- parameters:
+    
+    % ADC setup
+    alginfo.inputs(pid).name = 'adc_bits';
+    alginfo.inputs(pid).desc = 'ADC resolution';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+        
+    alginfo.inputs(pid).name = 'adc_nrng';
+    alginfo.inputs(pid).desc = 'ADC nominal range';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+        
+    alginfo.inputs(pid).name = 'adc_lsb';
+    alginfo.inputs(pid).desc = 'ADC LSB voltage';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % ADC jitter:
+    alginfo.inputs(pid).name = 'adc_jitter';
+    alginfo.inputs(pid).desc = 'ADC rms jitter';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % ADC apperture effect correction:
+    % this set to non-zero value will enable auto correction of the aperture effect by algorithm
+    alginfo.inputs(pid).name = 'adc_aper_corr';
+    alginfo.inputs(pid).desc = 'ADC aperture effect correction switch';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    % apperture value must be passed if the 'adc_aper_corr' is non-zero:
+    alginfo.inputs(pid).name = 'adc_aper';
+    alginfo.inputs(pid).desc = 'ADC aperture value';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;     
+    % ADC jitter [s]:
+    alginfo.inputs(pid).name = 'adc_jitter';
+    alginfo.inputs(pid).desc = 'ADC jitter value';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    % ADC offset [V]:
+    alginfo.inputs(pid).name = 'adc_offset';
+    alginfo.inputs(pid).desc = 'ADC offset voltage';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+          
+    
+    % ADC gain calibration matrix (2D dependence, rows: freqs., columns: harmonic amplitudes)
+    alginfo.inputs(pid).name = 'adc_gain_f';
+    alginfo.inputs(pid).desc = 'ADC gain transfer: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_gain_a';
+    alginfo.inputs(pid).desc = 'ADC gain transfer: voltage axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_gain';
+    alginfo.inputs(pid).desc = 'ADC gain transfer: 2D data';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);     
+    
+    % ADC phase calibration matrix (2D dependence, rows: freqs., columns: harmonic amplitudes)
+    alginfo.inputs(pid).name = 'adc_phi_f';
+    alginfo.inputs(pid).desc = 'ADC phase transfer: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_phi_a';
+    alginfo.inputs(pid).desc = 'ADC phase transfer: voltage axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_phi';
+    alginfo.inputs(pid).desc = 'ADC phase transfer: 2D data';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % ADC SFDR (2D dependence, rows: fund. freqs., columns: fund. harmonic amplitudes)
+    alginfo.inputs(pid).name = 'adc_sfdr_f';
+    alginfo.inputs(pid).desc = 'ADC SFDR: fundamental frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_sfdr_a';
+    alginfo.inputs(pid).desc = 'ADC SFDR: fundamental harmonic amplitude';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_sfdr';
+    alginfo.inputs(pid).desc = 'ADC SFDR: 2D data';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % ADC input admittance matrices (1D dependences, rows: freqs.)
+    alginfo.inputs(pid).name = 'adc_Yin_f';
+    alginfo.inputs(pid).desc = 'ADC input admittance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_Yin_Cp';
+    alginfo.inputs(pid).desc = 'ADC input admittance: parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'adc_Yin_Gp';
+    alginfo.inputs(pid).desc = 'ADC input admittance: parallel conductance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    
+    
+    % Transducer phase calibration matrix (2D dependence, rows: freqs., columns: input rms levels)
+    alginfo.inputs(pid).name = 'tr_gain_f';
+    alginfo.inputs(pid).desc = 'Transducer gain: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_gain_a';
+    alginfo.inputs(pid).desc = 'Transducer gain: rms level axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_gain';
+    alginfo.inputs(pid).desc = 'Transducer gain: 2D data';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Transducer phase calibration matrix (2D dependence, rows: freqs., columns: input rms levels)
+    alginfo.inputs(pid).name = 'tr_phi_f';
+    alginfo.inputs(pid).desc = 'Transducer phase transfer: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_phi_a';
+    alginfo.inputs(pid).desc = 'Transducer phase transfer: rms level axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_phi';
+    alginfo.inputs(pid).desc = 'Transducer phase transfer: 2D data';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % RVD low-side impedance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'tr_Zlo_f';
+    alginfo.inputs(pid).desc = 'RVD low-side impedance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zlo_Rp';
+    alginfo.inputs(pid).desc = 'RVD low-side impedance: parallel resistance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zlo_Cp';
+    alginfo.inputs(pid).desc = 'RVD low-side impedance: parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Optional buffer impedance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'tr_Zbuf_f';
+    alginfo.inputs(pid).desc = 'Transducer optional output buffer impedance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zbuf_Rs';
+    alginfo.inputs(pid).desc = 'Transducer optional output buffer impedance: series resistance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zbuf_Ls';
+    alginfo.inputs(pid).desc = 'Transducer optional output buffer impedance: series inductance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Transducer output terminals series impedance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'tr_Zca_f';
+    alginfo.inputs(pid).desc = 'Transducer terminals series impedance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zca_Ls';
+    alginfo.inputs(pid).desc = 'Transducer terminals series impedance: series inductance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Zca_Rs';
+    alginfo.inputs(pid).desc = 'Transducer terminals series impedance: series resistance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Transducer output terminals shunting admittance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'tr_Yca_f';
+    alginfo.inputs(pid).desc = 'Transducer terminals shunting admittance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Yca_Cp';
+    alginfo.inputs(pid).desc = 'Transducer terminals shunting admittance: parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'tr_Yca_D';
+    alginfo.inputs(pid).desc = 'Transducer terminals shunting admittance: loss tangent';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Cable(s) series impedance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'Zcb_f';
+    alginfo.inputs(pid).desc = 'Cables series impedance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'Zcb_Ls';
+    alginfo.inputs(pid).desc = 'Cables series impedance: series inductance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'Zcb_Rs';
+    alginfo.inputs(pid).desc = 'Cables series impedance: series resistance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    % Cable(s) shunting admittance matrix (1D dependence, rows: freqs.)
+    alginfo.inputs(pid).name = 'Ycb_f';
+    alginfo.inputs(pid).desc = 'Cables shunting admittance: frequency axis';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'Ycb_Cp';
+    alginfo.inputs(pid).desc = 'Cables shunting admittance: parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    alginfo.inputs(pid).name = 'Ycb_D';
+    alginfo.inputs(pid).desc = 'Cables series impedance: parallel capacitance';
+    alginfo.inputs(pid).alternative = 0;
+    alginfo.inputs(pid).optional = 1;
+    alginfo.inputs(pid).parameter = 0;
+    pid = pid + 1;
+    [alginfo,pid] = add_ui_pair(alginfo,pid,0);
+    
+    
+    
+    
+    pid = 1;
+    % outputs       
+    alginfo.outputs(pid).name = 'f';
+    alginfo.outputs(pid).desc = 'Fundamental frequency [Hz]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'Uref';
+    alginfo.outputs(pid).desc = 'Reference RMS voltage [V]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'Udut';
+    alginfo.outputs(pid).desc = 'DUT channel RMS voltage [V]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'Cp';
+    alginfo.outputs(pid).desc = 'Input parallel capacitance [F]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'Rp';
+    alginfo.outputs(pid).desc = 'Input parallel resistance [Ohm]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'Gp';
+    alginfo.outputs(pid).desc = 'Input parallel conductance [S]';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'mjr';
+    alginfo.outputs(pid).desc = 'Major component of DUT impedance';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'mnr';
+    alginfo.outputs(pid).desc = 'Minor component of DUT impedance';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'mnr_name';
+    alginfo.outputs(pid).desc = 'Name of minor component of DUT impedance';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'mjr_name';
+    alginfo.outputs(pid).desc = 'Name of major component of DUT impedance';
+    pid = pid + 1;
+    
+    alginfo.outputs(pid).name = 'spec_f';
+    alginfo.outputs(pid).desc = 'Frequency axis of spectrum';
+    pid = pid + 1;
+    alginfo.outputs(pid).name = 'spec_I';
+    alginfo.outputs(pid).desc = 'DUT voltage spectrum';
+    pid = pid + 1;
+    alginfo.outputs(pid).name = 'spec_U';
+    alginfo.outputs(pid).desc = 'REF voltage spectrum';
+    pid = pid + 1;
+        
+    alginfo.providesGUF = 0;
+    alginfo.providesMCM = 0;
+
+end
+
+
+% creates pair of voltage/current inputs from last quantity in the list 'par'
+function [par,pid] = add_ui_pair(par,pid,has_lo)
+    in_ref = par.inputs(pid-1);    
+    par.inputs(pid) = in_ref;
+    par.inputs(pid).name = ['i_' in_ref.name];
+    par.inputs(pid).desc = ['Current ' in_ref.desc];
+    pid = pid + 1;
+    par.inputs(pid) = in_ref;
+    par.inputs(pid).name = ['u_' in_ref.name];
+    par.inputs(pid).desc = ['Voltage ' in_ref.desc];
+    pid = pid + 1;
+end
+
+

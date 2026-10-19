@@ -9,3 +9,7 @@ export 'src/models/digitizer.dart';
 export 'src/models/digitizer_config.dart';
 export 'src/models/measurement.dart';
 export 'src/models/qwtb.dart';
+export 'src/api/backend.dart';
+export 'src/api/events.dart';
+export 'src/dsp/dsp.dart';
+export 'src/dsp/online_analyzer.dart';

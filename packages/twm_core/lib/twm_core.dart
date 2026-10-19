@@ -11,3 +11,5 @@ export 'src/session/session_reader.dart';
 export 'src/measurement/measurement_engine.dart';
 export 'src/octave/octave_bridge.dart';
 export 'src/octave/qwtb_service.dart';
+export 'src/digitizer/digitizer_factory.dart';
+export 'src/backend/local_backend.dart';
