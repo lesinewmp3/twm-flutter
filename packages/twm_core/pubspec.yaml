@@ -8,5 +8,6 @@ dependencies:
   twm_model:
     path: ../twm_model
   path: any
+  ffi: ^2.1.0
 dev_dependencies:
   test: any

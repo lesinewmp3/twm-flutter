@@ -8,6 +8,7 @@ import 'package:twm_model/twm_model.dart';
 import '../digitizer/digitizer_factory.dart';
 import '../digitizer/virtual_digitizer.dart';
 import '../measurement/measurement_engine.dart';
+import '../drivers/aux/multiplexers.dart';
 import '../multiplexer/multiplexer.dart';
 import '../octave/octave_bridge.dart';
 import '../octave/qwtb_service.dart';
@@ -287,9 +288,7 @@ class LocalBackend implements TwmBackend {
     final dig = await _getDigitizer(s.digitizer);
     Multiplexer? mux;
     if (s.digitizer.multiplexer.enabled) {
-      // hardware multiplexer drivers are registered in drivers/; the dummy
-      // one only tracks the state (simulated digitizer)
-      mux = DummyMultiplexer(s.digitizer.multiplexer);
+      mux = createMultiplexer(s.digitizer.multiplexer, dig);
       await mux.open();
     }
     final ps = s.measurement.processing;

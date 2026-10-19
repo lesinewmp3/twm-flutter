@@ -660,7 +660,7 @@ class DigitizerConfig {
     DigitizerType.simulated => [for (final c in simulated.channels) c.range],
     DigitizerType.niScope => [for (final c in niScope.channels) c.range],
     DigitizerType.hp3458a => [for (final c in hp3458a.channels) c.range],
-    DigitizerType.cdaq => [for (final _ in cdaq.channelIds) 10.0],
+    DigitizerType.cdaq => [for (final _ in cdaq.channelIds) 0.5],
     DigitizerType.keysightDso => [for (final c in dso.channels) c.range],
     DigitizerType.soundCard => List.filled(soundCard.channels, soundCard.range),
     DigitizerType.ads127l21 => List.filled(ads127.channels, ads127.range),
