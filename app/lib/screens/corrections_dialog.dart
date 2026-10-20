@@ -112,7 +112,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                         st.update((s) => s.corrections = c);
                         Navigator.pop(context);
                       },
-                      child: const Text('OK'),
+                      child: Text(tr('OK')),
                     ),
                   ],
                 ),

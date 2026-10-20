@@ -195,11 +195,8 @@ class _BatchDialogState extends State<_BatchDialog> {
       ),
       actions: [
         TextButton(onPressed: _running ? null : () => Navigator.pop(context), child: Text(tr('Close'))),
-        OutlinedButton(onPressed: _running ? () => st.backend.stopProcessing() : null, child: const Text('STOP')),
-        FilledButton(
-          onPressed: _running || _session.isEmpty || _sel.isEmpty ? null : _start,
-          child: const Text('START'),
-        ),
+        OutlinedButton(onPressed: _running ? () => st.backend.stopProcessing() : null, child: Text(tr('STOP'))),
+        FilledButton(onPressed: _running || _session.isEmpty || _sel.isEmpty ? null : _start, child: Text(tr('START'))),
       ],
     );
   }

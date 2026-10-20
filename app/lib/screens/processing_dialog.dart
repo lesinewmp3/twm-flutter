@@ -126,7 +126,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                     ),
                     TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
                     const SizedBox(width: 8),
-                    FilledButton(onPressed: () => Navigator.pop(context, ps), child: const Text('OK')),
+                    FilledButton(onPressed: () => Navigator.pop(context, ps), child: Text(tr('OK'))),
                   ],
                 ),
               ),

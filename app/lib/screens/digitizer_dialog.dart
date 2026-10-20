@@ -207,7 +207,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
-                  FilledButton.tonal(onPressed: _busy ? null : _test, child: const Text('TEST')),
+                  FilledButton.tonal(onPressed: _busy ? null : _test, child: Text(tr('TEST'))),
                   const SizedBox(width: 8),
                   FilledButton.tonal(onPressed: _busy ? null : _selfCal, child: const Text('SELF-CAL')),
                   const SizedBox(width: 12),
@@ -220,7 +220,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                       st.update((s) => s.digitizer = cfg);
                       Navigator.pop(context);
                     },
-                    child: const Text('OK'),
+                    child: Text(tr('OK')),
                   ),
                 ],
               ),

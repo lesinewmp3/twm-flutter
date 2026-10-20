@@ -234,7 +234,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
             _save();
             Navigator.pop(context);
           },
-          child: const Text('OK'),
+          child: Text(tr('OK')),
         ),
       ],
     );

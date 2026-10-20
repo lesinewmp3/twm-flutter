@@ -133,7 +133,7 @@ class _ServerDialogState extends State<_ServerDialog> {
                   setState(() {});
                 }
               : null,
-          child: const Text('STOP'),
+          child: Text(tr('STOP')),
         ),
         FilledButton(
           onPressed: srv.running
@@ -146,7 +146,7 @@ class _ServerDialogState extends State<_ServerDialog> {
                   }
                   setState(() {});
                 },
-          child: const Text('START'),
+          child: Text(tr('START')),
         ),
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close (keeps running)'))),
       ],

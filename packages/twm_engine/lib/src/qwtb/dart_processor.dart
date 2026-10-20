@@ -261,7 +261,10 @@ class DartProcessor {
     if (v == 0) return '0';
     final a = v.abs();
     if (a >= 1e6 || a < 1e-4) return v.toStringAsExponential(7);
-    return v.toStringAsPrecision(9).replaceFirst(RegExp(r'(\.\d*?)0+$'), r'$1').replaceFirst(RegExp(r'\.$'), '');
+    // trim trailing zeros of the fraction (Dart replaceFirst has no $1 backreferences)
+    var t = v.toStringAsPrecision(9);
+    if (t.contains('.')) t = t.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    return t;
   }
 
   Future<ResultsTable> results(String session, String algorithm, ResultViewConfig cfg) async {

@@ -137,6 +137,7 @@ class _MainScreenState extends State<MainScreen> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: pages.indexOf(_page),
           onDestinationSelected: (i) => setState(() => _page = pages[i]),
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           destinations: [
             for (final p in pages)
               NavigationDestination(icon: Icon(_meta(p).$1), selectedIcon: Icon(_meta(p).$2), label: _meta(p).$3),

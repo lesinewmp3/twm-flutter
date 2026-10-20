@@ -55,7 +55,8 @@ class BrowserBackend implements TwmBackend {
     s.measurement
       ..folder = sessionsFolder
       ..nameBase = 'meas_%id%'
-      ..processing = ProcessingSetup(algorithmId: 'TWM-PSFE');
+      ..processingEnabled = true
+      ..processing = ProcessingSetup(algorithmId: 'TWM-PSFE', mode: ProcessingMode.qwtb);
     s.corrections.transducersRoot = '$correctionsFolder/transducers';
     s.digitizer.simulated.realtimeFactor = 1;
     return s;

@@ -145,7 +145,7 @@ class _CsvEditorState extends State<_CsvEditor> {
                               setState(() => _msg = 'Save failed: $e');
                             }
                           },
-                    child: const Text('SAVE'),
+                    child: Text(tr('SAVE')),
                   ),
                 ],
               ),
@@ -577,7 +577,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                               info.remove(item.name);
                               _rev++;
                             }),
-                            child: const Text('CLEAR'),
+                            child: Text(tr('CLEAR')),
                           ),
                         ],
                       ],

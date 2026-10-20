@@ -44,7 +44,7 @@ class _MeasDialogState extends State<_MeasDialog> {
       _caps = r.capabilities;
       _capsMsg = r.ok
           ? '${st.settings.digitizer.type.label}: fs ${formatNum(_caps!.minFs)} - ${formatNum(_caps!.maxFs)} Sa/s, '
-                'max ${_caps!.maxSamplesCount} samples'
+                '${tr('max')} ${_caps!.maxSamplesCount} ${tr('samples')}'
           : '${tr('Digitizer not available')}: ${r.message}';
       if (r.ok) st.channelIdns = r.channelIdns;
     });
@@ -213,8 +213,11 @@ class _MeasDialogState extends State<_MeasDialog> {
                               ),
                           ]),
                           Text(
-                            'DFT bin: ${formatNum(m.fs / m.samplesCount)} Hz, record length: ${formatNum(m.measurementTime)} s'
-                            '${m.subRecordsCount > 1 ? ' x ${m.subRecordsCount} sub-records' : ''}',
+                            trf('DFT bin: {0} Hz, record length: {1} s', [
+                                  formatNum(m.fs / m.samplesCount),
+                                  formatNum(m.measurementTime),
+                                ]) +
+                                (m.subRecordsCount > 1 ? ' x ${m.subRecordsCount} ${tr('sub-records')}' : ''),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -235,7 +238,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                                 if (caps?.hasExtTrig ?? true) TriggerSource.external,
                                 if (caps?.hasLevelTrig ?? true) TriggerSource.level,
                               ],
-                              itemLabel: (t) => TriggerConfig(source: t).modeName,
+                              itemLabel: (t) => tr(TriggerConfig(source: t).modeName),
                               onChanged: (v) => setState(() => m.trigger.source = v),
                             ),
                             if (m.trigger.source != TriggerSource.immediate)
@@ -364,7 +367,7 @@ class _MeasDialogState extends State<_MeasDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('CANCEL'))),
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () {
@@ -373,7 +376,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                       st.update((x) => x.measurement = m);
                       Navigator.pop(context, true);
                     },
-                    child: const Text('OK'),
+                    child: Text(tr('OK')),
                   ),
                 ],
               ),

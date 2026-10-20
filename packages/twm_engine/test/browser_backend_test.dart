@@ -4,6 +4,13 @@ import 'package:twm_model/twm_model.dart';
 
 /// Complete browser mode workflow on the in-memory store.
 void main() {
+  test('result number formatting', () {
+    expect(DartProcessor.fmt(50.0), '50');
+    expect(DartProcessor.fmt(50.1), '50.1');
+    expect(DartProcessor.fmt(7.071067812), '7.07106781');
+    expect(DartProcessor.fmt(1200.0), '1200');
+  });
+
   test('measure, process by Dart algorithm, view results, zip round trip', () async {
     final store = MemoryFileStore();
     await store.writeText(
