@@ -63,12 +63,13 @@ void main() {
       nameBase: 'dmm',
     );
     final session = await MeasurementEngine(
+      store: IoFileStore(),
       digitizer: d,
       digitizerConfig: c,
       config: mc,
       corrections: CorrectionsConfig(),
     ).run();
-    final r = await SessionReader.open(session);
+    final r = await SessionReader.open(IoFileStore(), session);
     expect(r.channelDescriptors, ['HP3458A, sn. MY45053091', 'HP3458A, sn. MY45053092']);
     final h = r.header;
     expect(h.text('synchronization mode'), 'MASTER-SLAVE, MASTER clocked by TIMER');

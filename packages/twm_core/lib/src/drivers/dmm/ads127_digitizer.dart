@@ -1,6 +1,6 @@
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 
 /// CMI ADS127L21 experimental digitizer. Its communication protocol is not
 /// public (TWM contains only binary LabVIEW VIs), so this port cannot

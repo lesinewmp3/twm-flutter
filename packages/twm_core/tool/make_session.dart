@@ -20,6 +20,7 @@ Future<void> main(List<String> args) async {
     ],
   );
   final s = await MeasurementEngine(
+          store: IoFileStore(),
     digitizer: SimulatedDigitizer(dc),
     digitizerConfig: dc,
     config: mc,

@@ -23,12 +23,13 @@ void main() {
     final c = DigitizerConfig(type: DigitizerType.soundCard, onClose: OnCloseAction.immediateReset);
     final mc = MeasurementConfig(fs: 48000, samplesCount: 24000, recordsCount: 2, folder: tmp.path, nameBase: 's');
     final session = await MeasurementEngine(
+      store: IoFileStore(),
       digitizer: DigitizerFactory.create(c),
       digitizerConfig: c,
       config: mc,
       corrections: CorrectionsConfig(),
     ).run().timeout(const Duration(seconds: 20));
-    final r = await SessionReader.open(session);
+    final r = await SessionReader.open(IoFileStore(), session);
     final rec = await r.readRecord(1, 2);
     expect(rec.channels.length, 2);
     expect(rec.fullLength, 24000);

@@ -5,15 +5,11 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:twm_model/twm_model.dart';
 
-import '../digitizer/digitizer_factory.dart';
-import '../digitizer/virtual_digitizer.dart';
-import '../measurement/measurement_engine.dart';
+import 'package:twm_engine/twm_engine.dart';
 import '../drivers/aux/multiplexers.dart';
-import '../multiplexer/multiplexer.dart';
+import '../store/io_file_store.dart';
 import '../octave/octave_bridge.dart';
 import '../octave/qwtb_service.dart';
-import '../session/session_reader.dart';
-import '../session/session_writer.dart';
 
 /// Locations of the application resources (m-files, example corrections)
 /// and of the settings file.
@@ -63,6 +59,7 @@ class AppPaths {
 /// In-process implementation of [TwmBackend] (desktop and server).
 class LocalBackend implements TwmBackend {
   final AppPaths paths;
+  final _store = IoFileStore();
   final _events = StreamController<BackendEvent>.broadcast();
 
   VirtualDigitizer? _digitizer;
@@ -275,11 +272,11 @@ class LocalBackend implements TwmBackend {
 
   @override
   Future<List<String>> collidingFiles(MeasurementConfig cfg) async =>
-      SessionWriter.collidingFiles(MeasurementEngine.sessionRoot(cfg, DateTime.now()));
+      SessionWriter.collidingFiles(_store, MeasurementEngine.sessionRoot(cfg, DateTime.now()));
 
   @override
   Future<void> clearSession(MeasurementConfig cfg) =>
-      SessionWriter.clearSession(MeasurementEngine.sessionRoot(cfg, DateTime.now()));
+      SessionWriter.clearSession(_store, MeasurementEngine.sessionRoot(cfg, DateTime.now()));
 
   @override
   Future<String> startMeasurement(AppSettings s) async {
@@ -294,6 +291,7 @@ class LocalBackend implements TwmBackend {
     final ps = s.measurement.processing;
     final online = OnlineAnalyzer(s.online);
     final engine = MeasurementEngine(
+      store: _store,
       digitizer: dig,
       digitizerConfig: s.digitizer,
       config: s.measurement,
@@ -384,7 +382,7 @@ class LocalBackend implements TwmBackend {
 
   @override
   Future<SessionSummary> sessionSummary(String sessionPath) async {
-    final r = await SessionReader.open(sessionPath);
+    final r = await SessionReader.open(_store, sessionPath);
     final h = r.header;
     final recs = [for (var g = 1; g <= r.groupsCount; g++) r.repetitions(g)];
     var tags = <String>[];
@@ -415,7 +413,7 @@ class LocalBackend implements TwmBackend {
 
   @override
   Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) async {
-    final r = await SessionReader.open(sessionPath);
+    final r = await SessionReader.open(_store, sessionPath);
     final d = await r.readRecord(group, record, maxPoints: maxPoints);
     return WaveformData(d.names, [for (final c in d.channels) c.toList()], d.ts, d.fullLength);
   }
@@ -549,7 +547,7 @@ class LocalBackend implements TwmBackend {
     await _ensureQwtb();
     final root = p.dirname(sessionPath);
     if (setup.mode == ProcessingMode.qwtb) {
-      await SessionWriter.writeQwtbSetup(root, setup);
+      await SessionWriter.writeQwtbSetup(_store, root, setup);
     }
     _stopProcessing = false;
     for (var k = 0; k < records.length; k++) {

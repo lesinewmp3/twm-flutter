@@ -1,7 +1,6 @@
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
-import '../../multiplexer/multiplexer.dart';
+import 'package:twm_engine/twm_engine.dart';
 import '../io/instrument_io.dart';
 import '../niscope/niscope_digitizer.dart';
 

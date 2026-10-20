@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 
 typedef _CreateTaskN = Int32 Function(Pointer<Utf8>, Pointer<Pointer<Void>>);
 typedef _CreateTaskD = int Function(Pointer<Utf8>, Pointer<Pointer<Void>>);

@@ -9,6 +9,7 @@ import '../digitizer/virtual_digitizer.dart';
 import '../multiplexer/multiplexer.dart';
 import '../session/record_file.dart';
 import '../session/session_writer.dart';
+import '../store/file_store.dart';
 
 /// Events emitted by the running measurement (status line, progress bar,
 /// waveform preview, new record/result notifications).
@@ -58,6 +59,7 @@ typedef RecordProcessor = Future<void> Function(String sessionFile, int group, i
 /// to the session folder and optionally calls the processing for each
 /// record.
 class MeasurementEngine {
+  final FileStore store;
   final VirtualDigitizer digitizer;
   final DigitizerConfig digitizerConfig;
   final MeasurementConfig config;
@@ -76,6 +78,7 @@ class MeasurementEngine {
   bool _running = false;
 
   MeasurementEngine({
+    required this.store,
     required this.digitizer,
     required this.digitizerConfig,
     required this.config,
@@ -90,7 +93,8 @@ class MeasurementEngine {
   bool get running => _running;
 
   /// Session folder for [config] at time [now].
-  static String sessionRoot(MeasurementConfig c, DateTime now) => p.join(c.folder, c.resolveName(now));
+  static String sessionRoot(MeasurementConfig c, DateTime now, [p.Context? ctx]) =>
+      (ctx ?? p.context).join(c.folder, c.resolveName(now));
 
   void stop() {
     _stop = true;
@@ -107,8 +111,8 @@ class MeasurementEngine {
     _stop = false;
     final t0 = now ?? DateTime.now();
     final save = config.saveRecords || !config.continuous;
-    final root = save ? sessionRoot(config, t0) : '';
-    final sessionFile = save ? p.join(root, 'session.info') : '';
+    final root = save ? sessionRoot(config, t0, store.path) : '';
+    final sessionFile = save ? store.path.join(root, 'session.info') : '';
     Object? error;
     try {
       _status('Initializing digitizer...');
@@ -141,6 +145,7 @@ class MeasurementEngine {
       var group = 0;
       if (save) {
         writer = SessionWriter(
+          store: store,
           root: root,
           channelDescriptors: digitizer.channelIdns,
           auxDescriptors: digitizer.auxIdns,
@@ -172,7 +177,7 @@ class MeasurementEngine {
           ),
         );
         if (config.processingEnabled && config.processing.mode == ProcessingMode.qwtb) {
-          await SessionWriter.writeQwtbSetup(root, config.processing);
+          await SessionWriter.writeQwtbSetup(store, root, config.processing);
         }
         await writer.save();
       }

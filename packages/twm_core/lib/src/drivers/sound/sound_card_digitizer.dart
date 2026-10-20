@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 import 'sound_capture.dart';
 
 /// Sound card digitizer (TWM "dsdll" driver: DirectSound). Low accuracy,

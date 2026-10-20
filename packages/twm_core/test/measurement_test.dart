@@ -47,7 +47,13 @@ void main() {
     );
     expect(corr.validate(2), isEmpty);
     final dig = SimulatedDigitizer(dc);
-    final engine = MeasurementEngine(digitizer: dig, digitizerConfig: dc, config: mc, corrections: corr);
+    final engine = MeasurementEngine(
+      store: IoFileStore(),
+      digitizer: dig,
+      digitizerConfig: dc,
+      config: mc,
+      corrections: corr,
+    );
     final events = <MeasEvent>[];
     engine.events.listen(events.add);
     final session = await engine.run();
@@ -79,7 +85,7 @@ void main() {
     expect(File(p.join(tmp.path, 'meas_007', 'TRANSDUCERS', 'T02', 'dummy.info')).existsSync(), isTrue);
 
     // data read back
-    final rd = await SessionReader.open(session);
+    final rd = await SessionReader.open(IoFileStore(), session);
     expect(rd.repetitions(1), 3);
     final rec = await rd.readRecord(1, 2);
     expect(rec.channels.length, 2);
@@ -105,6 +111,7 @@ void main() {
     );
     final mux = DummyMultiplexer(dc.multiplexer);
     final engine = MeasurementEngine(
+      store: IoFileStore(),
       digitizer: SimulatedDigitizer(dc),
       digitizerConfig: dc,
       config: mc,
@@ -133,7 +140,7 @@ void main() {
       ],
       uncertainty: UncertaintyMode.guf,
     );
-    await SessionWriter.writeQwtbSetup(tmp.path, ps);
+    await SessionWriter.writeQwtbSetup(IoFileStore(), tmp.path, ps);
     final q = Info.parse(File(p.join(tmp.path, 'qwtb.info')).readAsStringSync()).section('QWTB processing setup');
     expect(q.text('algorithm id'), 'TWM-PWRTDI');
     expect(q.text('uncertainty mode'), 'guf');
@@ -145,6 +152,7 @@ void main() {
     final dc = simConfig()..simulated.realtimeFactor = 1;
     final mc = MeasurementConfig(fs: 1000, samplesCount: 100, continuous: true, saveRecords: false, folder: tmp.path);
     final engine = MeasurementEngine(
+      store: IoFileStore(),
       digitizer: SimulatedDigitizer(dc),
       digitizerConfig: dc,
       config: mc,

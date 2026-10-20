@@ -1,27 +1,28 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:path/path.dart' as p;
 import 'package:twm_model/twm_model.dart';
 
+import '../store/file_store.dart';
 import 'record_file.dart';
 
 /// Reader of a TWM measurement session folder (counterpart of
 /// `tpq_load_record.m` used by the record viewer).
 class SessionReader {
+  final FileStore store;
   final String root;
   final Info header;
 
-  SessionReader._(this.root, this.header);
+  SessionReader._(this.store, this.root, this.header);
 
-  static Future<SessionReader> open(String pathOrRoot) async {
+  static Future<SessionReader> open(FileStore store, String pathOrRoot) async {
+    final p = store.path;
     var file = pathOrRoot;
-    if (await FileSystemEntity.isDirectory(pathOrRoot)) {
+    if (await store.isDirectory(pathOrRoot)) {
       file = p.join(pathOrRoot, 'session.info');
     }
-    final txt = await File(file).readAsString();
-    return SessionReader._(p.dirname(file), Info.parse(txt));
+    final txt = await store.readText(file);
+    return SessionReader._(store, p.dirname(file), Info.parse(txt));
   }
 
   int get groupsCount => header.number('groups count').round();
@@ -43,7 +44,7 @@ class SessionReader {
     final offs = gi.matrix('record sample data offsets [V]')[rep - 1];
     final ts = gi.vector('record time increments [s]')[rep - 1];
     final tstamps = gi.matrix('record relative timestamps [s]')[rep - 1];
-    final v = await RecordFileReader.read(p.join(root, rel), varName: dataVariable);
+    final v = await RecordFileReader.read(store, store.path.join(root, rel), varName: dataVariable);
     final ch = <Float64List>[];
     var step = 1;
     if (maxPoints > 0 && v.cols > maxPoints) step = (v.cols / maxPoints).ceil();

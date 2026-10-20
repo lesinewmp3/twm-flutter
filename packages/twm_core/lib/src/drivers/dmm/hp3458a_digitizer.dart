@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 import '../aux/aux_instruments.dart';
 import '../io/instrument_io.dart';
 

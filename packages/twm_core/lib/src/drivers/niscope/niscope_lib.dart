@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 
 /// `struct niScope_wfmInfo` (niScope.h).
 final class WfmInfo extends Struct {

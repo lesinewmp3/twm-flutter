@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:twm_model/twm_model.dart';
 
-import '../../digitizer/virtual_digitizer.dart';
+import 'package:twm_engine/twm_engine.dart';
 import 'niscope_lib.dart';
 
 /// NI PXI-5922 (niScope) virtual digitizer, one or more cards synchronized

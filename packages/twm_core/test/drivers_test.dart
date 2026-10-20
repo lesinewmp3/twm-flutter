@@ -44,12 +44,13 @@ void main() {
       ..dso.visa = 'SIM::DSO::1';
     final mc = MeasurementConfig(fs: 100000, samplesCount: 2000, folder: tmp.path, nameBase: 'dso');
     final session = await MeasurementEngine(
+      store: IoFileStore(),
       digitizer: DigitizerFactory.create(c),
       digitizerConfig: c,
       config: mc,
       corrections: CorrectionsConfig(),
     ).run();
-    final r = await SessionReader.open(session);
+    final r = await SessionReader.open(IoFileStore(), session);
     expect(r.channelDescriptors.first, 'DSOS604A MY00000001, channel 1');
     final rec = await r.readRecord(1, 1);
     final peak = rec.channels[0].reduce((a, b) => a.abs() > b.abs() ? a : b).abs();

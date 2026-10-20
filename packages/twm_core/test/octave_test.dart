@@ -73,6 +73,7 @@ void main() {
       ],
     );
     final session = await MeasurementEngine(
+      store: IoFileStore(),
       digitizer: SimulatedDigitizer(dc),
       digitizerConfig: dc,
       config: mc,

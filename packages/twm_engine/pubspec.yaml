@@ -1,0 +1,12 @@
+name: twm_engine
+description: TWM/TPQA measurement engine, simulated digitizer and session files on an abstract file store (web safe, no dart:io).
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.9.0
+dependencies:
+  twm_model:
+    path: ../twm_model
+  path: any
+dev_dependencies:
+  test: any

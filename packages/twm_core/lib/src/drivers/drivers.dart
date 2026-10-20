@@ -3,7 +3,7 @@ library;
 
 import 'package:twm_model/twm_model.dart';
 
-import '../digitizer/digitizer_factory.dart';
+import 'package:twm_engine/twm_engine.dart';
 import 'daqmx/cdaq_digitizer.dart';
 import 'dmm/ads127_digitizer.dart';
 import 'dmm/hp3458a_digitizer.dart';

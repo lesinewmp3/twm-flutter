@@ -2,16 +2,11 @@
 /// session files and GNU Octave bridge.
 library;
 
-export 'src/digitizer/virtual_digitizer.dart';
-export 'src/digitizer/simulated_digitizer.dart';
-export 'src/multiplexer/multiplexer.dart';
-export 'src/session/record_file.dart';
-export 'src/session/session_writer.dart';
-export 'src/session/session_reader.dart';
-export 'src/measurement/measurement_engine.dart';
+export 'package:twm_engine/twm_engine.dart';
+export 'src/store/io_file_store.dart';
+
 export 'src/octave/octave_bridge.dart';
 export 'src/octave/qwtb_service.dart';
-export 'src/digitizer/digitizer_factory.dart';
 export 'src/backend/local_backend.dart';
 export 'src/drivers/drivers.dart';
 export 'src/server/twm_server.dart';

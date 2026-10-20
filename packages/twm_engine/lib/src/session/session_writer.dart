@@ -1,9 +1,7 @@
-import 'dart:io';
-
-import 'package:path/path.dart' as p;
 import 'package:twm_model/twm_model.dart';
 
 import '../digitizer/virtual_digitizer.dart';
+import '../store/file_store.dart';
 import 'record_file.dart';
 
 /// Data of one acquired record for the session header.
@@ -78,11 +76,14 @@ class SessionWriter {
   final MultiplexerConfig? multiplexer;
   final String comment;
 
+  final FileStore store;
+
   final List<GroupSetup> _groups = [];
   final List<List<RecordEntry>> _records = [];
   Info? _setupSection;
 
   SessionWriter({
+    required this.store,
     required this.root,
     required this.channelDescriptors,
     this.auxDescriptors = const [],
@@ -93,7 +94,7 @@ class SessionWriter {
     this.comment = '',
   });
 
-  String get headerPath => p.join(root, 'session.info');
+  String get headerPath => store.path.join(root, 'session.info');
   int get groupsCount => _groups.length;
 
   static String recordName(int group, int repetition) =>
@@ -102,10 +103,10 @@ class SessionWriter {
   /// Relative path as stored in the header (DOS separators like TWM).
   static String recordRelPath(int group, int repetition) => 'RAW\\${recordName(group, repetition)}';
 
-  String recordAbsPath(int group, int repetition) => p.join(root, 'RAW', recordName(group, repetition));
+  String recordAbsPath(int group, int repetition) => store.path.join(root, 'RAW', recordName(group, repetition));
 
   Future<RecordFileWriter> openRecord(int group, int repetition, {required bool int16}) =>
-      RecordFileWriter.create(recordAbsPath(group, repetition), channelDescriptors.length, int16: int16);
+      RecordFileWriter.create(store, recordAbsPath(group, repetition), channelDescriptors.length, int16: int16);
 
   /// Starts a new measurement group; returns its 1-based index.
   int addGroup(GroupSetup g) {
@@ -126,7 +127,7 @@ class SessionWriter {
     final s = Info();
     // digitizer
     var digRel = '';
-    if (corr.digitizerPath.isNotEmpty && File(corr.digitizerPath).existsSync()) {
+    if (corr.digitizerPath.isNotEmpty && await store.exists(corr.digitizerPath)) {
       digRel = await _copyCorrection(corr.digitizerPath, 'DIGITIZER', null);
     }
     // transducers
@@ -139,8 +140,8 @@ class SessionWriter {
     for (var k = 0; k < corr.transducers.length; k++) {
       final t = corr.transducers[k];
       var src = t.path;
-      if (!p.isAbsolute(src) && corr.transducersRoot.isNotEmpty) {
-        src = p.join(corr.transducersRoot, src);
+      if (!store.path.isAbsolute(src) && corr.transducersRoot.isNotEmpty) {
+        src = store.path.join(corr.transducersRoot, src);
       }
       final tdir = 'T${(k + 1).toString().padLeft(2, '0')}';
       trPaths.add(await _copyCorrection(src, 'TRANSDUCERS', tdir));
@@ -172,33 +173,20 @@ class SessionWriter {
   /// Copies folder containing the correction INFO file and returns relative
   /// path of the copied INFO file. Folder copy keeps relative CSV/channel links.
   Future<String> _copyCorrection(String infoPath, String dest, String? rename) async {
-    final file = File(infoPath);
-    if (!file.existsSync()) {
-      throw FileSystemException('Correction file not found', infoPath);
+    final pc = store.path;
+    if (!await store.exists(infoPath)) {
+      throw StoreException('Correction file not found', infoPath);
     }
-    var srcDir = file.parent;
+    var srcDir = pc.dirname(infoPath);
     // digitizer corrections may reference '..\channel\x.info'
-    final txt = await file.readAsString();
+    final txt = await store.readText(infoPath);
     if (RegExp(r'^\s*\.\.[\\/]', multiLine: true).hasMatch(txt)) {
-      srcDir = srcDir.parent;
+      srcDir = pc.dirname(srcDir);
     }
-    final name = rename ?? p.basename(srcDir.path);
-    final dst = Directory(p.join(root, dest, name));
-    await _copyDir(srcDir, dst);
-    final rel = p.relative(infoPath, from: srcDir.path);
-    return [dest, name, ...p.split(rel)].join('\\');
-  }
-
-  static Future<void> _copyDir(Directory src, Directory dst) async {
-    await dst.create(recursive: true);
-    await for (final e in src.list(recursive: false)) {
-      final target = p.join(dst.path, p.basename(e.path));
-      if (e is Directory) {
-        await _copyDir(e, Directory(target));
-      } else if (e is File) {
-        await e.copy(target);
-      }
-    }
+    final name = rename ?? pc.basename(srcDir);
+    await store.copyTree(srcDir, pc.join(root, dest, name));
+    final rel = pc.relative(infoPath, from: srcDir);
+    return [dest, name, ...pc.split(rel)].join('\\');
   }
 
   // --------------------------------------------------------------- header --
@@ -292,15 +280,15 @@ class SessionWriter {
   }
 
   Future<void> save() async {
-    await Directory(root).create(recursive: true);
-    await File(headerPath).writeAsString(buildHeader().toString());
+    await store.mkdirs(root);
+    await store.writeText(headerPath, buildHeader().toString());
   }
 
   // ------------------------------------------------------------ processing --
 
   /// Writes `qwtb.info` with the processing setup (the LabVIEW VI
   /// "Meas Proc QWTB Write Algorithm Processing Header").
-  static Future<void> writeQwtbSetup(String root, ProcessingSetup ps) async {
+  static Future<void> writeQwtbSetup(FileStore store, String root, ProcessingSetup ps) async {
     final i = Info();
     i.setText('algorithm id', ps.algorithmId);
     i.setNumber('calculate whole average at once', ps.wholeAverageAtOnce ? 1 : 0);
@@ -317,31 +305,29 @@ class SessionWriter {
       i.setTextList(p.name, p.values);
     }
     final root2 = Info()..setSection('QWTB processing setup', i);
-    await Directory(root).create(recursive: true);
-    await File(p.join(root, 'qwtb.info')).writeAsString(root2.toString());
+    await store.mkdirs(root);
+    await store.writeText(store.path.join(root, 'qwtb.info'), root2.toString());
   }
 
   /// Lists files that would be overwritten by a new measurement in [root]
   /// (TWM "clear last measurement session data" warning).
-  static List<String> collidingFiles(String root) {
-    final d = Directory(root);
-    if (!d.existsSync()) return [];
+  static Future<List<String>> collidingFiles(FileStore store, String root) async {
+    if (!await store.isDirectory(root)) return [];
     return [
-      for (final e in d.listSync(recursive: true))
-        if (e is File) p.relative(e.path, from: root),
+      for (final e in await store.list(root, recursive: true))
+        if (!e.isDir) store.path.relative(e.path, from: root),
     ]..sort();
   }
 
-  static Future<void> clearSession(String root) async {
-    final d = Directory(root);
-    if (!d.existsSync()) return;
-    for (final name in ['session.info', 'qwtb.info', 'results.info']) {
-      final f = File(p.join(root, name));
-      if (f.existsSync()) await f.delete();
+  static Future<void> clearSession(FileStore store, String root) async {
+    if (!await store.isDirectory(root)) return;
+    for (final name in ['session.info', 'qwtb.info', 'results.info', 'results_web.json']) {
+      final f = store.path.join(root, name);
+      if (await store.exists(f)) await store.delete(f);
     }
     for (final name in ['RAW', 'RESULTS', 'DIGITIZER', 'TRANSDUCERS']) {
-      final s = Directory(p.join(root, name));
-      if (s.existsSync()) await s.delete(recursive: true);
+      final d = store.path.join(root, name);
+      if (await store.exists(d)) await store.delete(d, recursive: true);
     }
   }
 }
