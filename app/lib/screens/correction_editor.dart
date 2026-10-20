@@ -6,6 +6,7 @@ import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
 import '../widgets/matrix_editor.dart';
 import '../widgets/paths.dart';
+import '../l10n.dart';
 
 // =================================================================== CSV ====
 
@@ -54,7 +55,7 @@ class _CsvEditorState extends State<_CsvEditor> {
     } else if (widget.template != null) {
       setState(() {
         sheet = widget.template!.template();
-        _msg = 'New file - template created.';
+        _msg = tr('New file - template created.');
         _dirty = true;
       });
     }
@@ -73,10 +74,10 @@ class _CsvEditorState extends State<_CsvEditor> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('CSV correction matrix editor', style: Theme.of(context).textTheme.titleLarge),
+              Text(tr('CSV correction matrix editor'), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               PathField(
-                label: 'File path',
+                label: tr('File path'),
                 value: path,
                 backend: b,
                 extensions: const ['.csv'],
@@ -95,19 +96,19 @@ class _CsvEditorState extends State<_CsvEditor> {
                         sheet = widget.template!.template(xCount: widget.template!.is2d ? 2 : 1);
                         _dirty = true;
                       }),
-                      child: const Text('Create template'),
+                      child: Text(tr('Create template')),
                     ),
                   OutlinedButton(
                     onPressed: () => setState(() {
                       sheet.fixDecimalSeparators();
                       _dirty = true;
                     }),
-                    child: const Text('Convert decimal commas'),
+                    child: Text(tr('Convert decimal commas')),
                   ),
                   if (widget.template != null)
                     Tooltip(
                       message: widget.template!.description,
-                      child: const Chip(label: Text('Format info')),
+                      child: Chip(label: Text(tr('Format info'))),
                     ),
                 ],
               ),
@@ -118,7 +119,7 @@ class _CsvEditorState extends State<_CsvEditor> {
               Row(
                 children: [
                   Expanded(child: Text(_msg)),
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                  TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close'))),
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: !_dirty && path.isNotEmpty
@@ -129,7 +130,7 @@ class _CsvEditorState extends State<_CsvEditor> {
                               final r = await browse(
                                 context,
                                 b,
-                                title: 'Save CSV',
+                                title: tr('Save CSV'),
                                 mode: BrowseMode.saveFile,
                                 extensions: const ['.csv'],
                                 defaultName: 'table.csv',
@@ -194,7 +195,7 @@ class _TransducerEditorState extends State<_TransducerEditor> {
       setState(() {
         info = i;
         _rev++;
-        _msg = 'Loaded.';
+        _msg = tr('Loaded.');
         _err = false;
       });
     } catch (e) {
@@ -233,10 +234,10 @@ class _TransducerEditorState extends State<_TransducerEditor> {
             key: ValueKey(_rev),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Transducer correction editor', style: Theme.of(context).textTheme.titleLarge),
+              Text(tr('Transducer correction editor'), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               PathField(
-                label: 'Correction file path',
+                label: tr('Correction file path'),
                 value: path,
                 backend: b,
                 extensions: const ['.info'],
@@ -247,15 +248,15 @@ class _TransducerEditorState extends State<_TransducerEditor> {
               ),
               FieldRow([
                 Choice<String>(
-                  label: 'Type',
+                  label: tr('Type'),
                   value: _t('type').isEmpty ? 'divider' : _t('type'),
                   items: const ['divider', 'shunt'],
                   width: 140,
                   onChanged: (v) => _set('type', v),
                 ),
-                TextEntry(label: 'Name', value: _t('name'), width: 300, onChanged: (v) => info.setText('name', v)),
+                TextEntry(label: tr('Name'), value: _t('name'), width: 300, onChanged: (v) => info.setText('name', v)),
                 TextEntry(
-                  label: 'Serial number',
+                  label: tr('Serial number'),
                   value: _t('serial number'),
                   width: 200,
                   onChanged: (v) => info.setText('serial number', v),
@@ -263,33 +264,33 @@ class _TransducerEditorState extends State<_TransducerEditor> {
               ]),
               FieldRow([
                 TextEntry(
-                  label: 'Digitizer channel identifier (optional)',
+                  label: tr('Digitizer channel identifier (optional)'),
                   value: _t('linked to digitizer channel'),
                   width: 360,
                   onChanged: (v) => info.setText('linked to digitizer channel', v),
                 ),
                 NumField(
-                  label: 'Nominal ratio',
+                  label: tr('Nominal ratio'),
                   value: Info.parseNumber(_t('nominal ratio')) ?? 1,
                   width: 160,
                   onChanged: (v) => info.setText('nominal ratio', Info.formatNumber(v)),
                 ),
                 NumField(
-                  label: 'Uncertainty',
+                  label: tr('Uncertainty'),
                   value: Info.parseNumber(_t('nominal ratio uncertainty')) ?? 0,
                   width: 140,
                   onChanged: (v) => info.setText('nominal ratio uncertainty', Info.formatNumber(v)),
                 ),
               ]),
               Group(
-                title: 'Correction items (CSV tables)',
+                title: tr('Correction items (CSV tables)'),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
                         Choice<CsvItem>(
-                          label: 'Correction item',
+                          label: tr('Correction item'),
                           value: item,
                           items: CorrectionCatalog.transducerItems,
                           width: 420,
@@ -320,7 +321,7 @@ class _TransducerEditorState extends State<_TransducerEditor> {
                         Expanded(
                           child: TextEntry(
                             key: ValueKey('${item.key}$_rev'),
-                            label: 'CSV table path (relative to the INFO file)',
+                            label: tr('CSV table path (relative to the INFO file)'),
                             value: rel,
                             onChanged: (v) => info.setText(item.key, v),
                           ),
@@ -341,14 +342,14 @@ class _TransducerEditorState extends State<_TransducerEditor> {
                                     });
                                   }
                                 },
-                          child: const Text('EDIT CSV'),
+                          child: Text(tr('EDIT CSV')),
                         ),
                         TextButton(
                           onPressed: () => setState(() {
                             info.remove(item.key);
                             _rev++;
                           }),
-                          child: const Text('Remove'),
+                          child: Text(tr('Remove')),
                         ),
                       ],
                     ),
@@ -361,7 +362,7 @@ class _TransducerEditorState extends State<_TransducerEditor> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                  TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close'))),
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () async {
@@ -370,7 +371,7 @@ class _TransducerEditorState extends State<_TransducerEditor> {
                         final r = await browse(
                           context,
                           b,
-                          title: 'Save transducer correction',
+                          title: tr('Save transducer correction'),
                           mode: BrowseMode.saveFile,
                           extensions: const ['.info'],
                           defaultName: 'transducer.info',
@@ -388,7 +389,7 @@ class _TransducerEditorState extends State<_TransducerEditor> {
                         });
                       }
                     },
-                    child: const Text('SAVE CHANGES'),
+                    child: Text(tr('SAVE CHANGES')),
                   ),
                 ],
               ),
@@ -441,7 +442,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
       setState(() {
         info = i;
         _rev++;
-        _msg = 'Loaded.';
+        _msg = tr('Loaded.');
         _err = false;
       });
     } catch (e) {
@@ -503,12 +504,12 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.channel ? 'Channel correction editor' : 'Digitizer correction editor',
+                widget.channel ? tr('Channel correction editor') : tr('Digitizer correction editor'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
               PathField(
-                label: 'Correction file path',
+                label: tr('Correction file path'),
                 value: path,
                 backend: b,
                 extensions: const ['.info'],
@@ -519,14 +520,14 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
               ),
               FieldRow([
                 TextEntry(
-                  label: 'Name',
+                  label: tr('Name'),
                   value: info.textOrNull('name') ?? '',
                   width: 400,
                   onChanged: (v) => info.setText('name', v),
                 ),
                 if (widget.channel)
                   TextEntry(
-                    label: 'Channel name filter (channel identifier)',
+                    label: tr('Channel name filter (channel identifier)'),
                     value: info.textOrNull('channel identifier') ?? '',
                     width: 360,
                     onChanged: (v) => info.setText('channel identifier', v),
@@ -534,14 +535,14 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
               ]),
               if (!widget.channel) _channelsTable(st),
               Group(
-                title: 'Correction item',
+                title: tr('Correction item'),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
                         Choice<SectionItem>(
-                          label: 'Correction item',
+                          label: tr('Correction item'),
                           value: item,
                           items: _items,
                           width: 360,
@@ -563,11 +564,11 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                               _section();
                               _rev++;
                             }),
-                            child: const Text('Create'),
+                            child: Text(tr('Create')),
                           )
                         else ...[
                           Check(
-                            label: 'Disable correction',
+                            label: tr('Disable correction'),
                             value: (sec.numberOrNull('disabled') ?? 0) != 0,
                             onChanged: (v) => setState(() => v ? sec.setNumber('disabled', 1) : sec.remove('disabled')),
                           ),
@@ -591,7 +592,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                  TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close'))),
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () async {
@@ -600,7 +601,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                         final r = await browse(
                           context,
                           b,
-                          title: 'Save correction',
+                          title: tr('Save correction'),
                           mode: BrowseMode.saveFile,
                           extensions: const ['.info'],
                           defaultName: widget.channel ? 'channel.info' : 'digitizer.info',
@@ -618,7 +619,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                         });
                       }
                     },
-                    child: const Text('SAVE CHANGES'),
+                    child: Text(tr('SAVE CHANGES')),
                   ),
                 ],
               ),
@@ -649,7 +650,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
     }
 
     return Group(
-      title: 'Channels (identifier - channel correction file)',
+      title: tr('Channels (identifier - channel correction file)'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -661,7 +662,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                   SizedBox(width: 30, child: Text('#${i + 1}')),
                   Expanded(
                     child: TextEntry(
-                      label: 'Channel identifier',
+                      label: tr('Channel identifier'),
                       value: ids[i],
                       onChanged: (v) {
                         ids[i] = v;
@@ -672,7 +673,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextEntry(
-                      label: 'Relative path of channel correction',
+                      label: tr('Relative path of channel correction'),
                       value: paths[i],
                       onChanged: (v) {
                         paths[i] = v;
@@ -681,7 +682,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Edit channel correction',
+                    tooltip: tr('Edit channel correction'),
                     icon: const Icon(Icons.edit),
                     onPressed: path.isEmpty
                         ? null
@@ -702,7 +703,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                           },
                   ),
                   IconButton(
-                    tooltip: 'Remove',
+                    tooltip: tr('Remove'),
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () => setState(() {
                       ids.removeAt(i);
@@ -725,7 +726,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                   _rev++;
                 }),
                 icon: const Icon(Icons.add),
-                label: const Text('Insert'),
+                label: Text(tr('Insert')),
               ),
               TextButton.icon(
                 onPressed: () async {
@@ -743,7 +744,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                   });
                 },
                 icon: const Icon(Icons.download),
-                label: const Text('Load names from connected digitizer'),
+                label: Text(tr('Load names from connected digitizer')),
               ),
             ],
           ),
@@ -783,7 +784,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Value'),
+                  Text(tr('Value')),
                   MatrixEditor(
                     cells: value,
                     cellWidth: item.table == null ? 110 : 260,
@@ -798,7 +799,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Uncertainty'),
+                    Text(tr('Uncertainty')),
                     MatrixEditor(cells: unc, onChanged: () => sec.setTextMatrix('uncertainty', unc)),
                   ],
                 ),
@@ -838,7 +839,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
           ),
         const SizedBox(height: 8),
         Group(
-          title: 'Restrict validity by digitizer attributes (optional)',
+          title: tr('Restrict validity by digitizer attributes (optional)'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -847,7 +848,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                   children: [
                     Expanded(
                       child: TextEntry(
-                        label: 'Attribute name (as in session header)',
+                        label: tr('Attribute name (as in session header)'),
                         value: attrs[k],
                         onChanged: (v) {
                           final old = attrs[k];
@@ -862,7 +863,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextEntry(
-                        label: 'Allowed values (separate by ;)',
+                        label: tr('Allowed values (separate by ;)'),
                         value: sec.textMatrixOrNull(attrs[k]) == null ? '' : sec.textList(attrs[k]).join('; '),
                         onChanged: (v) => sec.setTextList(attrs[k], v.split(';').map((e) => e.trim()).toList()),
                       ),
@@ -889,7 +890,7 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
                     _rev++;
                   }),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add attribute'),
+                  label: Text(tr('Add attribute')),
                 ),
               ),
             ],
@@ -924,18 +925,18 @@ class _DigitizerEditorState extends State<_DigitizerEditor> {
             )
           : FieldRow([
               TextEntry(
-                label: 'HW parameter name (exact header name)',
+                label: tr('HW parameter name (exact header name)'),
                 value: p.textOrNull('name') ?? '',
                 width: 300,
                 onChanged: (v) => p.setText('name', v),
               ),
               Check(
-                label: 'Interpolable',
+                label: tr('Interpolable'),
                 value: (p.numberOrNull('interpolable') ?? 0) != 0,
                 onChanged: (v) => setState(() => p.setNumber('interpolable', v ? 1 : 0)),
               ),
               TextEntry(
-                label: 'Values (separate by ;)',
+                label: tr('Values (separate by ;)'),
                 value: p.textMatrixOrNull('value') == null ? '' : p.textList('value').join('; '),
                 width: 320,
                 onChanged: (v) => p.setTextList('value', v.split(';').map((e) => e.trim()).toList()),

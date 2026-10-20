@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../l10n.dart';
 import '../state/app_state.dart';
 import '../widgets/fields.dart';
 
 /// GNU Octave / Matlab console (GOLPI console window of TWM) with command
 /// entry for debugging.
 class ConsoleView extends StatefulWidget {
-  const ConsoleView({super.key});
+  /// Output of the RAW processing mode (user m-code).
+  final String rawOutput;
+  const ConsoleView({super.key, this.rawOutput = ''});
   @override
   State<ConsoleView> createState() => _ConsoleViewState();
 }
@@ -52,6 +55,12 @@ class _ConsoleViewState extends State<ConsoleView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.rawOutput.isNotEmpty) ...[
+            Text(tr('RAW processing output'), style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 4),
+            MessageBox(widget.rawOutput, height: 140),
+            const SizedBox(height: 8),
+          ],
           Expanded(
             child: Container(
               color: Colors.black,
@@ -83,19 +92,14 @@ class _ConsoleViewState extends State<ConsoleView> {
                   controller: _cmd,
                   enabled: !_busy,
                   style: const TextStyle(fontFamily: 'monospace'),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    labelText: 'Octave/Matlab command',
-                    prefixText: '>> ',
-                  ),
+                  decoration: InputDecoration(isDense: true, labelText: tr('Octave/Matlab command'), prefixText: '>> '),
                   onSubmitted: (_) => _run(),
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton(onPressed: _busy ? null : _run, child: const Text('Run')),
+              FilledButton(onPressed: _busy ? null : _run, child: Text(tr('Run'))),
               const SizedBox(width: 8),
-              OutlinedButton(onPressed: st.clearConsole, child: const Text('Clear')),
+              OutlinedButton(onPressed: st.clearConsole, child: Text(tr('Clear'))),
             ],
           ),
         ],

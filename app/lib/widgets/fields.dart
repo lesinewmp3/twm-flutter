@@ -118,7 +118,6 @@ class _NumFieldState extends State<NumField> {
           suffixText: widget.unit,
           isDense: true,
           errorText: _invalid ? 'invalid number' : null,
-          border: const OutlineInputBorder(),
         ),
       ),
     );
@@ -179,7 +178,6 @@ class _TextEntryState extends State<TextEntry> {
         labelText: widget.label,
         hintText: widget.hint,
         isDense: true,
-        border: const OutlineInputBorder(),
         suffixIcon: widget.suffix,
       ),
     );
@@ -219,7 +217,7 @@ class Choice<T> extends StatelessWidget {
         initialValue: has ? value : null,
         isExpanded: true,
         isDense: true,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        decoration: InputDecoration(labelText: label, isDense: true),
         items: [
           for (final i in items)
             DropdownMenuItem(
@@ -233,35 +231,38 @@ class Choice<T> extends StatelessWidget {
   }
 }
 
-/// Group box (LabVIEW decoration frame with label).
+/// Titled section of a form (replaces LabVIEW decoration frames).
 class Group extends StatelessWidget {
   final String title;
   final Widget child;
   final EdgeInsets padding;
-  const Group({super.key, required this.title, required this.child, this.padding = const EdgeInsets.all(12)});
+  const Group({super.key, required this.title, required this.child, this.padding = const EdgeInsets.all(14)});
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: t.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: t.colorScheme.surfaceContainerHigh,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: Material(
+        color: t.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: t.colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Text(
+                title,
+                style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: t.colorScheme.primary),
+              ),
             ),
-            child: Text(title, style: t.textTheme.titleSmall),
-          ),
-          Padding(padding: padding, child: child),
-        ],
+            Padding(padding: padding, child: child),
+          ],
+        ),
       ),
     );
   }
@@ -289,7 +290,7 @@ class Check extends StatelessWidget {
   );
 }
 
-/// Black message box of TWM panels (OK in green, errors in red).
+/// Status / message area of the panels (errors in red).
 class MessageBox extends StatelessWidget {
   final String text;
   final bool error;
@@ -297,22 +298,31 @@ class MessageBox extends StatelessWidget {
   const MessageBox(this.text, {super.key, this.error = false, this.height = 80});
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: height,
-    width: double.infinity,
-    padding: const EdgeInsets.all(8),
-    color: Colors.black,
-    child: SingleChildScrollView(
-      child: SelectableText(
-        text,
-        style: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 12,
-          color: error ? Colors.redAccent : Colors.lightGreenAccent,
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = error ? t.colorScheme.error : (text.isEmpty ? t.colorScheme.outline : Colors.green.shade700);
+    return Container(
+      height: height,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: error ? t.colorScheme.errorContainer.withValues(alpha: 0.35) : t.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: c, width: 4)),
+      ),
+      child: SingleChildScrollView(
+        child: SelectableText(
+          text,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12.5,
+            height: 1.35,
+            color: error ? t.colorScheme.error : t.colorScheme.onSurface,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Wrap of form fields with uniform spacing.
@@ -371,16 +381,17 @@ class DialogHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Material(
-      color: t.colorScheme.surfaceContainer,
+      color: t.colorScheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Text(title, style: t.textTheme.titleLarge),
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 12),
+            child: Text(title, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
           ),
           ?bottom,
+          Divider(height: 1, color: t.colorScheme.outlineVariant),
         ],
       ),
     );

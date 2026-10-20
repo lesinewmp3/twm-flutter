@@ -6,6 +6,7 @@ import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
 import '../widgets/paths.dart';
 import 'processing_dialog.dart';
+import '../l10n.dart';
 
 /// QWTB batch processing panel (TWM guide figure 3.36, TPQA "TWM
 /// processing panel"): processing of previously recorded measurements.
@@ -66,7 +67,7 @@ class _BatchDialogState extends State<_BatchDialog> {
       st.viewedSession = _session;
       st.resultsVersion++;
       st.touch();
-      setState(() => _msg = 'Done. Results shown in the main window results viewer.');
+      setState(() => _msg = tr('Done. Results shown in the main window results viewer.'));
     } catch (e) {
       setState(() => _msg = 'Error: $e');
     } finally {
@@ -80,7 +81,7 @@ class _BatchDialogState extends State<_BatchDialog> {
     final s = _sum;
     final recs = s == null || s.recordsPerGroup.isEmpty ? 0 : s.recordsPerGroup[_group - 1];
     return AlertDialog(
-      title: const Text('QWTB batch processing'),
+      title: Text(tr('QWTB batch processing')),
       content: SizedBox(
         width: 800,
         height: 560,
@@ -89,7 +90,9 @@ class _BatchDialogState extends State<_BatchDialog> {
           children: [
             Row(
               children: [
-                Expanded(child: Text('Measurement session: ${_session.isEmpty ? '(select)' : dirName(_session)}')),
+                Expanded(
+                  child: Text('${tr('Measurement session')}: ${_session.isEmpty ? '(select)' : dirName(_session)}'),
+                ),
                 OutlinedButton.icon(
                   onPressed: _running
                       ? null
@@ -97,14 +100,14 @@ class _BatchDialogState extends State<_BatchDialog> {
                           final f = await browse(
                             context,
                             st.backend,
-                            title: 'Select measurement session',
+                            title: tr('Select measurement session'),
                             extensions: const ['session.info'],
                             initial: _session.isEmpty ? st.settings.measurement.folder : dirName(_session),
                           );
                           if (f != null) await _open(f);
                         },
                   icon: const Icon(Icons.folder_open),
-                  label: const Text('Select...'),
+                  label: Text(tr('Select...')),
                 ),
               ],
             ),
@@ -114,7 +117,7 @@ class _BatchDialogState extends State<_BatchDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Choice<int>(
-                  label: 'Measurement group',
+                  label: tr('Measurement group'),
                   value: _group,
                   width: 180,
                   items: [for (var g = 1; g <= s.recordsPerGroup.length; g++) g],
@@ -126,13 +129,13 @@ class _BatchDialogState extends State<_BatchDialog> {
               ),
             Row(
               children: [
-                Text('Records', style: Theme.of(context).textTheme.titleSmall),
+                Text(tr('Records'), style: Theme.of(context).textTheme.titleSmall),
                 const Spacer(),
                 TextButton(
                   onPressed: () => setState(() => _sel.addAll([for (var r = 1; r <= recs; r++) r])),
-                  child: const Text('All'),
+                  child: Text(tr('All')),
                 ),
-                TextButton(onPressed: () => setState(_sel.clear), child: const Text('None')),
+                TextButton(onPressed: () => setState(_sel.clear), child: Text(tr('None'))),
               ],
             ),
             Expanded(
@@ -166,7 +169,7 @@ class _BatchDialogState extends State<_BatchDialog> {
                           if (r != null) setState(() => _setup = r);
                         },
                   icon: const Icon(Icons.calculate),
-                  label: const Text('PROCESSING SETUP'),
+                  label: Text(tr('PROCESSING SETUP')),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -180,16 +183,18 @@ class _BatchDialogState extends State<_BatchDialog> {
             ),
             if (_running) ...[const SizedBox(height: 8), Text(st.status), LinearProgressIndicator(value: st.progress)],
             const SizedBox(height: 4),
-            const Text(
-              'Processing the same algorithm again overwrites its previous results; results of other '
-              'algorithms are kept.',
+            Text(
+              tr(
+                'Processing the same algorithm again overwrites its previous results; results of other '
+                'algorithms are kept.',
+              ),
               style: TextStyle(fontSize: 12),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: _running ? null : () => Navigator.pop(context), child: const Text('Close')),
+        TextButton(onPressed: _running ? null : () => Navigator.pop(context), child: Text(tr('Close'))),
         OutlinedButton(onPressed: _running ? () => st.backend.stopProcessing() : null, child: const Text('STOP')),
         FilledButton(
           onPressed: _running || _session.isEmpty || _sel.isEmpty ? null : _start,

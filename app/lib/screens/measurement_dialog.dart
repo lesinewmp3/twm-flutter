@@ -7,6 +7,7 @@ import '../widgets/file_browser.dart';
 import '../widgets/paths.dart';
 import 'processing_dialog.dart';
 import 'sampling_assistant.dart';
+import '../l10n.dart';
 
 /// New measurement configuration (TWM guide figure 3.21). Returns true on OK.
 Future<bool> showMeasurementDialog(BuildContext context) async =>
@@ -26,7 +27,7 @@ class _MeasDialog extends StatefulWidget {
 class _MeasDialogState extends State<_MeasDialog> {
   late MeasurementConfig m = AppScope.read(context).settings.measurement.copy();
   DigitizerCapabilities? _caps;
-  String _capsMsg = 'Querying digitizer capabilities...';
+  String _capsMsg = tr('Querying digitizer capabilities...');
   int _rev = 0;
 
   @override
@@ -44,7 +45,7 @@ class _MeasDialogState extends State<_MeasDialog> {
       _capsMsg = r.ok
           ? '${st.settings.digitizer.type.label}: fs ${formatNum(_caps!.minFs)} - ${formatNum(_caps!.maxFs)} Sa/s, '
                 'max ${_caps!.maxSamplesCount} samples'
-          : 'Digitizer not available: ${r.message}';
+          : '${tr('Digitizer not available')}: ${r.message}';
       if (r.ok) st.channelIdns = r.channelIdns;
     });
   }
@@ -87,7 +88,7 @@ class _MeasDialogState extends State<_MeasDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DialogHeader('New measurement'),
+            DialogHeader(tr('New measurement')),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(12),
@@ -97,14 +98,14 @@ class _MeasDialogState extends State<_MeasDialog> {
                   children: [
                     Text(_capsMsg, style: Theme.of(context).textTheme.bodySmall),
                     Group(
-                      title: 'Sampling',
+                      title: tr('Sampling'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           FieldRow([
                             if (caps != null && caps.fixedRates.isNotEmpty)
                               Choice<double>(
-                                label: 'Sampling rate',
+                                label: tr('Sampling rate'),
                                 value: caps.coerceFs(m.fs),
                                 items: caps.fixedRates,
                                 width: 180,
@@ -113,7 +114,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               )
                             else
                               NumField(
-                                label: 'Sampling rate',
+                                label: tr('Sampling rate'),
                                 unit: 'Sa/s',
                                 value: m.fs,
                                 min: caps?.minFs ?? 0.001,
@@ -124,7 +125,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                             if (coerced != null && (coerced - m.fs).abs() > 1e-9 * m.fs)
                               Text('actual: ${formatNum(coerced)} Sa/s', style: const TextStyle(color: Colors.orange)),
                             NumField(
-                              label: aperAuto ? 'Aperture (auto)' : 'Aperture time',
+                              label: aperAuto ? tr('Aperture (auto)') : tr('Aperture time'),
                               unit: 's',
                               value: aperAuto ? _autoAperture(s) : m.aperture,
                               enabled: (caps?.hasAperture ?? true) && !aperAuto,
@@ -145,12 +146,12 @@ class _MeasDialogState extends State<_MeasDialog> {
                                 }
                               },
                               icon: const Icon(Icons.auto_fix_high),
-                              label: const Text('Sampling setup assistant'),
+                              label: Text(tr('Sampling setup assistant')),
                             ),
                           ]),
                           FieldRow([
                             NumField(
-                              label: 'Samples count',
+                              label: tr('Samples count'),
                               value: m.samplesCount.toDouble(),
                               integer: true,
                               min: 1,
@@ -162,7 +163,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               }),
                             ),
                             NumField(
-                              label: 'Measurement time',
+                              label: tr('Measurement time'),
                               unit: 's',
                               value: m.measurementTime,
                               min: 0,
@@ -173,7 +174,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               }),
                             ),
                             NumField(
-                              label: 'Records count',
+                              label: tr('Records count'),
                               value: m.recordsCount.toDouble(),
                               integer: true,
                               min: 1,
@@ -182,7 +183,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               onChanged: (v) => setState(() => m.recordsCount = v.round()),
                             ),
                             NumField(
-                              label: 'Pre-record settling time',
+                              label: tr('Pre-record settling time'),
                               unit: 's',
                               value: m.preRecordDelay,
                               min: 0,
@@ -190,7 +191,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               onChanged: (v) => m.preRecordDelay = v,
                             ),
                             NumField(
-                              label: 'Sub-records count',
+                              label: tr('Sub-records count'),
                               value: m.subRecordsCount.toDouble(),
                               integer: true,
                               min: 1,
@@ -200,13 +201,13 @@ class _MeasDialogState extends State<_MeasDialog> {
                           ]),
                           FieldRow([
                             Check(
-                              label: 'Continuous acquisition until STOP (TPQA)',
+                              label: tr('Continuous acquisition until STOP (TPQA)'),
                               value: m.continuous,
                               onChanged: (v) => setState(() => m.continuous = v),
                             ),
                             if (m.continuous)
                               Check(
-                                label: 'Save sampled data',
+                                label: tr('Save sampled data'),
                                 value: m.saveRecords,
                                 onChanged: (v) => setState(() => m.saveRecords = v),
                               ),
@@ -220,13 +221,13 @@ class _MeasDialogState extends State<_MeasDialog> {
                       ),
                     ),
                     Group(
-                      title: 'Trigger and ranges',
+                      title: tr('Trigger and ranges'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           FieldRow([
                             Choice<TriggerSource>(
-                              label: 'Trigger mode',
+                              label: tr('Trigger mode'),
                               value: m.trigger.source,
                               width: 160,
                               items: [
@@ -239,7 +240,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                             ),
                             if (m.trigger.source != TriggerSource.immediate)
                               Choice<TriggerSlope>(
-                                label: 'Slope',
+                                label: tr('Slope'),
                                 value: m.trigger.slope,
                                 items: TriggerSlope.values,
                                 width: 130,
@@ -248,7 +249,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                               ),
                             if (m.trigger.source == TriggerSource.level) ...[
                               Choice<TriggerCoupling>(
-                                label: 'Coupling',
+                                label: tr('Coupling'),
                                 value: m.trigger.coupling,
                                 items: TriggerCoupling.values,
                                 width: 120,
@@ -256,7 +257,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                                 onChanged: (v) => setState(() => m.trigger.coupling = v),
                               ),
                               NumField(
-                                label: 'Level (1. channel)',
+                                label: tr('Level (1. channel)'),
                                 unit: 'V',
                                 value: m.trigger.level,
                                 width: 160,
@@ -266,14 +267,14 @@ class _MeasDialogState extends State<_MeasDialog> {
                           ]),
                           FieldRow([
                             Choice<RangeMode>(
-                              label: 'Voltage range selection',
+                              label: tr('Voltage range selection'),
                               value: m.rangeMode,
                               items: RangeMode.values,
                               width: 220,
-                              itemLabel: (r) => const {
-                                RangeMode.keepDefaults: 'Keep defaults',
-                                RangeMode.allSame: 'Same for all channels',
-                                RangeMode.oddEven: 'Odd/even channels',
+                              itemLabel: (r) => {
+                                RangeMode.keepDefaults: tr('Keep defaults'),
+                                RangeMode.allSame: tr('Same for all channels'),
+                                RangeMode.oddEven: tr('Odd/even channels'),
                               }[r]!,
                               onChanged: (v) => setState(() => m.rangeMode = v),
                             ),
@@ -288,12 +289,12 @@ class _MeasDialogState extends State<_MeasDialog> {
                       ),
                     ),
                     Group(
-                      title: 'Measurement data',
+                      title: tr('Measurement data'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           PathField(
-                            label: 'Folder for measurement data files',
+                            label: tr('Folder for measurement data files'),
                             value: m.folder,
                             backend: st.backend,
                             mode: BrowseMode.folder,
@@ -301,14 +302,14 @@ class _MeasDialogState extends State<_MeasDialog> {
                           ),
                           FieldRow([
                             TextEntry(
-                              label: 'Measurement name base',
+                              label: tr('Measurement name base'),
                               value: m.nameBase,
                               width: 300,
-                              hint: 'variables: %id% %date% %time%',
+                              hint: tr('variables: %id% %date% %time%'),
                               onChanged: (v) => setState(() => m.nameBase = v),
                             ),
                             NumField(
-                              label: 'Measurement number (%id%)',
+                              label: tr('Measurement number (%id%)'),
                               value: m.measurementId.toDouble(),
                               integer: true,
                               min: 0,
@@ -317,12 +318,12 @@ class _MeasDialogState extends State<_MeasDialog> {
                             ),
                           ]),
                           SelectableText(
-                            'Full measurement base path: $fullPath',
+                            '${tr('Full measurement base path')}: $fullPath',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const SizedBox(height: 8),
                           TextEntry(
-                            label: 'Measurement comment',
+                            label: tr('Measurement comment'),
                             value: m.comment,
                             maxLines: 3,
                             onChanged: (v) => m.comment = v,
@@ -331,10 +332,10 @@ class _MeasDialogState extends State<_MeasDialog> {
                       ),
                     ),
                     Group(
-                      title: 'Processing',
+                      title: tr('Processing'),
                       child: FieldRow([
                         Check(
-                          label: 'Enable result calculation',
+                          label: tr('Enable result calculation'),
                           value: m.processingEnabled,
                           onChanged: (v) => setState(() => m.processingEnabled = v),
                         ),
@@ -344,7 +345,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                             if (r != null) setState(() => m.processing = r);
                           },
                           icon: const Icon(Icons.calculate),
-                          label: const Text('Processing setup'),
+                          label: Text(tr('Processing setup')),
                         ),
                         Text(
                           m.processing.mode == ProcessingMode.raw

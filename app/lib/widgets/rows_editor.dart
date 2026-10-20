@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n.dart';
+
 /// Editable list of rows with add / remove / move buttons (the LabVIEW
 /// tables with coloured reorder icons in TWM configuration panels).
 class RowsEditor<T> extends StatelessWidget {
@@ -40,7 +42,7 @@ class RowsEditor<T> extends StatelessWidget {
                       onChanged();
                     },
               icon: const Icon(Icons.add),
-              label: const Text('Add row'),
+              label: Text(tr('Add row')),
             ),
           ],
         ),
@@ -57,7 +59,7 @@ class RowsEditor<T> extends StatelessWidget {
                 SizedBox(width: 28, child: Text('#${i + 1}', style: t.textTheme.labelMedium)),
                 Expanded(child: rowBuilder(context, i, rows[i])),
                 IconButton(
-                  tooltip: 'Move up',
+                  tooltip: tr('Move up'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.arrow_upward, size: 18),
                   onPressed: i == 0
@@ -69,7 +71,7 @@ class RowsEditor<T> extends StatelessWidget {
                         },
                 ),
                 IconButton(
-                  tooltip: 'Move down',
+                  tooltip: tr('Move down'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.arrow_downward, size: 18),
                   onPressed: i == rows.length - 1
@@ -81,7 +83,7 @@ class RowsEditor<T> extends StatelessWidget {
                         },
                 ),
                 IconButton(
-                  tooltip: 'Remove',
+                  tooltip: tr('Remove'),
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.delete_outline, size: 18, color: t.colorScheme.error),
                   onPressed: rows.length <= minRows

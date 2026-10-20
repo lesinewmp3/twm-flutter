@@ -4,6 +4,7 @@ import 'package:twm_model/twm_model.dart';
 import '../state/app_state.dart';
 import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
+import '../l10n.dart';
 
 /// Processing configuration panel (TWM guide figures 3.27 - 3.29, TPQA
 /// "QWTB processing algorithms"). Returns modified copy or null.
@@ -80,31 +81,37 @@ class _ProcDialogState extends State<_ProcDialog> {
     }
   }
 
+  bool get _octave => AppScope.read(context).backend.features.octave;
+
   @override
   Widget build(BuildContext context) {
+    if (!_octave) ps.mode = ProcessingMode.qwtb;
     return Dialog(
-      insetPadding: const EdgeInsets.all(24),
+      insetPadding: EdgeInsets.all(24),
       child: SizedBox(
         width: 1150,
         height: 800,
         child: DefaultTabController(
-          length: 2,
-          initialIndex: ps.mode == ProcessingMode.raw ? 0 : 1,
+          length: _octave ? 2 : 1,
+          initialIndex: _octave && ps.mode == ProcessingMode.raw ? 0 : (_octave ? 1 : 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DialogHeader(
-                'Processing setup',
+                tr('Processing setup'),
                 bottom: TabBar(
-                  onTap: (i) => ps.mode = i == 0 ? ProcessingMode.raw : ProcessingMode.qwtb,
-                  tabs: const [
-                    Tab(text: 'RAW command'),
-                    Tab(text: 'QWTB'),
+                  onTap: (i) => ps.mode = _octave && i == 0 ? ProcessingMode.raw : ProcessingMode.qwtb,
+                  tabs: [
+                    if (_octave) Tab(text: tr('RAW command')),
+                    Tab(text: tr('QWTB')),
                   ],
                 ),
               ),
               Expanded(
-                child: TabBarView(physics: const NeverScrollableScrollPhysics(), children: [_raw(), _qwtb()]),
+                child: TabBarView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [if (_octave) _raw(), _qwtb()],
+                ),
               ),
               const Divider(height: 1),
               Padding(
@@ -117,7 +124,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                     Expanded(
                       child: Text(_error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                     ),
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
                     const SizedBox(width: 8),
                     FilledButton(onPressed: () => Navigator.pop(context, ps), child: const Text('OK')),
                   ],
@@ -135,21 +142,23 @@ class _ProcDialogState extends State<_ProcDialog> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'm-code executed on each record. Loaded data are in structure "data" '
-          '(data.y - samples, one column per channel, data.Ts - sampling period, data.corr - corrections). '
-          'Printed output appears in the RAW tab of the main window.',
+        Text(
+          tr(
+            'm-code executed on each record. Loaded data are in structure "data" '
+            '(data.y - samples, one column per channel, data.Ts - sampling period, data.corr - corrections). '
+            'Printed output appears in the RAW tab of the main window.',
+          ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: TextEntry(label: 'm-code', value: ps.rawCode, maxLines: 30, onChanged: (v) => ps.rawCode = v),
+          child: TextEntry(label: tr('m-code'), value: ps.rawCode, maxLines: 30, onChanged: (v) => ps.rawCode = v),
         ),
         Row(
           children: [
             OutlinedButton(
               onPressed: () async {
                 final b = AppScope.read(context).backend;
-                final f = await browse(context, b, title: 'Load m-file', extensions: const ['.m']);
+                final f = await browse(context, b, title: tr('Load m-file'), extensions: const ['.m']);
                 if (f == null) return;
                 final t = await b.readText(f);
                 setState(() {
@@ -157,7 +166,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                   _rev++;
                 });
               },
-              child: const Text('Load from file'),
+              child: Text(tr('Load from file')),
             ),
           ],
         ),
@@ -191,9 +200,9 @@ class _ProcDialogState extends State<_ProcDialog> {
                 padding: const EdgeInsets.all(8),
                 child: Row(
                   children: [
-                    Text('List of algorithms', style: Theme.of(context).textTheme.titleSmall),
+                    Text(tr('List of algorithms'), style: Theme.of(context).textTheme.titleSmall),
                     const Spacer(),
-                    TextButton(onPressed: _loading ? null : _loadAlgs, child: const Text('RELOAD ALGs')),
+                    TextButton(onPressed: _loading ? null : _loadAlgs, child: Text(tr('RELOAD ALGs'))),
                   ],
                 ),
               ),
@@ -227,10 +236,11 @@ class _ProcDialogState extends State<_ProcDialog> {
                   const SizedBox(height: 4),
                   SelectableText(i.desc),
                   if (i.citation.isNotEmpty)
-                    SelectableText('Citation: ${i.citation}', style: const TextStyle(fontSize: 12)),
+                    SelectableText('${tr('Citation')}: ${i.citation}', style: const TextStyle(fontSize: 12)),
                   if (i.remarks.isNotEmpty)
-                    SelectableText('Remarks: ${i.remarks}', style: const TextStyle(fontSize: 12)),
-                  if (i.license.isNotEmpty) Text('License: ${i.license}', style: const TextStyle(fontSize: 12)),
+                    SelectableText('${tr('Remarks')}: ${i.remarks}', style: const TextStyle(fontSize: 12)),
+                  if (i.license.isNotEmpty)
+                    Text('${tr('License')}: ${i.license}', style: const TextStyle(fontSize: 12)),
                   const SizedBox(height: 6),
                   Wrap(
                     children: [
@@ -242,13 +252,16 @@ class _ProcDialogState extends State<_ProcDialog> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('Outputs: ${i.outputs.map((o) => o.name).join(', ')}', style: const TextStyle(fontSize: 12)),
+                  Text(
+                    '${tr('Outputs')}: ${i.outputs.map((o) => o.name).join(', ')}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   Group(
-                    title: 'Parameters of the algorithm',
+                    title: tr('Parameters of the algorithm'),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (params.isEmpty) const Text('(no user parameters)'),
+                        if (params.isEmpty) Text(tr('(no user parameters)')),
                         for (var k = 0; k < params.length; k++)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 3),
@@ -273,7 +286,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                             margin: const EdgeInsets.only(top: 6),
                             padding: const EdgeInsets.all(8),
                             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            child: Text('Variable description: ${params[_selParam].desc}'),
+                            child: Text('${tr('Variable description')}: ${params[_selParam].desc}'),
                           ),
                         Align(
                           alignment: Alignment.centerLeft,
@@ -284,22 +297,22 @@ class _ProcDialogState extends State<_ProcDialog> {
                               }
                               _rev++;
                             }),
-                            child: const Text('CLEAR PARAMETERS'),
+                            child: Text(tr('CLEAR PARAMETERS')),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ] else
-                  const Text('Select an algorithm.'),
+                  Text(tr('Select an algorithm.')),
                 Group(
-                  title: 'Processing options',
+                  title: tr('Processing options'),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       FieldRow([
                         NumField(
-                          label: 'Start offset',
+                          label: tr('Start offset'),
                           unit: 'smpl',
                           value: ps.sampleOffset.toDouble(),
                           integer: true,
@@ -308,7 +321,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                           onChanged: (v) => ps.sampleOffset = v.round(),
                         ),
                         NumField(
-                          label: 'Input data length (0=all)',
+                          label: tr('Input data length (0=all)'),
                           unit: 'smpl',
                           value: ps.sampleLimit.toDouble(),
                           integer: true,
@@ -317,32 +330,33 @@ class _ProcDialogState extends State<_ProcDialog> {
                           onChanged: (v) => ps.sampleLimit = v.round(),
                         ),
                         Choice<TimeStampMode>(
-                          label: 'Time-stamp handling',
+                          label: tr('Time-stamp handling'),
                           value: ps.timeStampMode,
                           items: TimeStampMode.values,
                           width: 200,
-                          itemLabel: (m) => const {
-                            TimeStampMode.enable: 'Enable',
-                            TimeStampMode.disable: 'Disable',
-                            TimeStampMode.relative: 'Relative to 1. record',
+                          itemLabel: (m) => {
+                            TimeStampMode.enable: tr('Enable'),
+                            TimeStampMode.disable: tr('Disable'),
+                            TimeStampMode.relative: tr('Relative to 1. record'),
                           }[m]!,
                           onChanged: (v) => setState(() => ps.timeStampMode = v),
                         ),
                       ]),
                       Check(
-                        label: 'Calculate result just once for all records (multi-record algorithms)',
+                        label: tr('Calculate result just once for all records (multi-record algorithms)'),
                         value: ps.wholeAverageAtOnce,
                         enabled: i?.supportMultiRecords ?? false,
                         onChanged: (v) => setState(() => ps.wholeAverageAtOnce = v),
                       ),
-                      Check(
-                        label: 'Calculate uncertainty just once (first record)',
-                        value: ps.uncertaintyOnce,
-                        onChanged: (v) => setState(() => ps.uncertaintyOnce = v),
-                      ),
+                      if (_octave)
+                        Check(
+                          label: tr('Calculate uncertainty just once (first record)'),
+                          value: ps.uncertaintyOnce,
+                          onChanged: (v) => setState(() => ps.uncertaintyOnce = v),
+                        ),
                       FieldRow([
                         Choice<UncertaintyMode>(
-                          label: 'Uncertainty calculation mode',
+                          label: tr('Uncertainty calculation mode'),
                           value: ps.uncertainty,
                           width: 220,
                           items: [
@@ -350,15 +364,15 @@ class _ProcDialogState extends State<_ProcDialog> {
                             if (i?.uncGuf ?? true) UncertaintyMode.guf,
                             if (i?.uncMcm ?? true) UncertaintyMode.mcm,
                           ],
-                          itemLabel: (u) => const {
-                            UncertaintyMode.none: 'None',
-                            UncertaintyMode.guf: 'GUF (estimator)',
-                            UncertaintyMode.mcm: 'Monte Carlo',
+                          itemLabel: (u) => {
+                            UncertaintyMode.none: tr('None'),
+                            UncertaintyMode.guf: tr('GUF (estimator)'),
+                            UncertaintyMode.mcm: tr('Monte Carlo'),
                           }[u]!,
                           onChanged: (v) => setState(() => ps.uncertainty = v),
                         ),
                         NumField(
-                          label: 'Level of confidence',
+                          label: tr('Level of confidence'),
                           value: ps.levelOfConfidence,
                           min: 0.5,
                           max: 0.9999,
@@ -367,7 +381,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                         ),
                         if (ps.uncertainty == UncertaintyMode.mcm)
                           NumField(
-                            label: 'Monte Carlo cycles',
+                            label: tr('Monte Carlo cycles'),
                             value: ps.monteCarloCycles.toDouble(),
                             integer: true,
                             min: 10,
@@ -375,7 +389,7 @@ class _ProcDialogState extends State<_ProcDialog> {
                             onChanged: (v) => ps.monteCarloCycles = v.round(),
                           ),
                         NumField(
-                          label: 'Processing timeout',
+                          label: tr('Processing timeout'),
                           unit: 's',
                           value: ps.timeout,
                           min: 1,
@@ -386,52 +400,53 @@ class _ProcDialogState extends State<_ProcDialog> {
                     ],
                   ),
                 ),
-                Group(
-                  title: 'Multicore processing',
-                  child: FieldRow([
-                    Choice<ExecutionMode>(
-                      label: 'QWTB algorithms execution mode',
-                      value: ps.execution,
-                      items: ExecutionMode.values,
-                      width: 260,
-                      itemLabel: (m) =>
-                          m == ExecutionMode.singleCore ? 'Single-core' : 'Parallel record processing (exp.)',
-                      onChanged: (v) => setState(() => ps.execution = v),
-                    ),
-                    Choice<ParallelMode>(
-                      label: 'Parallel mode (Monte Carlo)',
-                      value: ps.parallel,
-                      items: ParallelMode.values,
-                      width: 220,
-                      itemLabel: (m) => const {
-                        ParallelMode.singlecore: 'Singlecore',
-                        ParallelMode.multicore: 'Multicore (parcellfun/parfor)',
-                        ParallelMode.multistation: 'Multistation (multicore pkg)',
-                      }[m]!,
-                      onChanged: (v) => setState(() => ps.parallel = v),
-                    ),
-                    if (ps.parallel != ParallelMode.singlecore)
-                      NumField(
-                        label: 'CPU cores',
-                        value: ps.cores.toDouble(),
-                        integer: true,
-                        min: 1,
-                        width: 110,
-                        onChanged: (v) => ps.cores = v.round(),
+                if (_octave)
+                  Group(
+                    title: tr('Multicore processing'),
+                    child: FieldRow([
+                      Choice<ExecutionMode>(
+                        label: tr('QWTB algorithms execution mode'),
+                        value: ps.execution,
+                        items: ExecutionMode.values,
+                        width: 260,
+                        itemLabel: (m) =>
+                            m == ExecutionMode.singleCore ? tr('Single-core') : tr('Parallel record processing (exp.)'),
+                        onChanged: (v) => setState(() => ps.execution = v),
                       ),
-                    if (ps.parallel == ParallelMode.multistation)
-                      SizedBox(
-                        width: 420,
-                        child: PathField(
-                          label: 'Multistation jobs folder',
-                          value: ps.jobsFolder,
-                          backend: st.backend,
-                          mode: BrowseMode.folder,
-                          onChanged: (v) => setState(() => ps.jobsFolder = v),
+                      Choice<ParallelMode>(
+                        label: tr('Parallel mode (Monte Carlo)'),
+                        value: ps.parallel,
+                        items: ParallelMode.values,
+                        width: 220,
+                        itemLabel: (m) => {
+                          ParallelMode.singlecore: tr('Singlecore'),
+                          ParallelMode.multicore: tr('Multicore (parcellfun/parfor)'),
+                          ParallelMode.multistation: tr('Multistation (multicore pkg)'),
+                        }[m]!,
+                        onChanged: (v) => setState(() => ps.parallel = v),
+                      ),
+                      if (ps.parallel != ParallelMode.singlecore)
+                        NumField(
+                          label: tr('CPU cores'),
+                          value: ps.cores.toDouble(),
+                          integer: true,
+                          min: 1,
+                          width: 110,
+                          onChanged: (v) => ps.cores = v.round(),
                         ),
-                      ),
-                  ]),
-                ),
+                      if (ps.parallel == ParallelMode.multistation)
+                        SizedBox(
+                          width: 420,
+                          child: PathField(
+                            label: tr('Multistation jobs folder'),
+                            value: ps.jobsFolder,
+                            backend: st.backend,
+                            mode: BrowseMode.folder,
+                            onChanged: (v) => setState(() => ps.jobsFolder = v),
+                          ),
+                        ),
+                    ]),
+                  ),
               ],
             ),
           ),
@@ -456,7 +471,7 @@ class _ProcDialogState extends State<_ProcDialog> {
         value: cur,
         items: ['', ...inp.enumValues],
         width: 260,
-        itemLabel: (v) => v.isEmpty ? '(default)' : v,
+        itemLabel: (v) => v.isEmpty ? tr('(default)') : v,
         onChanged: (v) => setState(() => p.values = v.isEmpty ? [] : [v]),
       );
     }

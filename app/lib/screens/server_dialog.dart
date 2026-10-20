@@ -6,6 +6,7 @@ import '../backend/server_control.dart';
 import '../state/app_state.dart';
 import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
+import '../l10n.dart';
 
 /// TWM server panel (TWM guide figure 3.37). The original named pipe server
 /// is replaced by HTTP + WebSocket API, which also serves the web UI.
@@ -49,39 +50,41 @@ class _ServerDialogState extends State<_ServerDialog> {
     final st = AppScope.of(context);
     if (!canHostServer(st.backend)) {
       return AlertDialog(
-        title: const Text('TWM server'),
+        title: Text(tr('TWM server')),
         content: Text(
           'This client is connected to ${st.backend.description}.\n'
           'The server can be hosted only by the desktop application with local backend, or by the headless '
           '"twm_server" program.',
         ),
-        actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close')))],
       );
     }
     final srv = serverControlFor(st.backend);
     return AlertDialog(
-      title: const Text('TWM server'),
+      title: Text(tr('TWM server')),
       content: SizedBox(
         width: 700,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Remote control of this TWM instance via HTTP/WebSocket API (web UI, sequencers such as '
-              'Open-Z-Bridge style clients). POST /api/<method> with JSON, events on ws://host:port/events.',
+            Text(
+              tr(
+                'Remote control of this TWM instance via HTTP/WebSocket API (web UI, sequencers such as '
+                'Open-Z-Bridge style clients). POST /api/<method> with JSON, events on ws://host:port/events.',
+              ),
             ),
             FieldRow([
               Choice<String>(
-                label: 'Listen on',
+                label: tr('Listen on'),
                 value: host,
                 items: const ['127.0.0.1', '0.0.0.0'],
                 width: 220,
-                itemLabel: (h) => h == '0.0.0.0' ? '0.0.0.0 (all interfaces)' : '127.0.0.1 (this PC only)',
+                itemLabel: (h) => h == '0.0.0.0' ? tr('0.0.0.0 (all interfaces)') : tr('127.0.0.1 (this PC only)'),
                 onChanged: (v) => setState(() => host = v),
               ),
               NumField(
-                label: 'Port',
+                label: tr('Port'),
                 value: port,
                 integer: true,
                 min: 1,
@@ -89,10 +92,10 @@ class _ServerDialogState extends State<_ServerDialog> {
                 width: 110,
                 onChanged: (v) => port = v,
               ),
-              TextEntry(label: 'Access token (optional)', value: token, width: 240, onChanged: (v) => token = v),
+              TextEntry(label: tr('Access token (optional)'), value: token, width: 240, onChanged: (v) => token = v),
             ]),
             PathField(
-              label: 'Web UI folder (built "flutter build web", optional)',
+              label: tr('Web UI folder (built "flutter build web", optional)'),
               value: webRoot,
               backend: st.backend,
               mode: BrowseMode.folder,
@@ -103,17 +106,19 @@ class _ServerDialogState extends State<_ServerDialog> {
               children: [
                 Icon(Icons.circle, color: srv.running ? Colors.green : Colors.grey, size: 16),
                 const SizedBox(width: 6),
-                Text(srv.running ? 'Running on port ${srv.port}, clients: ${srv.clients}' : 'Stopped'),
+                Text(srv.running ? trf('Running on port {0}, clients: {1}', [srv.port, srv.clients]) : tr('Stopped')),
               ],
             ),
             const SizedBox(height: 8),
             MessageBox(srv.log.reversed.take(50).join('\n'), height: 140),
             if (host == '0.0.0.0' && token.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text(
-                  'Warning: server open to the network without access token - anyone on the network can '
-                  'control the instruments and read/write files.',
+                  tr(
+                    'Warning: server open to the network without access token - anyone on the network can '
+                    'control the instruments and read/write files.',
+                  ),
                   style: TextStyle(color: Colors.orange),
                 ),
               ),
@@ -143,7 +148,7 @@ class _ServerDialogState extends State<_ServerDialog> {
                 },
           child: const Text('START'),
         ),
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close (keeps running)')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close (keeps running)'))),
       ],
     );
   }

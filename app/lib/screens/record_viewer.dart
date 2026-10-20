@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
+import '../l10n.dart';
 import '../state/app_state.dart';
 import '../widgets/chart.dart';
 import '../widgets/fields.dart';
@@ -12,16 +13,25 @@ import '../widgets/paths.dart';
 /// Record viewer (TWM guide figure 3.32): rereads the stored record files.
 Future<void> showRecordViewer(BuildContext context) => showDialog(
   context: context,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _RecordViewer()),
+  builder: (_) => AppScope(
+    state: AppScope.read(context),
+    child: const Dialog(
+      insetPadding: EdgeInsets.all(24),
+      child: SizedBox(width: 1150, height: 720, child: RecordViewerPanel(dialog: true)),
+    ),
+  ),
 );
 
-class _RecordViewer extends StatefulWidget {
-  const _RecordViewer();
+/// Record viewer page / dialog content.
+class RecordViewerPanel extends StatefulWidget {
+  final bool dialog;
+  const RecordViewerPanel({super.key, this.dialog = false});
   @override
-  State<_RecordViewer> createState() => _RecordViewerState();
+  State<RecordViewerPanel> createState() => _RecordViewerState();
 }
 
-class _RecordViewerState extends State<_RecordViewer> {
+class _RecordViewerState extends State<RecordViewerPanel> {
+  String _lastCurrent = '';
   String _session = '';
   SessionSummary? _sum;
   int _group = 1;
@@ -36,7 +46,19 @@ class _RecordViewerState extends State<_RecordViewer> {
   void initState() {
     super.initState();
     _session = AppScope.read(context).resultsSession;
+    _lastCurrent = _session;
     if (_session.isNotEmpty) _open(_session, last: true);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // follow the current measurement when a new record arrives
+    final cur = AppScope.of(context).currentSession;
+    if (cur.isNotEmpty && cur != _lastCurrent && !widget.dialog) {
+      _lastCurrent = cur;
+      _open(cur, last: true);
+    }
   }
 
   Future<void> _open(String s, {bool last = false}) async {
@@ -64,8 +86,8 @@ class _RecordViewerState extends State<_RecordViewer> {
       setState(() {
         _data = d;
         _msg =
-            '${d.fullLength} samples per channel'
-            '${d.channels.isNotEmpty && d.channels.first.length < d.fullLength ? ' (decimated to ${d.channels.first.length} points)' : ''}';
+            '${d.fullLength} ${tr('samples per channel')}'
+            '${d.channels.isNotEmpty && d.channels.first.length < d.fullLength ? ' (${tr('decimated to')} ${d.channels.first.length})' : ''}';
       });
     } catch (e) {
       setState(() => _msg = '$e');
@@ -101,98 +123,98 @@ class _RecordViewerState extends State<_RecordViewer> {
         }
       }
     }
-    return Dialog(
-      insetPadding: const EdgeInsets.all(24),
-      child: SizedBox(
-        width: 1150,
-        height: 720,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final content = Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.dialog)
+            Row(
+              children: [
+                Text(tr('Record viewer'), style: Theme.of(context).textTheme.titleLarge),
+                const Spacer(),
+                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              ],
+            ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Row(
-                children: [
-                  Text('Record viewer', style: Theme.of(context).textTheme.titleLarge),
-                  const Spacer(),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
-                ],
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final f = await browse(
+                    context,
+                    st.backend,
+                    title: tr('Select measurement session'),
+                    extensions: const ['session.info'],
+                    initial: _session.isEmpty ? st.settings.measurement.folder : dirName(_session),
+                  );
+                  if (f != null) await _open(f);
+                },
+                icon: const Icon(Icons.folder_open),
+                label: Text(tr('Session...')),
               ),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final f = await browse(
-                        context,
-                        st.backend,
-                        title: 'Select measurement session',
-                        extensions: const ['session.info'],
-                        initial: _session.isEmpty ? st.settings.measurement.folder : dirName(_session),
-                      );
-                      if (f != null) await _open(f);
-                    },
-                    icon: const Icon(Icons.folder_open),
-                    label: const Text('Session...'),
-                  ),
-                  SizedBox(width: 360, child: Text(_session.isEmpty ? '(no session)' : dirName(_session), maxLines: 2)),
-                  if (s != null && s.recordsPerGroup.length > 1)
-                    Choice<int>(
-                      label: 'Group',
-                      value: _group,
-                      items: [for (var g = 1; g <= s.recordsPerGroup.length; g++) g],
-                      width: 100,
-                      onChanged: (v) {
-                        setState(() => _group = v);
-                        _read();
-                      },
-                    ),
-                  if (recs > 0)
-                    Choice<int>(
-                      label: 'Record',
-                      value: _record.clamp(1, recs),
-                      items: [for (var r = 1; r <= recs; r++) r],
-                      width: 110,
-                      onChanged: (v) {
-                        setState(() => _record = v);
-                        _read();
-                      },
-                    ),
-                  NumField(
-                    label: 'Max samples to display',
-                    value: _maxPoints.toDouble(),
-                    integer: true,
-                    min: 100,
-                    width: 180,
-                    onChanged: (v) {
-                      _maxPoints = v.round();
-                      _read();
-                    },
-                  ),
-                  Check(label: 'Spectrum', value: _spectrum, onChanged: (v) => setState(() => _spectrum = v)),
-                  if (_busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                ],
+              SizedBox(width: 360, child: Text(_session.isEmpty ? tr('(no session)') : dirName(_session), maxLines: 2)),
+              if (s != null && s.recordsPerGroup.length > 1)
+                Choice<int>(
+                  label: tr('Group'),
+                  value: _group,
+                  items: [for (var g = 1; g <= s.recordsPerGroup.length; g++) g],
+                  width: 100,
+                  onChanged: (v) {
+                    setState(() => _group = v);
+                    _read();
+                  },
+                ),
+              if (recs > 0)
+                Choice<int>(
+                  label: tr('Record'),
+                  value: _record.clamp(1, recs),
+                  items: [for (var r = 1; r <= recs; r++) r],
+                  width: 110,
+                  onChanged: (v) {
+                    setState(() => _record = v);
+                    _read();
+                  },
+                ),
+              NumField(
+                label: tr('Max samples to display'),
+                value: _maxPoints.toDouble(),
+                integer: true,
+                min: 100,
+                width: 180,
+                onChanged: (v) {
+                  _maxPoints = v.round();
+                  _read();
+                },
               ),
-              if (s != null && s.comment.isNotEmpty)
-                Text('Comment: ${s.comment}', style: Theme.of(context).textTheme.bodySmall),
-              Text(_msg, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 4),
-              Expanded(
-                child: series.isEmpty
-                    ? const Center(child: Text('No data.'))
-                    : LineChart(
-                        series: series,
-                        xLabel: _spectrum ? 'frequency [Hz]' : 'time [s]',
-                        yLabel: _spectrum ? 'amplitude [V]' : 'voltage [V]',
-                        logY: _spectrum,
-                      ),
-              ),
+              Check(label: tr('Spectrum'), value: _spectrum, onChanged: (v) => setState(() => _spectrum = v)),
+              if (_busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
             ],
           ),
-        ),
+          if (s != null && s.comment.isNotEmpty)
+            Text('${tr('Comment')}: ${s.comment}', style: Theme.of(context).textTheme.bodySmall),
+          Text(_msg, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Expanded(
+            child: series.isEmpty
+                ? Center(child: Text(tr('No data - select a measurement session.')))
+                : LineChart(
+                    series: series,
+                    xLabel: _spectrum ? tr('frequency [Hz]') : tr('time [s]'),
+                    yLabel: _spectrum ? tr('amplitude [V]') : tr('voltage [V]'),
+                    logY: _spectrum,
+                  ),
+          ),
+        ],
       ),
     );
+    return widget.dialog
+        ? content
+        : Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(child: content),
+          );
   }
 }

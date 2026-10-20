@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../widgets/chart.dart';
 import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
+import '../l10n.dart';
 
 /// On-line data processing (TPQA "CVI Data Processing", guide figures
 /// 3.61/3.62): grid of measured values with statistics, harmonic graphs
@@ -48,14 +49,18 @@ class _OnlineViewState extends State<OnlineView> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Check(label: 'On-line processing enabled', value: o.enabled, onChanged: (v) => upd((c) => c.enabled = v)),
               Check(
-                label: 'Harmonic analyzer ON',
+                label: tr('On-line processing enabled'),
+                value: o.enabled,
+                onChanged: (v) => upd((c) => c.enabled = v),
+              ),
+              Check(
+                label: tr('Harmonic analyzer ON'),
                 value: o.harmonicAnalyzer,
                 onChanged: (v) => upd((c) => c.harmonicAnalyzer = v),
               ),
               NumField(
-                label: 'Harmonic number',
+                label: tr('Harmonic number'),
                 value: o.harmonics.toDouble(),
                 integer: true,
                 min: 1,
@@ -64,16 +69,16 @@ class _OnlineViewState extends State<OnlineView> {
                 onChanged: (v) => upd((c) => c.harmonics = v.round()),
               ),
               Choice<WindowType>(
-                label: 'Window type',
+                label: tr('Window type'),
                 value: o.window,
                 items: WindowType.values,
                 width: 190,
                 itemLabel: (w) => w.label,
                 onChanged: (v) => upd((c) => c.window = v),
               ),
-              Check(label: 'On/Off statistic', value: o.statistics, onChanged: (v) => upd((c) => c.statistics = v)),
+              Check(label: tr('On/Off statistic'), value: o.statistics, onChanged: (v) => upd((c) => c.statistics = v)),
               NumField(
-                label: 'Average cycles',
+                label: tr('Average cycles'),
                 value: o.averageCycles.toDouble(),
                 integer: true,
                 min: 2,
@@ -81,22 +86,22 @@ class _OnlineViewState extends State<OnlineView> {
                 onChanged: (v) => upd((c) => c.averageCycles = v.round()),
               ),
               NumField(
-                label: 'Max points to display',
+                label: tr('Max points to display'),
                 value: _maxPoints.toDouble(),
                 integer: true,
                 min: 10,
                 width: 170,
                 onChanged: (v) => setState(() => _maxPoints = v.round()),
               ),
-              OutlinedButton(onPressed: () => setState(_history.clear), child: const Text('Clear history')),
+              OutlinedButton(onPressed: () => setState(_history.clear), child: Text(tr('Clear history'))),
               Check(
-                label: 'Save CVI processed data',
+                label: tr('Save CVI processed data'),
                 value: o.saveResults,
                 onChanged: (v) => upd((c) => c.saveResults = v),
               ),
               if (o.saveResults)
                 PathField(
-                  label: 'Results file (CSV, appended)',
+                  label: tr('Results file (CSV, appended)'),
                   value: o.resultsFile,
                   backend: st.backend,
                   mode: BrowseMode.saveFile,
@@ -104,9 +109,11 @@ class _OnlineViewState extends State<OnlineView> {
                   width: 420,
                   onChanged: (v) => upd((c) => c.resultsFile = v),
                 ),
-              const Text(
-                'Indicative values only (not validated - use QWTB algorithms for traceable results). '
-                'Settings apply to the next measurement start.',
+              Text(
+                tr(
+                  'Indicative values only (not validated - use QWTB algorithms for traceable results). '
+                  'Settings apply to the next measurement start.',
+                ),
                 style: TextStyle(fontSize: 11),
               ),
             ],
@@ -114,7 +121,7 @@ class _OnlineViewState extends State<OnlineView> {
           const SizedBox(height: 8),
           Expanded(
             child: r == null
-                ? const Center(child: Text('No on-line results - start a measurement (continuous mode recommended).'))
+                ? Center(child: Text(tr('No on-line results - start a measurement (continuous mode recommended).')))
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -132,7 +139,10 @@ class _OnlineViewState extends State<OnlineView> {
                                   children: [
                                     Row(
                                       children: [
-                                        Text('History: $_graph', style: Theme.of(context).textTheme.titleSmall),
+                                        Text(
+                                          '${tr('History')}: $_graph',
+                                          style: Theme.of(context).textTheme.titleSmall,
+                                        ),
                                         const Spacer(),
                                         IconButton(
                                           onPressed: () => setState(() => _graph = null),
@@ -224,7 +234,7 @@ class _OnlineViewState extends State<OnlineView> {
                 _c(f(q.value)),
                 if (stats) ...[_c(f(q.mean)), _c(f(q.std)), _c(f(q.uA)), _c(f(q.errorPercent)), _c('${q.count}')],
                 IconButton(
-                  tooltip: 'Show graph',
+                  tooltip: tr('Show graph'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.show_chart, size: 18),
                   onPressed: () => setState(() => _graph = q.name),

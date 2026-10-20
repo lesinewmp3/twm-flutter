@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../widgets/fields.dart';
 import '../widgets/rows_editor.dart';
 import 'multiplexer_dialog.dart';
+import '../l10n.dart';
 
 /// "Digitizer configuration" panel (TWM guide 3.1.4.2, TPQA WB setup and
 /// LF-Setup DMMs panels).
@@ -58,7 +59,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
     final st = AppScope.read(context);
     setState(() {
       _busy = true;
-      _msg = 'Testing...';
+      _msg = tr('Testing...');
       _msgError = false;
     });
     final r = await st.backend.testDigitizer(cfg);
@@ -79,17 +80,19 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
   Future<void> _selfCal() async {
     final ok = await confirm(
       context,
-      'Self-calibration',
-      'Self-calibration changes the amplitude linearity of the digitizer, so it may alter the digitizer corrections. Continue?',
+      tr('Self-calibration'),
+      tr(
+        'Self-calibration changes the amplitude linearity of the digitizer, so it may alter the digitizer corrections. Continue?',
+      ),
     );
     if (!ok || !mounted) return;
     setState(() {
       _busy = true;
-      _msg = 'Self-calibration running...';
+      _msg = tr('Self-calibration running...');
     });
     try {
       await AppScope.read(context).backend.selfCalibrate(cfg);
-      setState(() => _msg = 'Self-calibration done.');
+      setState(() => _msg = tr('Self-calibration done.'));
     } catch (e) {
       setState(() {
         _msg = '$e';
@@ -111,7 +114,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DialogHeader('Digitizer configuration'),
+            DialogHeader(tr('Digitizer configuration')),
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,9 +127,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Choice<DigitizerType>(
-                            label: 'Digitizer type',
+                            label: tr('Digitizer type'),
                             value: cfg.type,
-                            items: DigitizerType.values,
+                            items: st.backend.features.digitizers,
                             itemLabel: (t) => t.label,
                             width: 300,
                             onChanged: (t) {
@@ -144,10 +147,11 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                           ),
                           const SizedBox(height: 12),
                           Choice<OnCloseAction>(
-                            label: 'On device close',
+                            label: tr('On device close'),
                             value: cfg.onClose,
                             items: OnCloseAction.values,
-                            itemLabel: (a) => a == OnCloseAction.immediateReset ? 'Immediate reset' : 'Delayed reset',
+                            itemLabel: (a) =>
+                                a == OnCloseAction.immediateReset ? tr('Immediate reset') : tr('Delayed reset'),
                             width: 300,
                             onChanged: (v) => setState(() => cfg.onClose = v),
                           ),
@@ -155,7 +159,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: NumField(
-                                label: 'Delayed reset timeout',
+                                label: tr('Delayed reset timeout'),
                                 unit: 's',
                                 value: cfg.delayedResetTimeout,
                                 min: 1,
@@ -163,18 +167,18 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                               ),
                             ),
                           Check(
-                            label: 'Force reset on open',
+                            label: tr('Force reset on open'),
                             value: cfg.forceResetOnOpen,
                             onChanged: (v) => setState(() => cfg.forceResetOnOpen = v),
                           ),
                           Check(
-                            label: 'Ignore channel overload',
+                            label: tr('Ignore channel overload'),
                             value: cfg.ignoreOverload,
                             onChanged: (v) => setState(() => cfg.ignoreOverload = v),
                           ),
                           const Divider(),
                           Check(
-                            label: 'Enable multiplexer mode (experimental)',
+                            label: tr('Enable multiplexer mode (experimental)'),
                             value: cfg.multiplexer.enabled,
                             onChanged: (v) => setState(() => cfg.multiplexer.enabled = v),
                           ),
@@ -183,10 +187,10 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                               await showMultiplexerDialog(context, cfg.multiplexer);
                               setState(() {});
                             },
-                            child: const Text('CONFIG MULTIPLEXER'),
+                            child: Text(tr('CONFIG MULTIPLEXER')),
                           ),
                           const SizedBox(height: 8),
-                          Text('Virtual channels: ${cfg.virtualChannelsCount}'),
+                          Text('${tr('Virtual channels')}: ${cfg.virtualChannelsCount}'),
                         ],
                       ),
                     ),
@@ -209,7 +213,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                   const SizedBox(width: 12),
                   Expanded(child: MessageBox(_msg, error: _msgError, height: 70)),
                   const SizedBox(width: 12),
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () {
@@ -246,31 +250,31 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       children: [
         FieldRow([
           NumField(
-            label: 'Bit resolution',
+            label: tr('Bit resolution'),
             value: s.bits.toDouble(),
             integer: true,
             min: 8,
             max: 31,
             onChanged: (v) => setState(() => s.bits = v.round()),
           ),
-          NumField(label: 'Max sampling rate', unit: 'Sa/s', value: s.maxFs, min: 1, onChanged: (v) => s.maxFs = v),
+          NumField(label: tr('Max sampling rate'), unit: 'Sa/s', value: s.maxFs, min: 1, onChanged: (v) => s.maxFs = v),
           NumField(
-            label: 'Sampling jitter',
+            label: tr('Sampling jitter'),
             unit: 's rms',
             value: s.jitterRms,
             min: 0,
             onChanged: (v) => s.jitterRms = v,
           ),
           NumField(
-            label: 'Real-time factor',
+            label: tr('Real-time factor'),
             value: s.realtimeFactor,
             min: 0,
-            tooltip: '1 = acquisition takes real time, 0 = instant',
+            tooltip: tr('1 = acquisition takes real time, 0 = instant'),
             onChanged: (v) => s.realtimeFactor = v,
           ),
         ]),
         RowsEditor<SimChannelConfig>(
-          title: 'Simulated channels',
+          title: tr('Simulated channels'),
           rows: s.channels,
           create: () => SimChannelConfig(name: 'ch${s.channels.length + 1}'),
           onChanged: _changed,
@@ -278,9 +282,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               FieldRow([
-                TextEntry(label: 'Name', value: ch.name, width: 120, onChanged: (v) => ch.name = v),
+                TextEntry(label: tr('Name'), value: ch.name, width: 120, onChanged: (v) => ch.name = v),
                 NumField(
-                  label: 'Range',
+                  label: tr('Range'),
                   unit: 'V',
                   value: ch.range,
                   width: 110,
@@ -289,7 +293,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                 ),
                 NumField(label: 'DC', unit: 'V', value: ch.dc, width: 110, onChanged: (v) => ch.dc = v),
                 NumField(
-                  label: 'Noise',
+                  label: tr('Noise'),
                   unit: 'V rms',
                   value: ch.noiseRms,
                   width: 130,
@@ -297,7 +301,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                   onChanged: (v) => ch.noiseRms = v,
                 ),
                 NumField(
-                  label: 'Time shift',
+                  label: tr('Time shift'),
                   unit: 's',
                   value: ch.timeShift,
                   width: 120,
@@ -353,7 +357,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                     onPressed: () =>
                         setState(() => ch.harmonics.add(SimHarmonic(50.0 * (ch.harmonics.length + 1), 0.01))),
                     icon: const Icon(Icons.add),
-                    label: const Text('component'),
+                    label: Text(tr('component')),
                   ),
                 ],
               ),
@@ -373,7 +377,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         RowsEditor<NiScopeChannelConfig>(
-          title: 'ADC Channels (NI 5922 cards, channel ID from 0)',
+          title: tr('ADC Channels (NI 5922 cards, channel ID from 0)'),
           rows: n.channels,
           create: () => NiScopeChannelConfig(
             resource: n.channels.isEmpty ? 'PXI1Slot2' : n.channels.last.resource,
@@ -381,9 +385,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
           ),
           onChanged: _changed,
           rowBuilder: (c, i, ch) => FieldRow([
-            TextEntry(label: 'Resource', value: ch.resource, width: 120, onChanged: (v) => ch.resource = v),
+            TextEntry(label: tr('Resource'), value: ch.resource, width: 120, onChanged: (v) => ch.resource = v),
             NumField(
-              label: 'Channel ID',
+              label: tr('Channel ID'),
               value: ch.channelId.toDouble(),
               width: 90,
               integer: true,
@@ -391,9 +395,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               max: 1,
               onChanged: (v) => ch.channelId = v.round(),
             ),
-            NumField(label: 'Range', unit: 'Vpk', value: ch.range, width: 110, onChanged: (v) => ch.range = v),
+            NumField(label: tr('Range'), unit: 'Vpk', value: ch.range, width: 110, onChanged: (v) => ch.range = v),
             Choice<NiScopeInputZ>(
-              label: 'Input Z',
+              label: tr('Input Z'),
               value: ch.inputZ,
               width: 110,
               items: NiScopeInputZ.values,
@@ -402,8 +406,8 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                 if (v == NiScopeInputZ.ohm50 &&
                     !await confirm(
                       context,
-                      'Warning',
-                      'Applying voltage over 5 V to 50 Ω input may damage the digitizer!',
+                      tr('Warning'),
+                      tr('Applying voltage over 5 V to 50 Ω input may damage the digitizer!'),
                     )) {
                   return;
                 }
@@ -411,47 +415,47 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               },
             ),
             Choice<NiScopeCoupling>(
-              label: 'Coupling',
+              label: tr('Coupling'),
               value: ch.coupling,
               width: 100,
               items: NiScopeCoupling.values,
               itemLabel: (c) => c.name.toUpperCase(),
               onChanged: (v) => setState(() => ch.coupling = v),
             ),
-            NumField(label: 'Offset', unit: 'V', value: ch.offset, width: 100, onChanged: (v) => ch.offset = v),
+            NumField(label: tr('Offset'), unit: 'V', value: ch.offset, width: 100, onChanged: (v) => ch.offset = v),
             NumField(
-              label: 'Probe att.',
+              label: tr('Probe att.'),
               value: ch.probeAttenuation,
               width: 90,
               onChanged: (v) => ch.probeAttenuation = v,
             ),
             NumField(
-              label: 'Max input f',
+              label: tr('Max input f'),
               unit: 'Hz',
               value: ch.maxInputFrequency,
               width: 120,
-              tooltip: '-1 = default bandwidth',
+              tooltip: tr('-1 = default bandwidth'),
               onChanged: (v) => ch.maxInputFrequency = v,
             ),
           ]),
         ),
         Group(
-          title: 'Clock and acquisition',
+          title: tr('Clock and acquisition'),
           child: FieldRow([
             NumField(
-              label: 'External clock',
+              label: tr('External clock'),
               unit: 'Hz',
               value: n.extClockHz,
               min: 0,
               width: 160,
-              tooltip: '0 = internal clock; e.g. 10M to lock PLL to external reference',
+              tooltip: tr('0 = internal clock; e.g. 10M to lock PLL to external reference'),
               onChanged: (v) => n.extClockHz = v,
             ),
             Choice<NiScopeClockSource>(
-              label: 'External clock mode',
+              label: tr('External clock mode'),
               value: n.extClockSource,
               items: NiScopeClockSource.values,
-              itemLabel: (s) => const {
+              itemLabel: (s) => {
                 NiScopeClockSource.clkIn: 'VAL_CLK_IN',
                 NiScopeClockSource.pxiClk: 'VAL_PXI_CLOCK',
                 NiScopeClockSource.pfi0: 'VAL_PFI_0',
@@ -461,73 +465,85 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               onChanged: (v) => setState(() => n.extClockSource = v),
             ),
             NumField(
-              label: 'Fetch timeout',
+              label: tr('Fetch timeout'),
               unit: 's',
               value: n.fetchTimeout,
               width: 120,
               onChanged: (v) => n.fetchTimeout = v,
             ),
-            Check(label: 'Use streaming mode', value: n.streaming, onChanged: (v) => setState(() => n.streaming = v)),
+            Check(
+              label: tr('Use streaming mode'),
+              value: n.streaming,
+              onChanged: (v) => setState(() => n.streaming = v),
+            ),
           ]),
         ),
         Group(
-          title: 'Trigger (advanced, TPQA)',
+          title: tr('Trigger (advanced, TPQA)'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FieldRow([
                 Choice<NiScopeTriggerType>(
-                  label: 'Trigger type',
+                  label: tr('Trigger type'),
                   value: t.type,
                   items: NiScopeTriggerType.values,
                   width: 160,
                   onChanged: (v) => setState(() => t.type = v),
                 ),
-                TextEntry(label: 'Trigger source', value: t.source, width: 150, onChanged: (v) => t.source = v),
+                TextEntry(label: tr('Trigger source'), value: t.source, width: 150, onChanged: (v) => t.source = v),
                 NumField(
-                  label: 'Ref. position',
+                  label: tr('Ref. position'),
                   unit: '%',
                   value: t.refPosition,
                   width: 120,
                   onChanged: (v) => t.refPosition = v,
                 ),
-                NumField(label: 'Holdoff', unit: 's', value: t.holdoff, width: 110, onChanged: (v) => t.holdoff = v),
-                NumField(label: 'Delay', unit: 's', value: t.delay, width: 110, onChanged: (v) => t.delay = v),
+                NumField(
+                  label: tr('Holdoff'),
+                  unit: 's',
+                  value: t.holdoff,
+                  width: 110,
+                  onChanged: (v) => t.holdoff = v,
+                ),
+                NumField(label: tr('Delay'), unit: 's', value: t.delay, width: 110, onChanged: (v) => t.delay = v),
               ]),
               FieldRow([
                 NumField(
-                  label: 'Hysteresis',
+                  label: tr('Hysteresis'),
                   unit: 'V',
                   value: t.hysteresis,
                   width: 120,
                   onChanged: (v) => t.hysteresis = v,
                 ),
                 Choice<bool>(
-                  label: 'Window mode',
+                  label: tr('Window mode'),
                   value: t.windowEntering,
                   items: const [true, false],
                   width: 130,
-                  itemLabel: (b) => b ? 'Entering' : 'Leaving',
+                  itemLabel: (b) => b ? tr('Entering') : tr('Leaving'),
                   onChanged: (v) => setState(() => t.windowEntering = v),
                 ),
                 NumField(
-                  label: 'Low level window',
+                  label: tr('Low level window'),
                   unit: 'V',
                   value: t.lowLevel,
                   width: 150,
                   onChanged: (v) => t.lowLevel = v,
                 ),
                 NumField(
-                  label: 'High level window',
+                  label: tr('High level window'),
                   unit: 'V',
                   value: t.highLevel,
                   width: 150,
                   onChanged: (v) => t.highLevel = v,
                 ),
               ]),
-              const Text(
-                'Level/slope/coupling of the basic trigger are set in the measurement setup. '
-                'Parameters above are used for the trigger types not available in TWM (TPQA).',
+              Text(
+                tr(
+                  'Level/slope/coupling of the basic trigger are set in the measurement setup. '
+                  'Parameters above are used for the trigger types not available in TWM (TPQA).',
+                ),
                 style: TextStyle(fontSize: 12),
               ),
             ],
@@ -545,14 +561,14 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         RowsEditor<DmmChannelConfig>(
-          title: 'DMM Channels (first = MASTER)',
+          title: tr('DMM Channels (first = MASTER)'),
           rows: d.channels,
           create: () => DmmChannelConfig(visa: 'GPIB0::${22 + d.channels.length}::INSTR'),
           onChanged: _changed,
           rowBuilder: (c, i, ch) => FieldRow([
             TextEntry(label: 'VISA', value: ch.visa, width: 220, onChanged: (v) => ch.visa = v),
             Choice<double>(
-              label: 'Range [Vpk]',
+              label: tr('Range [Vpk]'),
               value: ch.range,
               width: 120,
               items: const [0.1, 1, 10, 100, 1000],
@@ -563,25 +579,25 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
           ]),
         ),
         Group(
-          title: 'Digitizing',
+          title: tr('Digitizing'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FieldRow([
                 Choice<Dmm3458IdnMode>(
-                  label: 'Control DMM descriptor mode',
+                  label: tr('Control DMM descriptor mode'),
                   value: d.idnMode,
                   items: Dmm3458IdnMode.values,
                   width: 230,
-                  itemLabel: (m) => const {
-                    Dmm3458IdnMode.auto: 'Auto',
-                    Dmm3458IdnMode.sequential: 'Sequential',
-                    Dmm3458IdnMode.calibrationString: 'From calibration string',
+                  itemLabel: (m) => {
+                    Dmm3458IdnMode.auto: tr('Auto'),
+                    Dmm3458IdnMode.sequential: tr('Sequential'),
+                    Dmm3458IdnMode.calibrationString: tr('From calibration string'),
                   }[m]!,
                   onChanged: (v) => setState(() => d.idnMode = v),
                 ),
                 Choice<Dmm3458Mode>(
-                  label: 'DMM digitizing mode',
+                  label: tr('DMM digitizing mode'),
                   value: d.mode,
                   items: Dmm3458Mode.values,
                   width: 160,
@@ -589,7 +605,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                   onChanged: (v) => setState(() => d.mode = v),
                 ),
                 Choice<Dmm3458Sync>(
-                  label: 'Synchronization mode',
+                  label: tr('Synchronization mode'),
                   value: d.sync,
                   items: Dmm3458Sync.values,
                   width: 360,
@@ -600,14 +616,14 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               if (d.sync == Dmm3458Sync.masterSlaveAwg || d.sync == Dmm3458Sync.allAwg)
                 FieldRow([
                   Choice<AwgType>(
-                    label: 'AWG type',
+                    label: tr('AWG type'),
                     value: d.awgType,
                     items: AwgType.values,
                     width: 200,
                     onChanged: (v) => setState(() => d.awgType = v),
                   ),
                   TextEntry(
-                    label: 'AWG VISA',
+                    label: tr('AWG VISA'),
                     value: d.awgVisa,
                     width: 220,
                     onChanged: (v) => d.awgVisa = v,
@@ -617,14 +633,14 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               if (d.sync == Dmm3458Sync.allTimer)
                 FieldRow([
                   Choice<CounterType>(
-                    label: 'Counter type',
+                    label: tr('Counter type'),
                     value: d.counterType,
                     items: CounterType.values,
                     width: 200,
                     onChanged: (v) => setState(() => d.counterType = v),
                   ),
                   TextEntry(
-                    label: 'Counter VISA',
+                    label: tr('Counter VISA'),
                     value: d.counterVisa,
                     width: 220,
                     onChanged: (v) => d.counterVisa = v,
@@ -632,39 +648,39 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                 ]),
               FieldRow([
                 Check(
-                  label: 'Use streaming mode',
+                  label: tr('Use streaming mode'),
                   value: d.streaming,
                   onChanged: (v) => setState(() => d.streaming = v),
                 ),
                 Check(
-                  label: 'Measure temperature',
+                  label: tr('Measure temperature'),
                   value: d.measureTemperature,
                   onChanged: (v) => setState(() => d.measureTemperature = v),
                 ),
                 Check(
-                  label: 'Disable display',
+                  label: tr('Disable display'),
                   value: d.disableDisplay,
                   onChanged: (v) => setState(() => d.disableDisplay = v),
                 ),
               ]),
               FieldRow([
                 Choice<Dmm3458Format>(
-                  label: 'Output format',
+                  label: tr('Output format'),
                   value: d.format,
                   items: Dmm3458Format.values,
                   width: 150,
-                  itemLabel: (f) => f == Dmm3458Format.auto ? 'Auto' : f.name.toUpperCase(),
+                  itemLabel: (f) => f == Dmm3458Format.auto ? tr('Auto') : f.name.toUpperCase(),
                   onChanged: (v) => setState(() => d.format = v),
                 ),
                 Choice<Dmm3458Memory>(
-                  label: 'Memory mode',
+                  label: tr('Memory mode'),
                   value: d.memory,
                   items: Dmm3458Memory.values,
                   width: 170,
-                  itemLabel: (m) => const {
-                    Dmm3458Memory.standard: 'Standard',
-                    Dmm3458Memory.option001: 'Option 001',
-                    Dmm3458Memory.memoryOff: 'Memory OFF',
+                  itemLabel: (m) => {
+                    Dmm3458Memory.standard: tr('Standard'),
+                    Dmm3458Memory.option001: tr('Option 001'),
+                    Dmm3458Memory.memoryOff: tr('Memory OFF'),
                   }[m]!,
                   onChanged: (v) => setState(() => d.memory = v),
                 ),
@@ -673,13 +689,13 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
           ),
         ),
         Group(
-          title: 'Aperture selection',
+          title: tr('Aperture selection'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FieldRow([
                 Choice<Dmm3458ApertureMode>(
-                  label: 'Aperture selection mode',
+                  label: tr('Aperture selection mode'),
                   value: d.apertureMode,
                   items: Dmm3458ApertureMode.values,
                   width: 220,
@@ -688,14 +704,20 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               ]),
               if (d.apertureMode == Dmm3458ApertureMode.table)
                 RowsEditor<ApertureRule>(
-                  title: 'Aperture auto selection rules (up to fs -> aperture)',
+                  title: tr('Aperture auto selection rules (up to fs -> aperture)'),
                   rows: d.apertureTable,
                   create: () => ApertureRule(100000, 1.4e-6),
                   onChanged: _changed,
                   rowBuilder: (c, i, r) => FieldRow([
-                    NumField(label: 'fs max', unit: 'Sa/s', value: r.fsMax, width: 140, onChanged: (v) => r.fsMax = v),
                     NumField(
-                      label: 'Aperture',
+                      label: tr('fs max'),
+                      unit: 'Sa/s',
+                      value: r.fsMax,
+                      width: 140,
+                      onChanged: (v) => r.fsMax = v,
+                    ),
+                    NumField(
+                      label: tr('Aperture'),
                       unit: 's',
                       value: r.aperture,
                       width: 140,
@@ -708,17 +730,17 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
         ),
         if (d.hasF8588)
           Group(
-            title: 'Fluke 8588A options',
+            title: tr('Fluke 8588A options'),
             child: FieldRow([
               Choice<String>(
-                label: 'Low pass filter',
+                label: tr('Low pass filter'),
                 value: d.f8588Filter,
                 width: 160,
                 items: const ['OFF', '3MHz', '40MHz'],
                 onChanged: (v) => setState(() => d.f8588Filter = v),
               ),
               Check(
-                label: 'Lock to external reference',
+                label: tr('Lock to external reference'),
                 value: d.f8588ExtRefLock,
                 onChanged: (v) => setState(() => d.f8588ExtRefLock = v),
               ),
@@ -736,9 +758,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FieldRow([
-          TextEntry(label: 'Device address', value: c.device, width: 200, onChanged: (v) => c.device = v),
+          TextEntry(label: tr('Device address'), value: c.device, width: 200, onChanged: (v) => c.device = v),
           Choice<double>(
-            label: 'Fixed sampling rate',
+            label: tr('Fixed sampling rate'),
             value: c.fixedRate,
             width: 180,
             items: const [50000, 25000, 12500, 10000, 5000, 1000, 39062.5],
@@ -747,7 +769,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
           ),
         ]),
         Group(
-          title: 'Channels (NI 9238: ID 0 - 3)',
+          title: tr('Channels (NI 9238: ID 0 - 3)'),
           child: Wrap(
             spacing: 12,
             children: [
@@ -767,29 +789,29 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
           ),
         ),
         Group(
-          title: 'Digitizer master clock',
+          title: tr('Digitizer master clock'),
           child: FieldRow([
             Choice<CdaqClockMode>(
-              label: 'Digitizer master clock mode',
+              label: tr('Digitizer master clock mode'),
               value: c.clockMode,
               items: CdaqClockMode.values,
               width: 240,
-              itemLabel: (m) => const {
-                CdaqClockMode.freeRunning: 'Free running',
-                CdaqClockMode.importMasterClock: 'Import master clock',
-                CdaqClockMode.exportMasterClock: 'Export master clock',
+              itemLabel: (m) => {
+                CdaqClockMode.freeRunning: tr('Free running'),
+                CdaqClockMode.importMasterClock: tr('Import master clock'),
+                CdaqClockMode.exportMasterClock: tr('Export master clock'),
               }[m]!,
               onChanged: (v) => setState(() => c.clockMode = v),
             ),
             TextEntry(
-              label: 'Clock source',
+              label: tr('Clock source'),
               value: c.clockSource,
               width: 160,
               onChanged: (v) => c.clockSource = v,
               enabled: c.clockMode == CdaqClockMode.importMasterClock,
             ),
             NumField(
-              label: 'External master clock frequency',
+              label: tr('External master clock frequency'),
               unit: 'Hz',
               value: c.extClockHz,
               width: 240,
@@ -809,16 +831,16 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FieldRow([TextEntry(label: 'Scope VISA address', value: d.visa, width: 420, onChanged: (v) => d.visa = v)]),
+        FieldRow([TextEntry(label: tr('Scope VISA address'), value: d.visa, width: 420, onChanged: (v) => d.visa = v)]),
         RowsEditor<DsoChannelConfig>(
-          title: 'ADC channels (ID from 1)',
+          title: tr('ADC channels (ID from 1)'),
           rows: d.channels,
           maxRows: 4,
           create: () => DsoChannelConfig(channelId: d.channels.length + 1),
           onChanged: _changed,
           rowBuilder: (c, i, ch) => FieldRow([
             NumField(
-              label: 'Channel ID',
+              label: tr('Channel ID'),
               value: ch.channelId.toDouble(),
               integer: true,
               min: 1,
@@ -826,37 +848,40 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               width: 100,
               onChanged: (v) => ch.channelId = v.round(),
             ),
-            NumField(label: 'Range', unit: 'Vpk', value: ch.range, width: 120, onChanged: (v) => ch.range = v),
-            NumField(label: 'Offset', unit: 'V', value: ch.offset, width: 110, onChanged: (v) => ch.offset = v),
+            NumField(label: tr('Range'), unit: 'Vpk', value: ch.range, width: 120, onChanged: (v) => ch.range = v),
+            NumField(label: tr('Offset'), unit: 'V', value: ch.offset, width: 110, onChanged: (v) => ch.offset = v),
             Choice<DsoCoupling>(
-              label: 'Coupling',
+              label: tr('Coupling'),
               value: ch.coupling,
               items: DsoCoupling.values,
               width: 130,
-              itemLabel: (c) =>
-                  const {DsoCoupling.dc1M: 'DC 1 MΩ', DsoCoupling.ac1M: 'AC 1 MΩ', DsoCoupling.dc50: 'DC 50 Ω'}[c]!,
+              itemLabel: (c) => {
+                DsoCoupling.dc1M: tr('DC 1 MΩ'),
+                DsoCoupling.ac1M: tr('AC 1 MΩ'),
+                DsoCoupling.dc50: tr('DC 50 Ω'),
+              }[c]!,
               onChanged: (v) => setState(() => ch.coupling = v),
             ),
           ]),
         ),
         FieldRow([
           NumField(
-            label: 'BW limit',
+            label: tr('BW limit'),
             unit: 'Hz',
             value: d.bwLimit,
             width: 140,
-            tooltip: '-1 = disabled',
+            tooltip: tr('-1 = disabled'),
             onChanged: (v) => d.bwLimit = v,
           ),
           Choice<String>(
-            label: 'Bit resolution',
+            label: tr('Bit resolution'),
             value: d.bitResolution,
             width: 150,
             items: const ['Auto', '10', '11', '12', '13', '14', '15', '16'],
             onChanged: (v) => setState(() => d.bitResolution = v),
           ),
           Choice<String>(
-            label: 'Trigger noise reject',
+            label: tr('Trigger noise reject'),
             value: d.noiseReject,
             width: 170,
             items: const ['Normal', 'ON'],
@@ -876,7 +901,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       children: [
         FieldRow([
           Choice<String>(
-            label: 'Capture device',
+            label: tr('Capture device'),
             value: s.device,
             width: 360,
             items: {s.device, ..._devices}.toList(),
@@ -891,12 +916,12 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                 if (mounted) showError(context, e);
               }
             },
-            child: const Text('Enumerate devices'),
+            child: Text(tr('Enumerate devices')),
           ),
         ]),
         FieldRow([
           Choice<int>(
-            label: 'Channels',
+            label: tr('Channels'),
             value: s.channels,
             items: const [1, 2],
             width: 120,
@@ -906,23 +931,25 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
             },
           ),
           Choice<int>(
-            label: 'Bits',
+            label: tr('Bits'),
             value: s.bits,
             items: const [16, 24, 32],
             width: 120,
             onChanged: (v) => setState(() => s.bits = v),
           ),
           NumField(
-            label: 'Full scale (assumed)',
+            label: tr('Full scale (assumed)'),
             unit: 'Vpk',
             value: s.range,
             width: 180,
             onChanged: (v) => s.range = v,
           ),
         ]),
-        const Text(
-          'Sound cards usually have AC coupled inputs: usable for phase, THD and spectrum, '
-          'not for DC or non-stationary signals.',
+        Text(
+          tr(
+            'Sound cards usually have AC coupled inputs: usable for phase, THD and spectrum, '
+            'not for DC or non-stationary signals.',
+          ),
           style: TextStyle(fontSize: 12),
         ),
       ],
@@ -937,9 +964,9 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FieldRow([
-          TextEntry(label: 'VISA / port', value: a.visa, width: 220, onChanged: (v) => a.visa = v),
+          TextEntry(label: tr('VISA / port'), value: a.visa, width: 220, onChanged: (v) => a.visa = v),
           NumField(
-            label: 'Channels',
+            label: tr('Channels'),
             value: a.channels.toDouble(),
             integer: true,
             min: 1,
@@ -950,27 +977,31 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               _changed();
             },
           ),
-          NumField(label: 'Range', unit: 'Vpk', value: a.range, width: 110, onChanged: (v) => a.range = v),
+          NumField(label: tr('Range'), unit: 'Vpk', value: a.range, width: 110, onChanged: (v) => a.range = v),
         ]),
         FieldRow([
           Choice<String>(
-            label: 'Input mode',
+            label: tr('Input mode'),
             value: a.inputMode,
             items: const ['SE', 'DIFF'],
             width: 130,
             onChanged: (v) => setState(() => a.inputMode = v),
           ),
           Choice<String>(
-            label: 'Input impedance',
+            label: tr('Input impedance'),
             value: a.inputZ,
             items: const ['1M', '10M', 'HiZ'],
             width: 150,
             onChanged: (v) => setState(() => a.inputZ = v),
           ),
-          Check(label: 'External 10 MHz reference', value: a.extRef, onChanged: (v) => setState(() => a.extRef = v)),
+          Check(
+            label: tr('External 10 MHz reference'),
+            value: a.extRef,
+            onChanged: (v) => setState(() => a.extRef = v),
+          ),
         ]),
-        const Text(
-          'Experimental CMI digitizer, protocol not publicly documented - driver unverified.',
+        Text(
+          tr('Experimental CMI digitizer, protocol not publicly documented - driver unverified.'),
           style: TextStyle(fontSize: 12),
         ),
       ],

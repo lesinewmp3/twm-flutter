@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../json.dart';
-import '../models/digitizer.dart';
 import '../models/digitizer_config.dart';
 import '../models/measurement.dart';
 import '../models/qwtb.dart';

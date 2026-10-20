@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n.dart';
+
 /// Spreadsheet-like editor of a string matrix (correction value matrices,
 /// CSV tables). Supports Excel compatible copy/paste (tab separated) and
 /// converts decimal commas on paste.
@@ -60,16 +62,16 @@ class _MatrixEditorState extends State<MatrixEditor> {
     final a = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx, pos.dy),
-      items: const [
-        PopupMenuItem(value: 'copy', child: Text('Copy all (Excel)')),
-        PopupMenuItem(value: 'paste', child: Text('Paste at cell')),
+      items: [
+        PopupMenuItem(value: 'copy', child: Text(tr('Copy all (Excel)'))),
+        PopupMenuItem(value: 'paste', child: Text(tr('Paste at cell'))),
         PopupMenuDivider(),
-        PopupMenuItem(value: 'insRow', child: Text('Insert row')),
-        PopupMenuItem(value: 'delRow', child: Text('Delete row')),
-        PopupMenuItem(value: 'insCol', child: Text('Insert column')),
-        PopupMenuItem(value: 'delCol', child: Text('Delete column')),
+        PopupMenuItem(value: 'insRow', child: Text(tr('Insert row'))),
+        PopupMenuItem(value: 'delRow', child: Text(tr('Delete row'))),
+        PopupMenuItem(value: 'insCol', child: Text(tr('Insert column'))),
+        PopupMenuItem(value: 'delCol', child: Text(tr('Delete column'))),
         PopupMenuDivider(),
-        PopupMenuItem(value: 'clear', child: Text('Clear all')),
+        PopupMenuItem(value: 'clear', child: Text(tr('Clear all'))),
       ],
     );
     if (a == null) return;
@@ -196,11 +198,11 @@ class _MatrixEditorState extends State<MatrixEditor> {
           Wrap(
             spacing: 4,
             children: [
-              TextButton(onPressed: () => setState(() => _menuAction('insRowEnd')), child: const Text('+ row')),
-              TextButton(onPressed: () => setState(() => _menuAction('insColEnd')), child: const Text('+ column')),
-              TextButton(onPressed: () => setState(() => _menuAction('delRowEnd')), child: const Text('- row')),
-              TextButton(onPressed: () => setState(() => _menuAction('delColEnd')), child: const Text('- column')),
-              const Text('  right click a cell for copy/paste', style: TextStyle(fontSize: 11)),
+              TextButton(onPressed: () => setState(() => _menuAction('insRowEnd')), child: Text(tr('+ row'))),
+              TextButton(onPressed: () => setState(() => _menuAction('insColEnd')), child: Text(tr('+ column'))),
+              TextButton(onPressed: () => setState(() => _menuAction('delRowEnd')), child: Text(tr('- row'))),
+              TextButton(onPressed: () => setState(() => _menuAction('delColEnd')), child: Text(tr('- column'))),
+              Text(tr('  right click a cell for copy/paste'), style: TextStyle(fontSize: 11)),
             ],
           ),
       ],
@@ -274,7 +276,6 @@ class _CellState extends State<_Cell> {
       style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
       decoration: const InputDecoration(
         isDense: true,
-        border: OutlineInputBorder(),
         contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       ),
       onChanged: widget.onChanged,

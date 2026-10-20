@@ -22,6 +22,9 @@ class AppSettings {
   String lastSession;
   String serverPipe;
 
+  /// UI language: 'auto' (system/browser), 'ru' or 'en'.
+  String language;
+
   AppSettings({
     DigitizerConfig? digitizer,
     MeasurementConfig? measurement,
@@ -31,6 +34,7 @@ class AppSettings {
     OnlineAnalysisConfig? online,
     this.lastSession = '',
     this.serverPipe = 'twm_server',
+    this.language = 'auto',
   }) : digitizer = digitizer ?? DigitizerConfig(),
        measurement = measurement ?? MeasurementConfig(),
        corrections = corrections ?? CorrectionsConfig(),
@@ -47,6 +51,7 @@ class AppSettings {
     'online': online.toJson(),
     'lastSession': lastSession,
     'serverPipe': serverPipe,
+    'language': language,
   };
 
   factory AppSettings.fromJson(Json j) => AppSettings(
@@ -58,6 +63,7 @@ class AppSettings {
     online: j['online'] == null ? null : OnlineAnalysisConfig.fromJson(jMap(j['online'])),
     lastSession: jString(j['lastSession']),
     serverPipe: jString(j['serverPipe'], 'twm_server'),
+    language: jString(j['language'], 'auto'),
   );
 
   AppSettings copy() => AppSettings.fromJson(toJson());

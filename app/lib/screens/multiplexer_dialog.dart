@@ -3,6 +3,7 @@ import 'package:twm_model/twm_model.dart';
 
 import '../widgets/fields.dart';
 import '../widgets/rows_editor.dart';
+import '../l10n.dart';
 
 /// Multiplexer configuration panel (TWM guide figure 3.6). Edits [cfg] in
 /// place.
@@ -25,7 +26,7 @@ class _MuxDialogState extends State<_MuxDialog> {
     final primLabel = c.type == MultiplexerType.niScopePfi ? 'PFI0' : 'DTR';
     final secLabel = c.type == MultiplexerType.niScopePfi ? 'PFI1' : 'RTS';
     return AlertDialog(
-      title: const Text('Multiplexer configuration'),
+      title: Text(tr('Multiplexer configuration')),
       content: SizedBox(
         width: 760,
         child: SingleChildScrollView(
@@ -34,7 +35,7 @@ class _MuxDialogState extends State<_MuxDialog> {
             children: [
               FieldRow([
                 Choice<MultiplexerType>(
-                  label: 'Multiplexer type',
+                  label: tr('Multiplexer type'),
                   value: c.type,
                   items: MultiplexerType.values,
                   width: 300,
@@ -43,7 +44,7 @@ class _MuxDialogState extends State<_MuxDialog> {
                 ),
                 if (c.type == MultiplexerType.niScopePfi)
                   NumField(
-                    label: 'NI 5922 virtual channel index',
+                    label: tr('NI 5922 virtual channel index'),
                     value: c.niScopeChannelIndex.toDouble(),
                     integer: true,
                     min: 0,
@@ -51,17 +52,17 @@ class _MuxDialogState extends State<_MuxDialog> {
                     onChanged: (v) => c.niScopeChannelIndex = v.round(),
                   )
                 else
-                  TextEntry(label: 'Device VISA', value: c.visa, width: 220, onChanged: (v) => c.visa = v),
+                  TextEntry(label: tr('Device VISA'), value: c.visa, width: 220, onChanged: (v) => c.visa = v),
               ]),
               RowsEditor<MultiplexerPath>(
-                title: 'Virtual channel definitions (paths)',
+                title: tr('Virtual channel definitions (paths)'),
                 rows: c.paths,
                 create: () => MultiplexerPath(name: String.fromCharCode(65 + c.paths.length)),
                 onChanged: () => setState(() {}),
                 rowBuilder: (_, i, p) => FieldRow([
-                  TextEntry(label: 'Name', value: p.name, width: 100, onChanged: (v) => setState(() => p.name = v)),
+                  TextEntry(label: tr('Name'), value: p.name, width: 100, onChanged: (v) => setState(() => p.name = v)),
                   if (c.type == MultiplexerType.visaCommands || c.type == MultiplexerType.qpmx)
-                    TextEntry(label: 'Command', value: p.command, width: 300, onChanged: (v) => p.command = v)
+                    TextEntry(label: tr('Command'), value: p.command, width: 300, onChanged: (v) => p.command = v)
                   else ...[
                     Check(label: primLabel, value: p.primary, onChanged: (v) => setState(() => p.primary = v)),
                     Check(label: secLabel, value: p.secondary, onChanged: (v) => setState(() => p.secondary = v)),
@@ -69,7 +70,7 @@ class _MuxDialogState extends State<_MuxDialog> {
                 ]),
               ),
               const SizedBox(height: 12),
-              Text('Sequence definition', style: Theme.of(context).textTheme.titleSmall),
+              Text(tr('Sequence definition'), style: Theme.of(context).textTheme.titleSmall),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -82,7 +83,7 @@ class _MuxDialogState extends State<_MuxDialog> {
                       backgroundColor: names.contains(c.sequence[i]) ? null : Colors.red.shade100,
                     ),
                   PopupMenuButton<String>(
-                    tooltip: 'Add step',
+                    tooltip: tr('Add step'),
                     icon: const Icon(Icons.add_circle_outline),
                     itemBuilder: (_) => [for (final n in names) PopupMenuItem(value: n, child: Text(n))],
                     onSelected: (v) => setState(() => c.sequence.add(v)),
@@ -91,7 +92,7 @@ class _MuxDialogState extends State<_MuxDialog> {
               ),
               FieldRow([
                 NumField(
-                  label: 'Delay before switch',
+                  label: tr('Delay before switch'),
                   unit: 's',
                   value: c.delayBeforeSwitch,
                   min: 0,
@@ -99,7 +100,7 @@ class _MuxDialogState extends State<_MuxDialog> {
                   onChanged: (v) => c.delayBeforeSwitch = v,
                 ),
                 NumField(
-                  label: 'Delay after switch',
+                  label: tr('Delay after switch'),
                   unit: 's',
                   value: c.delayAfterSwitch,
                   min: 0,
@@ -107,16 +108,18 @@ class _MuxDialogState extends State<_MuxDialog> {
                   onChanged: (v) => c.delayAfterSwitch = v,
                 ),
               ]),
-              const Text(
-                'Enabling multiplexer multiplies virtual channels count by the sequence length, so digitizer '
-                'corrections for disabled multiplexing are not compatible.',
+              Text(
+                tr(
+                  'Enabling multiplexer multiplies virtual channels count by the sequence length, so digitizer '
+                  'corrections for disabled multiplexing are not compatible.',
+                ),
                 style: TextStyle(fontSize: 12),
               ),
             ],
           ),
         ),
       ),
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close')))],
     );
   }
 }

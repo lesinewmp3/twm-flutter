@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'backend/backend_factory.dart';
+import 'l10n.dart';
 import 'screens/connect_screen.dart';
 import 'screens/main_screen.dart';
 import 'state/app_state.dart';
+import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +27,7 @@ class _TwmAppState extends State<TwmApp> {
   @override
   void initState() {
     super.initState();
+    L10n.apply('auto');
     if (canRunLocalBackend) _connect(null);
   }
 
@@ -33,32 +36,39 @@ class _TwmAppState extends State<TwmApp> {
     try {
       final b = await createBackend(serverUrl: url);
       final s = await AppState.create(b);
+      L10n.apply(s.settings.language);
+      s.addListener(_onState);
       setState(() => _state = s);
     } catch (e) {
       setState(() => _error = e);
     }
   }
 
+  String _lang = '';
+
+  void _onState() {
+    final l = _state!.settings.language;
+    if (l != _lang) {
+      _lang = l;
+      L10n.apply(l);
+      setState(() {}); // rebuild whole tree with the new language
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final seed = const Color(0xFF2E5C8A);
     return MaterialApp(
       title: 'TWM - TracePQM Wattmeter',
       debugShowCheckedModeBanner: false,
       themeMode: _mode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        visualDensity: VisualDensity.compact,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-        visualDensity: VisualDensity.compact,
-        useMaterial3: true,
-      ),
+      theme: TwmTheme.light(),
+      darkTheme: TwmTheme.dark(),
       home: _state == null
-          ? ConnectScreen(error: _error, onConnect: _connect, canLocal: canRunLocalBackend)
+          ? (canRunLocalBackend && _error == null
+                ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+                : ConnectScreen(error: _error, onConnect: _connect, canLocal: canRunLocalBackend))
           : AppScope(
+              key: ValueKey(_lang),
               state: _state!,
               child: MainScreen(
                 onToggleTheme: () =>

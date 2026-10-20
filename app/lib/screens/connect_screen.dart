@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n.dart';
+
 /// Start screen: connecting to the backend (web: TWM server address).
 class ConnectScreen extends StatefulWidget {
   final Object? error;
@@ -27,16 +29,18 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('TWM - TracePQM Wattmeter', style: Theme.of(context).textTheme.headlineSmall),
+                  Text(tr('TWM - TracePQM Wattmeter'), style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Connect to a TWM server (the PC with digitizers and GNU Octave). '
-                    'Start it there with: dart run twm_core:twm_server --host 0.0.0.0',
+                  Text(
+                    tr(
+                      'Connect to a TWM server (the PC with digitizers and GNU Octave). '
+                      'Start it there with: dart run twm_core:twm_server --host 0.0.0.0',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _url,
-                    decoration: const InputDecoration(labelText: 'Server address', border: OutlineInputBorder()),
+                    decoration: InputDecoration(labelText: tr('Server address')),
                     onSubmitted: widget.onConnect,
                   ),
                   const SizedBox(height: 16),
@@ -47,9 +51,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       if (widget.canLocal)
-                        TextButton(onPressed: () => widget.onConnect(null), child: const Text('Use local backend')),
+                        TextButton(onPressed: () => widget.onConnect(null), child: Text(tr('Use local backend'))),
                       const SizedBox(width: 8),
-                      FilledButton(onPressed: () => widget.onConnect(_url.text), child: const Text('Connect')),
+                      FilledButton(onPressed: () => widget.onConnect(_url.text), child: Text(tr('Connect'))),
                     ],
                   ),
                 ],

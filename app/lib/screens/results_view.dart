@@ -9,6 +9,7 @@ import '../widgets/chart.dart';
 import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
 import '../widgets/paths.dart';
+import '../l10n.dart';
 
 enum _MeasSel { none, current, file }
 
@@ -113,22 +114,22 @@ class _ResultsViewState extends State<ResultsView> {
     final a = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx, pos.dy),
-      items: const [
-        PopupMenuItem(value: 'graph', child: Text('Show row as graph')),
-        PopupMenuItem(value: 'copy', child: Text('Copy table (Excel)')),
-        PopupMenuItem(value: 'export', child: Text('Export to CSV file...')),
+      items: [
+        PopupMenuItem(value: 'graph', child: Text(tr('Show row as graph'))),
+        PopupMenuItem(value: 'copy', child: Text(tr('Copy table (Excel)'))),
+        PopupMenuItem(value: 'export', child: Text(tr('Export to CSV file...'))),
       ],
     );
     if (a == null || !mounted) return;
     switch (a) {
       case 'copy':
         await Clipboard.setData(ClipboardData(text: _table.toTsv()));
-        if (mounted) showInfo(context, 'Table copied to clipboard.');
+        if (mounted) showInfo(context, tr('Table copied to clipboard.'));
       case 'export':
         final f = await browse(
           context,
           st.backend,
-          title: 'Export results',
+          title: tr('Export results'),
           mode: BrowseMode.saveFile,
           extensions: const ['.csv'],
           initial: dirName(st.resultsSession),
@@ -143,7 +144,7 @@ class _ResultsViewState extends State<ResultsView> {
           f,
           header + [_table.header.join(';'), for (final r in _table.rows) r.join(';')].join('\n'),
         );
-        if (mounted) showInfo(context, 'Exported to $f');
+        if (mounted) showInfo(context, '${tr('Exported to')} $f');
       case 'graph':
         await _showGraph(row);
     }
@@ -183,7 +184,7 @@ class _ResultsViewState extends State<ResultsView> {
                   Text('$name [${q.tag}] - ${q.desc}', style: Theme.of(context).textTheme.titleMedium),
                   Expanded(
                     child: q.value.length <= 1 && d.count > 1
-                        ? const Center(child: Text('Scalar quantity: use "Scalar" view mode to see its history.'))
+                        ? Center(child: Text(tr('Scalar quantity: use "Scalar" view mode to see its history.')))
                         : LineChart(
                             xLabel: xl,
                             yLabel: name,
@@ -239,18 +240,21 @@ class _ResultsViewState extends State<ResultsView> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Choice<_MeasSel>(
-                label: 'Measurement selection',
+                label: tr('Measurement selection'),
                 value: _sel,
                 items: _MeasSel.values,
                 width: 190,
-                itemLabel: (v) =>
-                    const {_MeasSel.none: 'None', _MeasSel.current: 'Current', _MeasSel.file: 'Load from file'}[v]!,
+                itemLabel: (v) => {
+                  _MeasSel.none: tr('None'),
+                  _MeasSel.current: tr('Current'),
+                  _MeasSel.file: tr('Load from file'),
+                }[v]!,
                 onChanged: (v) async {
                   if (v == _MeasSel.file) {
                     final f = await browse(
                       context,
                       st.backend,
-                      title: 'Select measurement session',
+                      title: tr('Select measurement session'),
                       extensions: const ['session.info'],
                       initial: st.settings.measurement.folder,
                     );
@@ -268,14 +272,14 @@ class _ResultsViewState extends State<ResultsView> {
               SizedBox(
                 width: 330,
                 child: Text(
-                  'Selected measurement:\n${session.isEmpty ? '-' : dirName(session)}',
+                  '${tr('Selected measurement')}:\n${session.isEmpty ? '-' : dirName(session)}',
                   style: Theme.of(context).textTheme.bodySmall,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Choice<String>(
-                label: 'Algorithm selection',
+                label: tr('Algorithm selection'),
                 value: _algorithm,
                 items: _info.algorithms.isEmpty ? [''] : _info.algorithms,
                 width: 200,
@@ -286,7 +290,7 @@ class _ResultsViewState extends State<ResultsView> {
                 },
               ),
               Choice<ResultDim>(
-                label: 'Max. shown dimension',
+                label: tr('Max. shown dimension'),
                 value: c.maxDim,
                 items: ResultDim.values,
                 width: 170,
@@ -294,36 +298,36 @@ class _ResultsViewState extends State<ResultsView> {
                 onChanged: (v) => _cfg((c) => c.maxDim = v),
               ),
               Choice<int>(
-                label: 'Result selection',
+                label: tr('Result selection'),
                 value: c.resultId,
                 items: [-1, 0, for (var i = 1; i <= _info.files.length; i++) i],
                 width: 170,
-                itemLabel: (v) => v == -1 ? 'Current result' : (v == 0 ? 'Average' : 'Result #$v'),
+                itemLabel: (v) => v == -1 ? tr('Current result') : (v == 0 ? tr('Average') : 'Result #$v'),
                 enabled: c.maxDim != ResultDim.scalar,
                 onChanged: (v) => _cfg((c) => c.resultId = v),
               ),
               Choice<UncDisplay>(
-                label: 'Uncertainty display',
+                label: tr('Uncertainty display'),
                 value: c.unc,
                 items: UncDisplay.values,
                 width: 170,
-                itemLabel: (v) => const {
-                  UncDisplay.none: 'None',
-                  UncDisplay.plusMinus: 'Value ± unc.',
-                  UncDisplay.alternateRows: 'Alternate rows',
+                itemLabel: (v) => {
+                  UncDisplay.none: tr('None'),
+                  UncDisplay.plusMinus: tr('Value ± unc.'),
+                  UncDisplay.alternateRows: tr('Alternate rows'),
                 }[v]!,
                 onChanged: (v) => _cfg((c) => c.unc = v),
               ),
               Choice<GroupMode>(
-                label: 'Res. order mode',
+                label: tr('Res. order mode'),
                 value: c.group,
                 items: GroupMode.values,
                 width: 170,
-                itemLabel: (v) => v == GroupMode.byChannels ? 'Group phases' : 'Group quantities',
+                itemLabel: (v) => v == GroupMode.byChannels ? tr('Group phases') : tr('Group quantities'),
                 onChanged: (v) => _cfg((c) => c.group = v),
               ),
               Choice<PhaseMode>(
-                label: 'Phase mode',
+                label: tr('Phase mode'),
                 value: c.phase,
                 items: PhaseMode.values,
                 width: 150,
@@ -331,15 +335,15 @@ class _ResultsViewState extends State<ResultsView> {
                 onChanged: (v) => _cfg((c) => c.phase = v),
               ),
               Choice<int>(
-                label: 'Ref. channel',
+                label: tr('Ref. channel'),
                 value: c.phaseRefChannel,
                 items: [0, for (var i = 1; i <= _info.channels.length; i++) i],
                 width: 150,
-                itemLabel: (v) => v == 0 ? '- none -' : _info.channels[v - 1],
+                itemLabel: (v) => v == 0 ? tr('- none -') : _info.channels[v - 1],
                 onChanged: (v) => _cfg((c) => c.phaseRefChannel = v),
               ),
               Choice<AmplitudeMode>(
-                label: 'Convert amplitude',
+                label: tr('Convert amplitude'),
                 value: c.amplitude,
                 items: AmplitudeMode.values,
                 width: 150,
@@ -347,7 +351,7 @@ class _ResultsViewState extends State<ResultsView> {
                 onChanged: (v) => _cfg((c) => c.amplitude = v),
               ),
               NumField(
-                label: 'Max. shown array size',
+                label: tr('Max. shown array size'),
                 value: c.maxArray.toDouble(),
                 integer: true,
                 min: 1,
@@ -355,7 +359,7 @@ class _ResultsViewState extends State<ResultsView> {
                 onChanged: (v) => _cfg((c) => c.maxArray = v.round()),
               ),
               IconButton(
-                tooltip: 'Refresh',
+                tooltip: tr('Refresh'),
                 onPressed: () => _schedule(reloadInfo: true),
                 icon: _busy
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
@@ -376,11 +380,8 @@ class _ResultsViewState extends State<ResultsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Select quantities', style: Theme.of(context).textTheme.labelLarge),
-                      TextButton(
-                        onPressed: () => _cfg((c) => c.variables = []),
-                        child: const Text('--- Select all ---'),
-                      ),
+                      Text(tr('Select quantities'), style: Theme.of(context).textTheme.labelLarge),
+                      TextButton(onPressed: () => _cfg((c) => c.variables = []), child: Text(tr('--- Select all ---'))),
                       Expanded(
                         child: ListView(
                           children: [
@@ -423,8 +424,10 @@ class _ResultsViewState extends State<ResultsView> {
       return Center(
         child: Text(
           AppScope.of(context).resultsSession.isEmpty
-              ? 'No measurement selected.'
-              : (_info.exists ? (_busy ? 'Loading...' : 'No results.') : 'No results available for this measurement.'),
+              ? tr('No measurement selected.')
+              : (_info.exists
+                    ? (_busy ? tr('Loading...') : tr('No results.'))
+                    : tr('No results available for this measurement.')),
         ),
       );
     }

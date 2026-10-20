@@ -7,6 +7,7 @@ import '../widgets/file_browser.dart';
 import '../widgets/paths.dart';
 import '../widgets/rows_editor.dart';
 import 'correction_editor.dart';
+import '../l10n.dart';
 
 /// HW corrections panel (TWM guide 3.1.4.3, TPQA guide 3.3.3.2): list of
 /// transducers with mapping to digitizer channels, and the digitizer
@@ -51,7 +52,9 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
       _digErr = s.error.isNotEmpty || s.type != 'digitizer';
       _digMsg = s.error.isNotEmpty
           ? s.error
-          : (s.type != 'digitizer' ? 'File is not a digitizer correction (type: ${s.type})!' : 'Loaded: ${s.name}');
+          : (s.type != 'digitizer'
+                ? trf('File is not a digitizer correction (type: {0})!', [s.type])
+                : '${tr('Loaded')}: ${s.name}');
     });
   }
 
@@ -88,10 +91,10 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
             children: [
               DialogHeader(
                 'HW corrections',
-                bottom: const TabBar(
+                bottom: TabBar(
                   tabs: [
-                    Tab(text: 'Transducers'),
-                    Tab(text: 'Digitizer'),
+                    Tab(text: tr('Transducers')),
+                    Tab(text: tr('Digitizer')),
                   ],
                 ),
               ),
@@ -102,7 +105,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: () {
@@ -130,7 +133,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PathField(
-            label: 'Transducer corrections root path',
+            label: tr('Transducer corrections root path'),
             value: c.transducersRoot,
             backend: b,
             mode: BrowseMode.folder,
@@ -138,7 +141,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
           ),
           const SizedBox(height: 8),
           RowsEditor<TransducerConfig>(
-            title: 'List of the transducers',
+            title: tr('List of the transducers'),
             rows: c.transducers,
             minRows: 0,
             create: () => TransducerConfig(
@@ -154,7 +157,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                   children: [
                     Expanded(
                       child: PathField(
-                        label: 'Correction file',
+                        label: tr('Correction file'),
                         value: t.path,
                         backend: b,
                         extensions: const ['.info'],
@@ -169,7 +172,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                               final saved = await showTransducerEditor(context, _abs(t.path));
                               if (saved != null) await _loadTransducer(t, saved);
                             },
-                      child: const Text('Edit'),
+                      child: Text(tr('Edit')),
                     ),
                   ],
                 ),
@@ -185,7 +188,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     ),
                   ),
                   NumField(
-                    label: 'Phase index',
+                    label: tr('Phase index'),
                     value: t.phaseIndex.toDouble(),
                     integer: true,
                     min: 1,
@@ -193,7 +196,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     onChanged: (v) => setState(() => t.phaseIndex = v.round()),
                   ),
                   Choice<int>(
-                    label: 'High',
+                    label: tr('High'),
                     value: t.highChannel,
                     items: chItems,
                     width: 100,
@@ -201,22 +204,22 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     onChanged: (v) => setState(() => t.highChannel = v),
                   ),
                   Choice<int>(
-                    label: 'Low',
+                    label: tr('Low'),
                     value: t.lowChannel,
                     items: [0, ...chItems],
                     width: 120,
-                    itemLabel: (k) => k == 0 ? 'Not used' : '#$k',
+                    itemLabel: (k) => k == 0 ? tr('Not used') : '#$k',
                     onChanged: (v) => setState(() => t.lowChannel = v),
                   ),
                   if (mux.enabled)
                     Choice<String>(
-                      label: 'Multiplexer',
+                      label: tr('Multiplexer'),
                       value: t.multiplexerPath,
                       items: mux.sequence.toSet().toList(),
                       width: 120,
                       onChanged: (v) => setState(() => t.multiplexerPath = v),
                     ),
-                  Check(label: 'Inverted', value: t.inverted, onChanged: (v) => setState(() => t.inverted = v)),
+                  Check(label: tr('Inverted'), value: t.inverted, onChanged: (v) => setState(() => t.inverted = v)),
                 ]),
               ],
             ),
@@ -224,11 +227,13 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
           const SizedBox(height: 8),
           MessageBox(errs.isEmpty ? 'OK' : errs.join('\n'), error: errs.isNotEmpty, height: 80),
           const SizedBox(height: 8),
-          const Text(
-            'Single input algorithms: each transducer is processed as a standalone channel; without transducers all '
-            'channels are processed as voltages with unity correction. Paired algorithms (power) require one shunt and '
-            'one divider with the same phase index. Use the dummy corrections from data/corrections/transducers if no '
-            'correction is needed.',
+          Text(
+            tr(
+              'Single input algorithms: each transducer is processed as a standalone channel; without transducers all '
+              'channels are processed as voltages with unity correction. Paired algorithms (power) require one shunt and '
+              'one divider with the same phase index. Use the dummy corrections from data/corrections/transducers if no '
+              'correction is needed.',
+            ),
             style: TextStyle(fontSize: 12),
           ),
         ],
@@ -244,7 +249,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Digitizer correction file: ${c.digitizerPath.isEmpty ? '(none)' : c.digitizerPath}'),
+          Text('${tr('Digitizer correction file')}: ${c.digitizerPath.isEmpty ? '(none)' : c.digitizerPath}'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -255,7 +260,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                   final f = await browse(
                     context,
                     st.backend,
-                    title: 'Load digitizer corrections',
+                    title: tr('Load digitizer corrections'),
                     initial: c.digitizerPath,
                     extensions: const ['.info'],
                   );
@@ -263,18 +268,18 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                   c.digitizerPath = f;
                   await _loadDigitizer();
                 },
-                child: const Text('LOAD NEW CORRECTIONS'),
+                child: Text(tr('LOAD NEW CORRECTIONS')),
               ),
-              OutlinedButton(onPressed: _loadDigitizer, child: const Text('RELOAD CORRECTIONS')),
+              OutlinedButton(onPressed: _loadDigitizer, child: Text(tr('RELOAD CORRECTIONS'))),
               OutlinedButton(
                 onPressed: () => setState(() {
                   c.digitizerPath = '';
                   c.digitizerName = '';
                   _dig = null;
-                  _digMsg = 'Digitizer corrections cleared.';
+                  _digMsg = tr('Digitizer corrections cleared.');
                   _digErr = false;
                 }),
-                child: const Text('CLEAR CORRECTIONS'),
+                child: Text(tr('CLEAR CORRECTIONS')),
               ),
               OutlinedButton(
                 onPressed: () async {
@@ -290,12 +295,12 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                   setState(() {
                     _digErr = !ok;
                     _digMsg = ok
-                        ? 'HW consistency OK.'
-                        : 'Digitizer channels do not match the correction file!\n'
+                        ? tr('HW consistency OK.')
+                        : '${tr('Digitizer channels do not match the correction file!')}\n'
                               'HW:         ${ids.join(' | ')}\nCorrection: ${corr.join(' | ')}';
                   });
                 },
-                child: const Text('CHECK HW CONSISTENCY'),
+                child: Text(tr('CHECK HW CONSISTENCY')),
               ),
               OutlinedButton(
                 onPressed: () async {
@@ -305,23 +310,25 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     await _loadDigitizer();
                   }
                 },
-                child: const Text('EDIT CORRECTION'),
+                child: Text(tr('EDIT CORRECTION')),
               ),
             ],
           ),
           const SizedBox(height: 12),
           if (d != null) ...[
-            Text('Name: ${d.name}'),
+            Text('${tr('Name')}: ${d.name}'),
             const SizedBox(height: 4),
-            const Text('Channel identifiers:'),
+            Text(tr('Channel identifiers:')),
             for (final id in d.channelIdentifiers) Text('   $id', style: const TextStyle(fontFamily: 'monospace')),
           ],
           const SizedBox(height: 8),
           MessageBox(_digMsg, error: _digErr, height: 100),
           const SizedBox(height: 8),
-          const Text(
-            'TWM works without digitizer corrections, only corrections enabled by default (aperture correction) are '
-            'applied. Channel names and order in the correction file must match the configured digitizer.',
+          Text(
+            tr(
+              'TWM works without digitizer corrections, only corrections enabled by default (aperture correction) are '
+              'applied. Channel names and order in the correction file must match the configured digitizer.',
+            ),
             style: TextStyle(fontSize: 12),
           ),
         ],

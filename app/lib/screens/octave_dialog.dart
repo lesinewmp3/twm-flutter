@@ -4,6 +4,7 @@ import 'package:twm_model/twm_model.dart';
 import '../state/app_state.dart';
 import '../widgets/fields.dart';
 import '../widgets/file_browser.dart';
+import '../l10n.dart';
 
 /// Processing environment configuration (TWM guide figure 3.4) with the
 /// GNU Octave package assistant (figure 3.5).
@@ -82,7 +83,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
     final installed = _status?.installedPackages ?? const <String>[];
     final isMatlab = cfg.engine == CalcEngine.matlab;
     return AlertDialog(
-      title: const Text('GNU Octave / Matlab configuration'),
+      title: Text(tr('GNU Octave / Matlab configuration')),
       content: SizedBox(
         width: 820,
         child: SingleChildScrollView(
@@ -90,13 +91,13 @@ class _OctaveDialogState extends State<_OctaveDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Check(
-                label: 'Enable Matlab script mode (otherwise GNU Octave)',
+                label: tr('Enable Matlab script mode (otherwise GNU Octave)'),
                 value: isMatlab,
                 onChanged: (v) => setState(() => cfg.engine = v ? CalcEngine.matlab : CalcEngine.octave),
               ),
               if (!isMatlab)
                 PathField(
-                  label: 'GNU Octave binary path (folder with octave-cli or the binary; empty = system PATH)',
+                  label: tr('GNU Octave binary path (folder with octave-cli or the binary; empty = system PATH)'),
                   value: cfg.octavePath,
                   backend: b,
                   mode: BrowseMode.openFile,
@@ -104,7 +105,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                 )
               else
                 PathField(
-                  label: 'Matlab binary (empty = system PATH)',
+                  label: tr('Matlab binary (empty = system PATH)'),
                   value: cfg.matlabPath,
                   backend: b,
                   onChanged: (v) => setState(() => cfg.matlabPath = v),
@@ -112,12 +113,12 @@ class _OctaveDialogState extends State<_OctaveDialog> {
               Wrap(
                 children: [
                   Check(
-                    label: 'Always clear function cache (debug only)',
+                    label: tr('Always clear function cache (debug only)'),
                     value: cfg.clearCache,
                     onChanged: (v) => setState(() => cfg.clearCache = v),
                   ),
                   Check(
-                    label: 'Show console window (see Console tab)',
+                    label: tr('Show console window (see Console tab)'),
                     value: cfg.showConsole,
                     onChanged: (v) => setState(() => cfg.showConsole = v),
                   ),
@@ -125,7 +126,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
               ),
               const SizedBox(height: 8),
               PathField(
-                label: 'TWM processing scripts (octprog) folder',
+                label: tr('TWM processing scripts (octprog) folder'),
                 value: cfg.octprogPath,
                 backend: b,
                 mode: BrowseMode.folder,
@@ -133,7 +134,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
               ),
               const SizedBox(height: 8),
               PathField(
-                label: 'QWTB toolbox root path (default: octprog/qwtb)',
+                label: tr('QWTB toolbox root path (default: octprog/qwtb)'),
                 value: cfg.qwtbPath,
                 backend: b,
                 mode: BrowseMode.folder,
@@ -141,7 +142,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
               ),
               if (!isMatlab)
                 Group(
-                  title: 'Package assistant',
+                  title: tr('Package assistant'),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -157,14 +158,14 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                         children: [
                           const SizedBox(height: 40),
                           IconButton(
-                            tooltip: 'Load on startup',
+                            tooltip: tr('Load on startup'),
                             icon: const Icon(Icons.arrow_forward),
                             onPressed: _selInstalled == null || cfg.packages.contains(_selInstalled)
                                 ? null
                                 : () => setState(() => cfg.packages.add(_selInstalled!)),
                           ),
                           IconButton(
-                            tooltip: 'Do not load',
+                            tooltip: tr('Do not load'),
                             icon: const Icon(Icons.arrow_back),
                             onPressed: _selLoad == null
                                 ? null
@@ -196,7 +197,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                                       final f = await browse(
                                         context,
                                         b,
-                                        title: 'Select package (*.tar.gz)',
+                                        title: tr('Select package (*.tar.gz)'),
                                         extensions: const ['.tar.gz', '.tgz'],
                                       );
                                       if (f == null) return;
@@ -205,12 +206,12 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                                         return 'Package installed. Reload packages and move it to the load list.';
                                       });
                                     },
-                              child: const Text('Install packages'),
+                              child: Text(tr('Install packages')),
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton(
                               onPressed: _busy ? null : () => _run('Reloading', _restart),
-                              child: const Text('Reload packages'),
+                              child: Text(tr('Reload packages')),
                             ),
                           ],
                         ),
@@ -225,8 +226,8 @@ class _OctaveDialogState extends State<_OctaveDialog> {
         ),
       ),
       actions: [
-        OutlinedButton(onPressed: _busy ? null : () => _run('Starting', _restart), child: const Text('Restart')),
-        OutlinedButton(onPressed: _busy ? null : () => _run('Testing QWTB', _testQwtb), child: const Text('TEST QWTB')),
+        OutlinedButton(onPressed: _busy ? null : () => _run('Starting', _restart), child: Text(tr('Restart'))),
+        OutlinedButton(onPressed: _busy ? null : () => _run('Testing QWTB', _testQwtb), child: Text(tr('TEST QWTB'))),
         const SizedBox(width: 24),
         FilledButton(
           onPressed: () {

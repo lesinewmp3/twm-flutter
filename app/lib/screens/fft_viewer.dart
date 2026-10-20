@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../widgets/chart.dart';
 import '../widgets/fields.dart';
 import '../widgets/paths.dart';
+import '../l10n.dart';
 
 /// Spectrum viewer (TWM guide figure 3.33): shows the spectra calculated by
 /// the selected algorithm (quantities listed as 'spectrum' in
@@ -40,7 +41,7 @@ class _FftViewerState extends State<_FftViewer> {
     if (session.isEmpty) {
       setState(() {
         _live = true;
-        _msg = 'No measurement - showing live spectrum.';
+        _msg = tr('No measurement - showing live spectrum.');
       });
       return;
     }
@@ -48,7 +49,7 @@ class _FftViewerState extends State<_FftViewer> {
     try {
       final info = await st.backend.resultsInfo(session);
       _alg = info.lastAlgorithm;
-      if (_alg.isEmpty) throw 'No processed results.';
+      if (_alg.isEmpty) throw tr('No processed results.');
       final list = Info.parse(await st.backend.readText(joinPath(st.settings.octave.octprogPath, 'qwtb_list.info')));
       final sec = list.sectionOrNull(_alg);
       final spec = sec?.textMatrixOrNull('spectrum');
@@ -113,7 +114,7 @@ class _FftViewerState extends State<_FftViewer> {
         width: 1100,
         height: 700,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -126,11 +127,11 @@ class _FftViewerState extends State<_FftViewer> {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text('Spectrum viewer', style: Theme.of(context).textTheme.titleLarge),
+                        Text(tr('Spectrum viewer'), style: Theme.of(context).textTheme.titleLarge),
                         SegmentedButton<bool>(
-                          segments: const [
-                            ButtonSegment(value: false, label: Text('Algorithm spectrum')),
-                            ButtonSegment(value: true, label: Text('Live spectrum')),
+                          segments: [
+                            ButtonSegment(value: false, label: Text(tr('Algorithm spectrum'))),
+                            ButtonSegment(value: true, label: Text(tr('Live spectrum'))),
                           ],
                           selected: {_live},
                           onSelectionChanged: (s) {
@@ -138,7 +139,7 @@ class _FftViewerState extends State<_FftViewer> {
                             if (!_live) _load();
                           },
                         ),
-                        Check(label: 'Log scale', value: _log, onChanged: (v) => setState(() => _log = v)),
+                        Check(label: tr('Log scale'), value: _log, onChanged: (v) => setState(() => _log = v)),
                         if (_busy) const CircularProgressIndicator(),
                       ],
                     ),
@@ -152,7 +153,7 @@ class _FftViewerState extends State<_FftViewer> {
               ),
               Expanded(
                 child: series.isEmpty
-                    ? const Center(child: Text('No spectrum available.'))
+                    ? Center(child: Text(tr('No spectrum available.')))
                     : LineChart(series: series, xLabel: 'frequency [Hz]', yLabel: 'amplitude', logY: _log),
               ),
             ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
+import '../l10n.dart';
+
 enum BrowseMode { openFile, saveFile, folder }
 
 /// File/folder selection dialog working over the backend file system (so it
@@ -96,20 +98,20 @@ class _BrowserDialogState extends State<_BrowserDialog> {
             Row(
               children: [
                 IconButton(
-                  tooltip: 'Up',
+                  tooltip: tr('Up'),
                   icon: const Icon(Icons.arrow_upward),
                   onPressed: l == null ? null : () => _load(l.parent),
                 ),
                 Expanded(
                   child: TextField(
                     controller: _path,
-                    decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+                    decoration: const InputDecoration(isDense: true),
                     onSubmitted: _load,
                   ),
                 ),
                 if (l != null)
                   PopupMenuButton<String>(
-                    tooltip: 'Places',
+                    tooltip: tr('Places'),
                     icon: const Icon(Icons.folder_special),
                     itemBuilder: (_) => [for (final r in l.roots) PopupMenuItem(value: r, child: Text(r))],
                     onSelected: _load,
@@ -152,10 +154,10 @@ class _BrowserDialogState extends State<_BrowserDialog> {
                     ),
             ),
             if (widget.mode == BrowseMode.folder)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: Text(
-                  'Click to select a folder, double-click (long press) to open it.',
+                  tr('Click to select a folder, double-click (long press) to open it.'),
                   style: TextStyle(fontSize: 12),
                 ),
               ),
@@ -164,18 +166,14 @@ class _BrowserDialogState extends State<_BrowserDialog> {
                 padding: const EdgeInsets.only(top: 8),
                 child: TextField(
                   controller: _name,
-                  decoration: const InputDecoration(
-                    labelText: 'File name',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: InputDecoration(labelText: tr('File name'), isDense: true),
                 ),
               ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
         FilledButton(onPressed: _ok, child: Text(widget.mode == BrowseMode.saveFile ? 'Save' : 'Select')),
       ],
     );
@@ -217,7 +215,7 @@ class PathField extends StatelessWidget {
           child: _PathText(label: label, value: value, onChanged: onChanged),
         ),
         IconButton(
-          tooltip: 'Browse...',
+          tooltip: tr('Browse...'),
           icon: const Icon(Icons.folder_open),
           onPressed: () async {
             final r = await browse(context, backend, title: label, initial: value, mode: mode, extensions: extensions);
@@ -258,6 +256,6 @@ class _PathTextState extends State<_PathText> {
     controller: _c,
     onSubmitted: widget.onChanged,
     onEditingComplete: () => widget.onChanged(_c.text),
-    decoration: InputDecoration(labelText: widget.label, isDense: true, border: const OutlineInputBorder()),
+    decoration: InputDecoration(labelText: widget.label, isDense: true),
   );
 }

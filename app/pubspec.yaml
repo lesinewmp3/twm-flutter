@@ -36,6 +36,9 @@ dependencies:
     path: ../packages/twm_core
   http: ^1.2.0
   web_socket_channel: ^3.0.0
+  web: ^1.1.0
+  twm_engine:
+    path: ../packages/twm_engine
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -62,6 +65,31 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/corrections/digitizer/HP3458A_session/
+    - assets/corrections/digitizer/HP3458A_session/chn1/
+    - assets/corrections/digitizer/HP3458A_session/chn1/csv/
+    - assets/corrections/digitizer/HP3458A_session/chn2/
+    - assets/corrections/digitizer/HP3458A_session/chn2/csv/
+    - assets/corrections/digitizer/PXI5922/
+    - assets/corrections/digitizer/PXI5922/chn1/
+    - assets/corrections/digitizer/PXI5922/chn1/csv/
+    - assets/corrections/digitizer/PXI5922_test/
+    - assets/corrections/digitizer/PXI5922_test/chn1/
+    - assets/corrections/digitizer/PXI5922_test/chn1/csv/
+    - assets/corrections/digitizer/PXI5922_test/chn2/
+    - assets/corrections/digitizer/PXI5922_test/chn2/csv/
+    - assets/corrections/transducers/SP0401-4V/
+    - assets/corrections/transducers/SP0401-4V/csv/
+    - assets/corrections/transducers/SP0404-56V/
+    - assets/corrections/transducers/SP0404-56V/csv/
+    - assets/corrections/transducers/dummy.cs/
+    - assets/corrections/transducers/dummy.cs/csv/
+    - assets/corrections/transducers/dummy.vd/
+    - assets/corrections/transducers/dummy.vd/csv/
+    - assets/corrections/transducers/shunt_100mA113/
+    - assets/corrections/transducers/shunt_100mA113/csv/
+    - assets/corrections/transducers/shunt_1A313/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

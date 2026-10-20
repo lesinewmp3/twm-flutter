@@ -5,6 +5,7 @@ import 'package:twm_model/twm_model.dart';
 
 import '../state/app_state.dart';
 import '../widgets/fields.dart';
+import '../l10n.dart';
 
 /// Sampling setup assistant (TWM guide figure 3.25): computes sampling rate
 /// and samples count for coherent sampling of a fundamental frequency.
@@ -61,7 +62,7 @@ class _AssistantState extends State<_Assistant> {
     final st = AppScope.read(context);
     setState(() {
       _busy = true;
-      _msg = 'Searching coherent setup (GNU Octave: twm_find_coherent)...';
+      _msg = tr('Searching coherent setup (GNU Octave: twm_find_coherent)...');
       _err = false;
     });
     var tmin = tMin, tmax = tMax;
@@ -109,7 +110,7 @@ class _AssistantState extends State<_Assistant> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Sampling setup assistant'),
+    title: Text(tr('Sampling setup assistant')),
     content: SizedBox(
       width: 760,
       child: SingleChildScrollView(
@@ -117,13 +118,13 @@ class _AssistantState extends State<_Assistant> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Group(
-              title: 'Fundamental frequency',
+              title: tr('Fundamental frequency'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   FieldRow([
                     NumField(
-                      label: 'Reference frequency fr',
+                      label: tr('Reference frequency fr'),
                       unit: 'Hz',
                       value: fr,
                       width: 180,
@@ -132,7 +133,7 @@ class _AssistantState extends State<_Assistant> {
                     NumField(label: 'P', value: p, width: 80, onChanged: (v) => setState(() => p = v)),
                     NumField(label: 'Q', value: q, width: 80, min: 1e-12, onChanged: (v) => setState(() => q = v)),
                     NumField(
-                      label: 'Offset',
+                      label: tr('Offset'),
                       unit: 'Hz',
                       value: offset,
                       width: 120,
@@ -144,14 +145,20 @@ class _AssistantState extends State<_Assistant> {
               ),
             ),
             Group(
-              title: 'Search range',
+              title: tr('Search range'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   FieldRow([
-                    NumField(label: 'Minimum fs', unit: 'Sa/s', value: minFs, width: 160, onChanged: (v) => minFs = v),
                     NumField(
-                      label: 'fs max tolerance',
+                      label: tr('Minimum fs'),
+                      unit: 'Sa/s',
+                      value: minFs,
+                      width: 160,
+                      onChanged: (v) => minFs = v,
+                    ),
+                    NumField(
+                      label: tr('fs max tolerance'),
                       unit: '-',
                       value: fsTol,
                       width: 140,
@@ -160,36 +167,36 @@ class _AssistantState extends State<_Assistant> {
                   ]),
                   FieldRow([
                     NumField(
-                      label: 'Min integration t.',
+                      label: tr('Min integration t.'),
                       unit: 's',
                       value: tMin,
                       width: 160,
                       onChanged: (v) => tMin = v,
                     ),
                     NumField(
-                      label: 'Max integration t.',
+                      label: tr('Max integration t.'),
                       unit: 's',
                       value: tMax,
                       width: 160,
                       onChanged: (v) => tMax = v,
                     ),
                     NumField(
-                      label: 'Min periods (0=off)',
+                      label: tr('Min periods (0=off)'),
                       value: periodsMin,
                       width: 150,
                       onChanged: (v) => periodsMin = v,
                     ),
                     NumField(
-                      label: 'Max periods (0=off)',
+                      label: tr('Max periods (0=off)'),
                       value: periodsMax,
                       width: 150,
                       onChanged: (v) => periodsMax = v,
                     ),
                   ]),
                   FieldRow([
-                    NumField(label: 'Max setup error', value: maxErr, width: 160, onChanged: (v) => maxErr = v),
+                    NumField(label: tr('Max setup error'), value: maxErr, width: 160, onChanged: (v) => maxErr = v),
                     NumField(
-                      label: 'Max timeout',
+                      label: tr('Max timeout'),
                       unit: 's',
                       value: timeout,
                       width: 140,
@@ -201,9 +208,9 @@ class _AssistantState extends State<_Assistant> {
             ),
             Row(
               children: [
-                OutlinedButton(onPressed: _busy ? null : _rough, child: const Text('FIND ROUGH')),
+                OutlinedButton(onPressed: _busy ? null : _rough, child: Text(tr('FIND ROUGH'))),
                 const SizedBox(width: 8),
-                FilledButton.tonal(onPressed: _busy ? null : _coherent, child: const Text('FIND COHERENT')),
+                FilledButton.tonal(onPressed: _busy ? null : _coherent, child: Text(tr('FIND COHERENT'))),
                 if (_busy) const Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()),
               ],
             ),
@@ -214,8 +221,8 @@ class _AssistantState extends State<_Assistant> {
       ),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-      FilledButton(onPressed: () => Navigator.pop(context, (fs: fs, n: n)), child: const Text('Apply')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
+      FilledButton(onPressed: () => Navigator.pop(context, (fs: fs, n: n)), child: Text(tr('Apply'))),
     ],
   );
 }
