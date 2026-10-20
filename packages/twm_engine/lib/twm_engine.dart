@@ -15,3 +15,5 @@ export 'src/measurement/measurement_engine.dart';
 export 'src/qwtb/qwtb_math.dart';
 export 'src/qwtb/dart_algorithms.dart';
 export 'src/qwtb/dart_processor.dart';
+export 'src/backend/shared.dart';
+export 'src/backend/browser_backend.dart';

@@ -76,6 +76,9 @@ class LocalBackend implements TwmBackend {
   String get description => 'local';
 
   @override
+  BackendFeatures get features => BackendFeatures.full;
+
+  @override
   Stream<BackendEvent> get events => _events.stream;
 
   void _emit(BackendEvent e) {
@@ -289,7 +292,7 @@ class LocalBackend implements TwmBackend {
       await mux.open();
     }
     final ps = s.measurement.processing;
-    final online = OnlineAnalyzer(s.online);
+    final mapper = MeasEventMapper(_store, s, _emit);
     final engine = MeasurementEngine(
       store: _store,
       digitizer: dig,
@@ -302,7 +305,7 @@ class LocalBackend implements TwmBackend {
           : null,
     );
     _engine = engine;
-    final sub = engine.events.listen((e) => _forward(e, s, online));
+    final sub = engine.events.listen(mapper.handle);
     final done = engine.run().whenComplete(() async {
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();
@@ -311,65 +314,6 @@ class LocalBackend implements TwmBackend {
     });
     unawaited(done.then((_) {}, onError: (_) {}));
     return MeasurementEngine.sessionRoot(s.measurement, DateTime.now());
-  }
-
-  void _forward(MeasEvent e, AppSettings s, OnlineAnalyzer online) {
-    switch (e) {
-      case MeasStatus():
-        _emit(StatusEvent(e.message, progress: e.progress, record: e.record, records: e.records));
-      case MeasRecordData():
-        final spectra = <List<double>>[];
-        var df = 0.0;
-        final full = e.full;
-        if (full != null && full.isNotEmpty) {
-          for (final c in full) {
-            final sp = Spectrum.of(c, 1 / e.fullTs, window: s.online.window);
-            df = sp.df;
-            spectra.add(sp.forDisplay(4096));
-          }
-          // display decimation of the spectrum changes the bin width
-          if (spectra.isNotEmpty) {
-            final n = full.first.length ~/ 2 + 1;
-            if (spectra.first.length < n) df *= (n / spectra.first.length).ceilToDouble();
-          }
-        }
-        Json? onl;
-        if (s.online.enabled && full != null) {
-          try {
-            final res = online.analyze(full, 1 / e.fullTs, s.corrections.transducers);
-            onl = res.toJson();
-            if (s.online.saveResults && s.online.resultsFile.isNotEmpty)
-              _saveOnline(s.online.resultsFile, res, e.record);
-          } catch (err) {
-            _emit(StatusEvent('On-line analysis failed: $err'));
-          }
-        }
-        _emit(
-          WaveformEvent(
-            e.record,
-            e.names,
-            [for (final c in e.channels) c.toList()],
-            e.ts,
-            spectra: spectra,
-            df: df,
-            online: onl,
-          ),
-        );
-      case MeasRecordStored():
-        _emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
-      case MeasFinished():
-        _emit(FinishedEvent(e.sessionPath, aborted: e.aborted, error: e.error?.toString() ?? ''));
-    }
-  }
-
-  void _saveOnline(String file, OnlineResult r, int record) {
-    final f = File(file);
-    final exists = f.existsSync() && f.lengthSync() > 0;
-    f.parent.createSync(recursive: true);
-    f.writeAsStringSync(
-      '${exists ? '' : '${onlineCsvHeader(r)}\n'}${onlineCsvRow(r, record, DateTime.now())}\n',
-      mode: FileMode.append,
-    );
   }
 
   @override
@@ -381,42 +325,11 @@ class LocalBackend implements TwmBackend {
   // ------------------------------------------------------------ sessions --
 
   @override
-  Future<SessionSummary> sessionSummary(String sessionPath) async {
-    final r = await SessionReader.open(_store, sessionPath);
-    final h = r.header;
-    final recs = [for (var g = 1; g <= r.groupsCount; g++) r.repetitions(g)];
-    var tags = <String>[];
-    final cs = h.sectionOrNull('measurement setup configuration');
-    if (cs != null) {
-      final paths = cs.textMatrixOrNull('transducer paths') == null ? <String>[] : cs.textList('transducer paths');
-      final ph = cs.matrixOrNull('channel phase indexes') == null ? <double>[] : cs.vector('channel phase indexes');
-      for (var k = 0; k < paths.length; k++) {
-        var type = 'divider';
-        try {
-          final f = p.join(r.root, paths[k].replaceAll('\\', '/'));
-          type = Info.parse(await File(f).readAsString(encoding: latin1)).text('type');
-        } catch (_) {}
-        tags.add('${type == 'shunt' ? 'i' : 'u'}${k < ph.length ? ph[k].round() : k + 1}');
-      }
-    }
-    final g1 = r.groupsCount > 0 ? r.group(1) : Info();
-    return SessionSummary(
-      path: p.join(r.root, 'session.info'),
-      channels: r.channelDescriptors,
-      recordsPerGroup: recs,
-      transducerTags: tags,
-      comment: h.textMatrixOrNull('measurement comment') == null ? '' : h.textList('measurement comment').join('\n'),
-      fs: g1.numberOrNull('sampling rate [Sa/s]') ?? 0,
-      samplesCount: (g1.numberOrNull('samples count') ?? 0).round(),
-    );
-  }
+  Future<SessionSummary> sessionSummary(String sessionPath) => sessionSummaryOf(_store, sessionPath);
 
   @override
-  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) async {
-    final r = await SessionReader.open(_store, sessionPath);
-    final d = await r.readRecord(group, record, maxPoints: maxPoints);
-    return WaveformData(d.names, [for (final c in d.channels) c.toList()], d.ts, d.fullLength);
-  }
+  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) =>
+      readRecordOf(_store, sessionPath, group, record, maxPoints);
 
   // ---------------------------------------------------------- processing --
 

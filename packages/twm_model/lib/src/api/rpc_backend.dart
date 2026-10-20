@@ -33,6 +33,9 @@ abstract class RpcBackend implements TwmBackend {
   Stream<BackendEvent> get events => eventsController.stream;
 
   @override
+  BackendFeatures get features => BackendFeatures.full;
+
+  @override
   bool get measuring => _measuring;
 
   set measuringState(bool v) => _measuring = v;

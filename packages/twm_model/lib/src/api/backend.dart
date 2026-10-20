@@ -273,9 +273,37 @@ class OctaveStatus {
   );
 }
 
+/// What the backend can do - the UI hides panels that are not available
+/// (e.g. GNU Octave and instruments in the browser version).
+class BackendFeatures {
+  final bool octave;
+  final bool hardware;
+  final bool server;
+  final bool fileTransfer; // upload/download of files (browser storage)
+  final List<DigitizerType> digitizers;
+  const BackendFeatures({
+    this.octave = true,
+    this.hardware = true,
+    this.server = true,
+    this.fileTransfer = false,
+    this.digitizers = DigitizerType.values,
+  });
+
+  static const full = BackendFeatures();
+  static const browser = BackendFeatures(
+    octave: false,
+    hardware: false,
+    server: false,
+    fileTransfer: true,
+    digitizers: [DigitizerType.simulated],
+  );
+}
+
 abstract class TwmBackend {
   /// Human readable description ("local", "server http://...").
   String get description;
+
+  BackendFeatures get features;
 
   Stream<BackendEvent> get events;
 
