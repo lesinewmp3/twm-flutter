@@ -106,7 +106,7 @@ class _LineChartState extends State<LineChart> {
     return LayoutBuilder(
       builder: (context, c) {
         final bounds = _view ?? _dataBounds();
-        final painter = _ChartPainter(
+        _ChartPainter painter(bool hoverLayer) => _ChartPainter(
           series: widget.series,
           view: bounds,
           logY: widget.logY,
@@ -116,6 +116,7 @@ class _LineChartState extends State<LineChart> {
           fg: theme.colorScheme.onSurface,
           grid: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
           bg: theme.colorScheme.surfaceContainerLowest,
+          hoverLayer: hoverLayer,
         );
         return Column(
           children: [
@@ -152,7 +153,15 @@ class _LineChartState extends State<LineChart> {
                       final dy = d.delta.dy / plot.height * b.height;
                       setState(() => _view = b.translate(dx, dy));
                     },
-                    child: CustomPaint(painter: painter, size: Size.infinite),
+                    // data layer is kept (and rasterized) apart from the hover
+                    // cursor: moving the mouse repaints only the cursor
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RepaintBoundary(child: CustomPaint(painter: painter(false), size: Size.infinite)),
+                        CustomPaint(painter: painter(true), size: Size.infinite),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -187,6 +196,9 @@ class _ChartPainter extends CustomPainter {
   final Offset? hover;
   final Color fg, grid, bg;
 
+  /// Paints only the hover cursor and read-out (else everything else).
+  final bool hoverLayer;
+
   _ChartPainter({
     required this.series,
     required this.view,
@@ -197,6 +209,7 @@ class _ChartPainter extends CustomPainter {
     required this.fg,
     required this.grid,
     required this.bg,
+    this.hoverLayer = false,
   });
 
   static Rect plotRect(Size s) => Rect.fromLTRB(64, 8, s.width - 12, s.height - 36);
@@ -207,15 +220,19 @@ class _ChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final plot = plotRect(size);
     if (plot.width <= 10 || plot.height <= 10) return;
-    canvas.drawRect(plot, Paint()..color = bg);
     final xmin = view.left, xmax = view.right, ymin = view.top, ymax = view.bottom;
+    final ts = TextStyle(color: fg, fontSize: 10);
+    if (hoverLayer) {
+      _paintHover(canvas, plot, xmin, xmax, ts);
+      return;
+    }
+    canvas.drawRect(plot, Paint()..color = bg);
     double px(double x) => plot.left + (x - xmin) / (xmax - xmin) * plot.width;
     double py(double y) => plot.bottom - (y - ymin) / (ymax - ymin) * plot.height;
 
     final gridPaint = Paint()
       ..color = grid
       ..strokeWidth = 1;
-    final ts = TextStyle(color: fg, fontSize: 10);
     // x ticks
     for (final t in niceTicks(xmin, xmax, (plot.width / 90).floor().clamp(2, 12))) {
       final x = px(t);
@@ -316,7 +333,9 @@ class _ChartPainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
 
-    // hover read-out
+  }
+
+  void _paintHover(Canvas canvas, Rect plot, double xmin, double xmax, TextStyle ts) {
     final h = hover;
     if (h != null && plot.contains(h)) {
       final xv = xmin + (h.dx - plot.left) / plot.width * (xmax - xmin);
@@ -370,7 +389,18 @@ class _ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ChartPainter old) => true;
+  bool shouldRepaint(_ChartPainter old) {
+    final data =
+        !identical(old.series, series) ||
+        old.view != view ||
+        old.logY != logY ||
+        old.xLabel != xLabel ||
+        old.yLabel != yLabel ||
+        old.fg != fg ||
+        old.grid != grid ||
+        old.bg != bg;
+    return hoverLayer ? data || old.hover != hover : data;
+  }
 }
 
 /// "Nice" tick values between [a] and [b].
