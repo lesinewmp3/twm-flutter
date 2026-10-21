@@ -18,6 +18,10 @@ class AppState extends ChangeNotifier {
 
   // ----------------------------------------------------- measurement state
   bool measuring = false;
+
+  /// Start pressed, the checks before the measurement run (may wait for
+  /// the calculation engine the first time).
+  bool preparing = false;
   String status = 'READY';
   double progress = 0;
   int record = 0;

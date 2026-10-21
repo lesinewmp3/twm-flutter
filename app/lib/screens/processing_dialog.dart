@@ -60,7 +60,7 @@ class _ProcDialogState extends State<_ProcDialog> {
   Future<void> _loadAlg(String id, {bool keepParams = false}) async {
     setState(() => _loading = true);
     try {
-      final i = await AppScope.read(context).backend.algorithmInfo(id);
+      final i = await AppScope.read(context).algorithmInfo(id); // cached for the start checks
       setState(() {
         _info = i;
         ps.algorithmId = id;

@@ -95,15 +95,31 @@ void main() {
 
     // press Start; confirm overwriting the previous measurement if asked; wait for the end
     Future<void> start({bool waitDone = true}) async {
+      // the end is the FinishedEvent of the backend (the start checks may
+      // first wait for Octave, so "not measuring" alone is not the end)
+      var finished = false;
+      final sub = backend.events.listen((e) {
+        if (e is FinishedEvent) finished = true;
+      });
       await click(find.text('Старт').first);
+      if (find.text('Всё равно начать?', findRichText: true).evaluate().isNotEmpty ||
+          find.textContaining('Всё равно начать?').evaluate().isNotEmpty) {
+        // start check warning (e.g. processing of too short records): go on
+        await shot('start_check_warning');
+        await click(find.text('Старт').last);
+      }
       if (find.text('Удалить и начать').evaluate().isNotEmpty) {
         await shot('overwrite_dialog');
         await click(find.text('Удалить и начать'));
       }
       if (waitDone) {
-        expect(await until(() => !st.measuring && !st.processing, timeout: const Duration(minutes: 3)), isTrue);
+        expect(await until(() => finished, timeout: const Duration(minutes: 3)), isTrue, reason: 'measurement finished');
+        expect(await until(() => !st.processing && !st.measuring, timeout: const Duration(minutes: 3)), isTrue);
         await settle(600);
+      } else {
+        expect(await until(() => st.measuring, timeout: const Duration(seconds: 30)), isTrue, reason: 'measurement started');
       }
+      await sub.cancel();
     }
 
     double on(String name) => st.lastOnline!.quantities.firstWhere((q) => q.name == name).value;

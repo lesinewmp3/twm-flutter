@@ -518,6 +518,7 @@ const Map<String, String> ruStrings = {
   'sub-records': 'подзаписей',
   'Select': 'Выбрать',
   'Error': 'Ошибка',
+  'Preparing...': 'Подготовка...',
   'Sag / interruption / transfer analysis': 'Анализ провалов и переключений',
   'Event threshold': 'Порог события',
   'Deviation from the steady waveform that marks an event, % of the peak':

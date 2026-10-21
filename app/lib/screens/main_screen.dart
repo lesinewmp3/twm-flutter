@@ -50,7 +50,10 @@ class _MainScreenState extends State<MainScreen> {
   /// Checks of the QWTB processing setup against the measurement setup.
   Future<List<String>> _processingProblems(AppState st) async {
     final m = st.settings.measurement;
-    if (!m.processingEnabled || m.processing.mode != ProcessingMode.qwtb) return const [];
+    // continuous acquisition without saving: nothing is processed
+    if (!m.processingEnabled || m.processing.mode != ProcessingMode.qwtb || (m.continuous && !m.saveRecords)) {
+      return const [];
+    }
     final out = <String>[];
     final alg = m.processing.algorithmId;
     // lowest input grid frequency of interest: 40 Hz
@@ -110,7 +113,16 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
     // processing that is bound to fail: say it before the measurement
-    final procProblems = await _processingProblems(st);
+    // (the first query may start the calculation engine: show it)
+    st.preparing = true;
+    st.touch();
+    List<String> procProblems;
+    try {
+      procProblems = await _processingProblems(st);
+    } finally {
+      st.preparing = false;
+      st.touch();
+    }
     if (!mounted) return;
     if (procProblems.isNotEmpty) {
       final go = await confirm(
@@ -374,7 +386,11 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               if (!busy && !st.processing)
-                FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.play_arrow), label: Text(tr('Start')))
+                FilledButton.icon(
+                  onPressed: st.preparing ? null : onStart,
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(tr('Start')),
+                )
               else
                 FilledButton.icon(
                   style: FilledButton.styleFrom(backgroundColor: t.colorScheme.error),
@@ -448,7 +464,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final busy = st.measuring || st.processing;
+    final busy = st.measuring || st.processing || st.preparing;
     final failed = !busy && st.lastRunError.isNotEmpty;
     final color = st.measuring
         ? t.colorScheme.primary
@@ -461,6 +477,8 @@ class _StatusPill extends StatelessWidget {
         ? (st.record > 0 ? '${tr('Record')} ${st.record}${st.records > 0 ? '/${st.records}' : ''}' : tr('Measuring'))
         : st.processing
         ? tr('Processing')
+        : st.preparing
+        ? tr('Preparing...')
         : failed
         ? tr('Error')
         : tr('Ready');

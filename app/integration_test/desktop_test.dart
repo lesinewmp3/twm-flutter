@@ -161,8 +161,8 @@ void main() {
     final sw2 = Stopwatch()..start();
     final hf = await watch(() async {
       await tester.tap(find.text('Start'));
-      await tester.pump(const Duration(milliseconds: 200));
-      // a colliding-files confirmation would appear for an existing folder
+      // the start checks may wait for Octave first
+      expect(await until(tester, () => st.measuring, const Duration(seconds: 30)), isTrue, reason: 'measurement started');
       expect(await until(tester, () => !st.measuring && !st.processing, const Duration(minutes: 3)), isTrue);
     });
     report['hf_2M_qwtb'] = {...hf.summary(), 'total_s': sw2.elapsedMilliseconds / 1000};
