@@ -32,5 +32,8 @@ RUN
 chmod +x "$appdir/AppRun"
 
 mkdir -p "$root/dist"
-ARCH=x86_64 "$tool" --no-appstream "$appdir" "$root/dist/TWM-Flutter-x86_64.AppImage"
-echo "-> $root/dist/TWM-Flutter-x86_64.AppImage"
+# build next to the target and replace it: works while the old AppImage runs
+out="$root/dist/TWM-Flutter-x86_64.AppImage"
+ARCH=x86_64 "$tool" --no-appstream "$appdir" "$out.part"
+mv -f "$out.part" "$out"
+echo "-> $out"
