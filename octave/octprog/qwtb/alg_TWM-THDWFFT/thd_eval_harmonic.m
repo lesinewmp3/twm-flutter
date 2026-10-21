@@ -143,7 +143,16 @@ function [U_org,U_org_m,U_org_a,U_org_b,U_fix,U_fix_m,U_fix_a,U_fix_b,is_high] =
   U_fix_a = zeros(H,1);
   U_fix_b = zeros(H,1);
   for h = 1:H
-    [sci,U_fix_a(h),U_fix_b(h)] = scovint(U_fix(h,:),probab,U_fix_m(h));
+    [sci,lo,hi] = scovint(U_fix(h,:),probab,U_fix_m(h));
+    if isempty(lo) || isempty(hi)
+      % TWM-Flutter fix: the estimate lies outside the randomized distribution
+      % (harmonic at the noise level of a pure sine) and scovint() returns
+      % empty bounds, which crashed the algorithm: use the full range instead.
+      lo = min(U_fix(h,:));
+      hi = max(U_fix(h,:));
+    end
+    U_fix_a(h) = lo;
+    U_fix_b(h) = hi;
   end
     
   

@@ -72,6 +72,10 @@ final _messagePatterns = <(RegExp, String)>[
   ),
   (RegExp(r'^Correction file not found: (.*)$'), r'Файл коррекции не найден: $1'),
   (
+    RegExp(r'^(.*) \(the record holds less than 5 mains periods\)$'),
+    r'$1 (в записи меньше 5 периодов сети — увеличьте длину записи)',
+  ),
+  (
     RegExp(r'^(.*nonconformant arguments.*)$'),
     r'Ошибка внутри алгоритма Octave: «$1». Чаще всего причина — слишком короткая запись '
         r'(меньше 5 периодов сети) или неподходящие параметры алгоритма.',

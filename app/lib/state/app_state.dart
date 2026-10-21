@@ -52,6 +52,8 @@ class AppState extends ChangeNotifier {
 
   final _algInfo = <String, AlgorithmInfo>{};
 
+  static const _shortHint = 'the record holds less than 5 mains periods';
+
   /// QWTB algorithm description (cached: needs the calculation engine).
   Future<AlgorithmInfo> algorithmInfo(String id) async => _algInfo[id] ??= await backend.algorithmInfo(id);
 
@@ -109,8 +111,12 @@ class AppState extends ChangeNotifier {
       case ProcessingEvent():
         processing = e.busy;
         if (e.error.isNotEmpty) {
-          lastRunError = e.error;
-          addError('Processing record ${e.record}: ${e.error}');
+          // most algorithm failures of the m-code come from too short records
+          final m = settings.measurement;
+          final short = m.samplesCount / m.fs * 40 < 5;
+          final err = short ? '${e.error} ($_shortHint)' : e.error;
+          lastRunError = err;
+          addError('Processing record ${e.record}: $err');
         }
         if (!e.busy && e.error.isEmpty) resultsVersion++;
     }
