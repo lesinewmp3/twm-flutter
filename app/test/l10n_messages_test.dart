@@ -16,6 +16,10 @@ void main() {
       'Обработка записи 2: Не удаётся запустить «x»: No such file. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
     );
     expect(trMessage('Done'), 'Готово');
+    expect(
+      trMessage('Processing record 1: Distance between the harmonics in spectrum must be at least 30 (detected 11)!'),
+      startsWith('Обработка записи 1: Запись слишком короткая для этого алгоритма: между гармониками в спектре нужно не меньше 30 бинов (сейчас 11).'),
+    );
     expect(trMessage('something else'), 'something else');
     L10n.apply('en');
     expect(trMessage('Done'), 'Done');

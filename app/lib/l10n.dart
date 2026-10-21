@@ -44,6 +44,8 @@ String trMessage(String m) {
 }
 
 final _messagePatterns = <(RegExp, String)>[
+  // wrappers first: their inner message is translated as a group
+  (RegExp(r'^Processing record (\d+): (.*)$'), r'Обработка записи $1: $2'),
   (
     RegExp(r'^Overload \(clipped signal\) of channel\(s\) ([\d, ]+) - increase the range\.$'),
     r'Перегрузка (сигнал обрезан) в канале(ах) $1 — увеличьте диапазон.',
@@ -54,10 +56,14 @@ final _messagePatterns = <(RegExp, String)>[
   ),
   (RegExp(r'^Correction file not found: (.*)$'), r'Файл коррекции не найден: $1'),
   (
+    RegExp(r'Distance between the harmonics in spectrum must be at least (\d+) \(detected (\d+)\)'),
+    r'Запись слишком короткая для этого алгоритма: между гармониками в спектре нужно не меньше $1 бинов (сейчас $2). '
+        r'Увеличьте длину записи (не меньше $1 периодов основной частоты).',
+  ),
+  (
     RegExp(r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path.*$'),
     r'Не удаётся запустить «$1»: $2. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
   ),
-  (RegExp(r'^Processing record (\d+): (.*)$'), r'Обработка записи $1: $2'),
   (RegExp(r'^Digitizing record (\d+)(/\d+)?\.\.\.$'), r'Оцифровка записи $1$2...'),
   (RegExp(r'^Processing record (\d+)\.\.\.$'), r'Обработка записи $1...'),
   (RegExp(r'^Initializing digitizer\.\.\.$'), 'Инициализация дигитайзера...'),
