@@ -168,7 +168,7 @@ class _OnlineViewState extends State<OnlineView> {
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     Text(
-                                      'Harmonics ${e.key} (f0 = ${formatNum(r.f0)} Hz)',
+                                      'Harmonics ${e.key} (f0 = ${r.f0.isNaN ? '-' : formatNum(r.f0)} Hz)',
                                       style: Theme.of(context).textTheme.labelLarge,
                                     ),
                                     Expanded(
