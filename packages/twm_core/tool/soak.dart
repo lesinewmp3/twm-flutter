@@ -29,6 +29,20 @@ int octaveProcesses() {
   return r.stdout.toString().trim().isEmpty ? 0 : r.stdout.toString().trim().split('\n').length;
 }
 
+/// Processing errors of setups the app warns about before the start: records
+/// shorter than 5 periods at 40 Hz (TWM-PWRTDI and TWM-WRMS run out of DFT
+/// bins), shorter than 30 periods for TWM-THDWFFT, power without a divider and
+/// shunt pair.
+bool expectedRefusal(String e, AppSettings s) {
+  final m = s.measurement;
+  final t = m.samplesCount / m.fs;
+  final alg = m.processing.algorithmId;
+  if (e.contains('Distance between the harmonics')) return alg == 'TWM-THDWFFT' && t < 30 / 40;
+  if (e.contains('nonconformant')) return (alg == 'TWM-PWRTDI' || alg == 'TWM-WRMS') && t < 5 / 40;
+  if (e.contains("Missing 'i' channel")) return alg == 'TWM-PWRTDI' && s.corrections.transducers.isEmpty;
+  return false;
+}
+
 Future<void> main(List<String> args) async {
   final hours = args.isEmpty ? 1.0 : double.parse(args[0]);
   log = File(args.length > 1 ? args[1] : 'soak.log').openWrite(mode: FileMode.append);
@@ -139,10 +153,10 @@ Future<void> main(List<String> args) async {
       } else if (overload && !fin.aborted) {
         failures++;
         result = 'FAIL overload not detected';
-      } else if (procErr.isNotEmpty && procErr.every((e) => e.contains('Distance between the harmonics'))) {
-        // TWM-THDWFFT needs >= 30 periods in the record: refusal is correct
+      } else if (procErr.isNotEmpty && procErr.every((e) => expectedRefusal(e, s))) {
+        // the algorithm refuses a setup the app warns about before the start
         expectedErrors++;
-        result = 'ok (algorithm precondition: record too short)';
+        result = 'ok (algorithm precondition: ${procErr.first.split('\n').first})';
       } else if (procErr.isNotEmpty) {
         failures++;
         result = 'FAIL processing: ${procErr.first}';
