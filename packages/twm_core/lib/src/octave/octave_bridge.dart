@@ -226,7 +226,10 @@ class OctaveBridge {
     _log('>> ${code.length > 300 ? '${code.substring(0, 300)}...' : code}', command: true);
     pr.stdin.write(
       'try\n$code\ncatch __twm_e\n'
-      "disp(['$_err' strrep(__twm_e.message, char(10), ' | ')]);\n"
+      // where in the m-code it failed (for reports of algorithm errors)
+      "__twm_l = ''; if isfield(__twm_e, 'stack') && numel(__twm_e.stack) > 0, "
+      "__twm_l = sprintf(' [%s:%d]', __twm_e.stack(1).name, __twm_e.stack(1).line); end\n"
+      "disp(['$_err' strrep(__twm_e.message, char(10), ' | ') __twm_l]);\n"
       'end\n'
       "disp('$marker'); fflush(stdout);\n",
     );

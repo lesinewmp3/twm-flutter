@@ -57,6 +57,11 @@ class Case {
   final double divider; // Vin/Vout
   final double shunt; // V/A
   final List<double> rippleHarmonics; // h numbers of f1 checked by WFFT
+  final int bits; // ADC resolution
+  final double noise; // noise of each digitizer channel [V rms]
+  final double jitter; // sampling jitter [s rms]
+  final int records; // > 1: the average of the records is checked
+  final int thdH; // harmonics counted in THD
   const Case(
     this.name,
     this.what, {
@@ -68,6 +73,11 @@ class Case {
     this.divider = 100,
     this.shunt = 0.05,
     this.rippleHarmonics = const [],
+    this.bits = 24,
+    this.noise = 1e-6,
+    this.jitter = 0,
+    this.records = 1,
+    this.thdH = 40,
   });
 
   double get p {
@@ -184,14 +194,99 @@ final cases = <Case>[
     u: const Signal([Tone(140000, 1.4, 0.0)], dc: 380),
     i: const Signal([Tone(140000, 0.7, -0.5)], dc: 20),
   ),
+  // grid frequency sweep over the input range, PF 0.99, THD(i) 3 %, non-coherent
+  for (final f in [40.0, 45.0, 49.5, 50.5, 55.0, 60.0])
+    Case(
+      'grid-${f.toStringAsFixed(1)}Hz',
+      'grid $f Hz, 230 V / 10 A, PF 0.99, THD(i) 3 %, 1.234 s record (non-integer periods)',
+      fs: 20000,
+      n: 24680,
+      f1: f,
+      u: Signal([Tone(f, 230)]),
+      i: Signal([Tone(f, 10, -_phi99), Tone(3 * f, 0.24, 0.4), Tone(5 * f, 0.15, 1.1), Tone(7 * f, 0.09, 2.0)]),
+    ),
+  Case(
+    'adc16-noise',
+    '16 bit ADC, 100 uV noise, 5 records averaged, 49.87 Hz, PF ~0.99, THD(i) 3 %',
+    fs: 10000,
+    n: 10000,
+    f1: 49.87,
+    bits: 16,
+    noise: 1e-4,
+    records: 5,
+    u: const Signal([Tone(49.87, 230)]),
+    i: const Signal([Tone(49.87, 10, -0.1), Tone(149.61, 0.24, 0.4), Tone(249.35, 0.15, 1.1), Tone(349.09, 0.09, 2.0)]),
+  ),
+  Case(
+    'jitter-10ns',
+    'sampling jitter 10 ns rms (cheap clock), 50 Hz, THD(i) 3 %',
+    fs: 20000,
+    n: 20000,
+    f1: 50,
+    jitter: 1e-8,
+    u: const Signal([Tone(50, 230)]),
+    i: const Signal([Tone(50, 10, -0.1), Tone(150, 0.24, 0.4), Tone(250, 0.15, 1.1)]),
+  ),
+  Case(
+    'harmonics-50',
+    'current with harmonics 2..50 (1/h^1.5), THD to the 50th, 50 Hz',
+    fs: 25600,
+    n: 25600,
+    f1: 50,
+    thdH: 50,
+    u: const Signal([Tone(50, 230)]),
+    i: Signal([
+      const Tone(50, 10, -0.1),
+      for (var h = 2; h <= 50; h++) Tone(50.0 * h, 0.4 / math.pow(h, 1.5), 0.37 * h),
+    ]),
+  ),
+  Case(
+    'dc-offsets',
+    'mains with DC offsets: u 1.5 V, i 0.08 A (half-wave rectifier load)',
+    fs: 10000,
+    n: 12000,
+    f1: 50,
+    u: const Signal([Tone(50, 230), Tone(150, 2.3, 0.2)], dc: 1.5),
+    i: const Signal([Tone(50, 10, -0.3), Tone(100, 2.0, 1.3), Tone(150, 0.5, 0.4)], dc: 0.08),
+  ),
+  Case(
+    'gan-600k',
+    'GaN PFC 200 kHz x3 interleaved: 600 kHz 0.15 A + 200 kHz 0.03 A ripple, fs 5 MSa/s',
+    fs: 5e6,
+    n: 5000000,
+    f1: 50,
+    u: const Signal([Tone(50, 230), Tone(600000, 0.4, 0.2)]),
+    i: const Signal([Tone(50, 10, -0.1), Tone(200000, 0.03, 0.5), Tone(600000, 0.15, 1.0)]),
+    rippleHarmonics: [4000, 12000],
+  ),
 ];
 
 class Row {
+  final Case kase;
   final String c, q;
   final double truth;
   final double? octave, dart, online;
   final bool absolute; // phase etc.
-  Row(this.c, this.q, this.truth, {this.octave, this.dart, this.online, this.absolute = false});
+  Row(this.kase, this.q, this.truth, {this.octave, this.dart, this.online, this.absolute = false}) : c = kase.name;
+
+  /// Acceptance limit of the error: relative, or absolute for phases [rad]
+  /// and for THD of a pure sine [percentage points]. Cases with a realistic
+  /// ADC (16 bit, noise, jitter) have a 30x wider band: their own noise.
+  double limit(String method) {
+    final k = kase.bits < 20 || kase.noise > 1e-5 || kase.jitter > 0 ? 30.0 : 1.0;
+    if (q.startsWith('phi')) return 2e-4 * k;
+    if (q.startsWith('THD')) return (absolute ? 1e-3 : 2e-3) * k;
+    if (q.startsWith('f ')) return 1e-7 * k;
+    if (q.contains(' dc ')) return 1e-3 * k;
+    if (q.contains('kHz amp')) return 1e-5 * k;
+    return 1e-6 * k; // U, I, P, S, PF
+  }
+
+  /// null = not computed by [method], else whether the error is within [limit].
+  bool? pass(String method, double? v) {
+    final e = err(v);
+    return e == null ? null : e.abs() <= limit(method);
+  }
 
   String get unit => q.startsWith('THD') ? 'pp' : 'rad';
 
@@ -234,6 +329,7 @@ Future<void> main(List<String> args) async {
   final q = QwtbService(oct);
   final rows = <Row>[];
   final times = <String, String>{};
+  final algErrors = <String>[];
   try {
     for (final c in cases) {
       if (only.isNotEmpty && !only.contains(c.name)) continue;
@@ -270,18 +366,20 @@ Future<void> main(List<String> args) async {
         name: name,
         range: range,
         dc: s.dc * k,
+        noiseRms: c.noise,
         harmonics: [for (final t in s.tones) SimHarmonic(t.f, t.amp * k, t.ph)],
       );
       final dc = DigitizerConfig()..type = DigitizerType.simulated;
       dc.simulated
         ..realtimeFactor = 0
         ..maxFs = 1e9
-        ..bits = 24
+        ..bits = c.bits
+        ..jitterRms = c.jitter
         ..channels = [ch('u', c.u, 1 / c.divider, 10), ch('i', c.i, c.shunt, 1)];
       final mc = MeasurementConfig(
         fs: c.fs,
         samplesCount: c.n,
-        recordsCount: 1,
+        recordsCount: c.records,
         folder: p.join(tmp.path, c.name),
         nameBase: 's',
       );
@@ -296,8 +394,21 @@ Future<void> main(List<String> args) async {
 
       Future<Map<String, Map<String, List<double>>>> octave(String alg, [List<AlgorithmParameter> prm = const []]) async {
         await SessionWriter.writeQwtbSetup(store, dir, ProcessingSetup(algorithmId: alg, parameters: prm));
-        await q.exec(session, record: 1, group: 1, isLast: true);
-        final d = await q.resultData(dir, alg, ResultViewConfig(resultId: -1, maxDim: ResultDim.vector, maxArray: 100));
+        for (var r = 1; r <= c.records; r++) {
+          try {
+            await q.exec(session, record: r, group: 1, isLast: r == c.records);
+          } catch (e) {
+            // reported as a failed check, the other algorithms still run
+            algErrors.add('${c.name} $alg record $r: $e');
+            stdout.writeln('  ERROR $alg: $e');
+            return {};
+          }
+        }
+        final d = await q.resultData(
+          dir,
+          alg,
+          ResultViewConfig(resultId: c.records > 1 ? 0 : -1, maxDim: ResultDim.vector, maxArray: 100),
+        );
         return {
           for (final ch in d.channels)
             if (ch.isNotEmpty) ch.first.tag: {for (final x in ch) x.name: x.value},
@@ -306,8 +417,14 @@ Future<void> main(List<String> args) async {
 
       Future<Map<String, Map<String, List<double>>>> dart(String alg, [List<AlgorithmParameter> prm = const []]) async {
         final dp = DartProcessor(store);
-        await dp.process(session, ProcessingSetup(algorithmId: alg, parameters: prm), record: 1);
-        final d = await dp.resultData(session, alg, ResultViewConfig(resultId: -1, maxDim: ResultDim.vector, maxArray: 100));
+        for (var r = 1; r <= c.records; r++) {
+          await dp.process(session, ProcessingSetup(algorithmId: alg, parameters: prm), record: r);
+        }
+        final d = await dp.resultData(
+          session,
+          alg,
+          ResultViewConfig(resultId: c.records > 1 ? 0 : -1, maxDim: ResultDim.vector, maxArray: 100),
+        );
         return {
           for (final ch in d.channels)
             if (ch.isNotEmpty) ch.first.tag: {for (final x in ch) x.name: x.value},
@@ -322,7 +439,7 @@ Future<void> main(List<String> args) async {
       // on-line analysis of the recorded data (as the live view computes it)
       final rec = await (await SessionReader.open(store, session)).readRecord(1, 1);
       final online = OnlineAnalyzer(
-        OnlineAnalysisConfig(harmonics: 40),
+        OnlineAnalysisConfig(harmonics: c.thdH),
       ).analyze(rec.channels, 1 / rec.ts, corr.transducers);
       double? on(String name) {
         for (final x in online.quantities) {
@@ -336,7 +453,7 @@ Future<void> main(List<String> args) async {
       final pwrO = await octave('TWM-PWRTDI');
       final pwrD = await dart('TWM-PWRTDI');
       void add(String qn, double truth, {double? o, double? d, double? onl, bool abs = false}) =>
-          rows.add(Row(c.name, qn, truth, octave: o, dart: d, online: onl, absolute: abs));
+          rows.add(Row(c, qn, truth, octave: o, dart: d, online: onl, absolute: abs));
 
       add('U rms [V]', c.u.rms, o: pick(wrmsO, 'u1', 'rms'), d: pick(wrmsD, 'u1', 'rms'), onl: on('RMS u1'));
       add('I rms [A]', c.i.rms, o: pick(wrmsO, 'i1', 'rms'), d: pick(wrmsD, 'i1', 'rms'), onl: on('RMS i1'));
@@ -367,7 +484,7 @@ Future<void> main(List<String> args) async {
 
         // THD to the 40th harmonic (IEC 61000-4-7 range)
         final thdO = await octave('TWM-THDWFFT', [
-          AlgorithmParameter('H', ['40']),
+          AlgorithmParameter('H', ['${c.thdH}']),
         ]);
         double? thdPct(String tag) {
           final v = pick(thdO, tag, 'thd');
@@ -375,7 +492,7 @@ Future<void> main(List<String> args) async {
         }
 
         // pure sine: absolute error [percentage points] = noise floor of the THD
-        final tu = 100 * c.u.thd(c.f1, 40), ti = 100 * c.i.thd(c.f1, 40);
+        final tu = 100 * c.u.thd(c.f1, c.thdH), ti = 100 * c.i.thd(c.f1, c.thdH);
         add('THD(u) [%]', tu, o: thdPct('u1'), onl: on('THD u1'), abs: tu == 0);
         add('THD(i) [%]', ti, o: thdPct('i1'), onl: on('THD i1'), abs: ti == 0);
 
@@ -402,12 +519,13 @@ Future<void> main(List<String> args) async {
         }
       }
       times[c.name] = '${(sw.elapsedMilliseconds / 1000).toStringAsFixed(1)} s';
+      String mark(bool? p) => p == null ? ' ' : (p ? ' ' : '!');
       for (final r in rows.where((r) => r.c == c.name)) {
         stdout.writeln(
           '  ${r.q.padRight(24)} truth ${fmtVal(r.truth).padRight(14)} '
-          'octave ${fmtErr(r.err(r.octave), r.absolute, r.unit).padRight(10)} '
-          'dart ${fmtErr(r.err(r.dart), r.absolute, r.unit).padRight(10)} '
-          'online ${fmtErr(r.err(r.online), r.absolute, r.unit)}',
+          'octave ${fmtErr(r.err(r.octave), r.absolute, r.unit).padRight(10)}${mark(r.pass('octave', r.octave))} '
+          'dart ${fmtErr(r.err(r.dart), r.absolute, r.unit).padRight(10)}${mark(r.pass('dart', r.dart))} '
+          'online ${fmtErr(r.err(r.online), r.absolute, r.unit)}${mark(r.pass('online', r.online))}',
         );
       }
     }
@@ -415,21 +533,54 @@ Future<void> main(List<String> args) async {
     await oct.dispose();
     tmp.deleteSync(recursive: true);
   }
+  // acceptance
+  var checks = 0;
+  final fails = <String>[];
+  for (final r in rows) {
+    for (final (m, v) in [('octave', r.octave), ('dart', r.dart), ('online', r.online)]) {
+      final p = r.pass(m, v);
+      if (p == null) continue;
+      checks++;
+      if (!p) {
+        fails.add('${r.c} ${r.q} $m: error ${fmtErr(r.err(v), r.absolute, r.unit)} > limit ${r.limit(m).toStringAsExponential(0)}');
+      }
+    }
+  }
+  for (final e in algErrors) {
+    checks++;
+    fails.add('algorithm error: $e');
+  }
+  stdout.writeln('\n$checks checks, ${fails.length} failed');
+  for (final f in fails) {
+    stdout.writeln('  FAIL $f');
+  }
   if (reportPath != null) {
+    String cell(Row r, String m, double? v) {
+      final e = fmtErr(r.err(v), r.absolute, r.unit);
+      final p = r.pass(m, v);
+      return p == null ? e : '$e ${p ? '✓' : '✗'}';
+    }
+
     final sb = StringBuffer()
       ..writeln('| Case | Quantity | Truth | QWTB (Octave) err. | Dart port err. | On-line err. |')
       ..writeln('|---|---|---|---|---|---|');
     for (final r in rows) {
       sb.writeln(
-        '| ${r.c} | ${r.q} | ${fmtVal(r.truth)} | ${fmtErr(r.err(r.octave), r.absolute, r.unit)} | '
-        '${fmtErr(r.err(r.dart), r.absolute, r.unit)} | ${fmtErr(r.err(r.online), r.absolute, r.unit)} |',
+        '| ${r.c} | ${r.q} | ${fmtVal(r.truth)} | ${cell(r, 'octave', r.octave)} | '
+        '${cell(r, 'dart', r.dart)} | ${cell(r, 'online', r.online)} |',
       );
     }
+    sb
+      ..writeln()
+      ..writeln('$checks checks, ${fails.length} failed. Limits: U, I, P, S, PF 1e-6 relative; f 1e-7; '
+          'phase difference 2e-4 rad; THD 2e-3 relative (pure sine: 1e-3 percentage points); DC 1e-3; '
+          'ripple amplitudes 1e-5; cases with a 16 bit ADC, noise or jitter: 30x wider.')
+      ..writeln();
     sb.writeln();
     for (final c in cases) {
       if (times.containsKey(c.name)) sb.writeln('- **${c.name}** (${times[c.name]}): ${c.what}');
     }
     File(reportPath).writeAsStringSync(sb.toString());
   }
-  exit(0);
+  exit(fails.isEmpty ? 0 : 1);
 }

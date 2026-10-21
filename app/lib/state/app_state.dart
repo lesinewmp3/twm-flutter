@@ -50,6 +50,11 @@ class AppState extends ChangeNotifier {
 
   String get resultsSession => viewedSession.isNotEmpty ? viewedSession : currentSession;
 
+  final _algInfo = <String, AlgorithmInfo>{};
+
+  /// QWTB algorithm description (cached: needs the calculation engine).
+  Future<AlgorithmInfo> algorithmInfo(String id) async => _algInfo[id] ??= await backend.algorithmInfo(id);
+
   static Future<AppState> create(TwmBackend backend) async {
     final s = await backend.loadSettings();
     final st = AppState(backend, s);

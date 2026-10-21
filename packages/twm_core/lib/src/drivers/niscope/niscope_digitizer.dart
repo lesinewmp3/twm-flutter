@@ -103,7 +103,8 @@ class NiScopeDigitizer extends VirtualDigitizer {
     final g = _groups;
     for (final e in g.entries) {
       final vi = _vi[e.key]!;
-      _l.check(vi, _l.configureAcquisition(vi, NiScope.valNormal), 'ConfigureAcquisition');
+      final acq = _c.acquisitionType == NiScopeAcquisitionType.flexres ? NiScope.valFlexres : NiScope.valNormal;
+      _l.check(vi, _l.configureAcquisition(vi, acq), 'ConfigureAcquisition');
       for (final chId in [0, 1]) {
         final idx = _c.channels.indexWhere((c) => c.resource == e.key && c.channelId == chId);
         final name = '$chId'.toNativeUtf8();

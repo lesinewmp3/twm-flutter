@@ -280,8 +280,20 @@ class NiScopeTriggerAdvanced {
   );
 }
 
+/// niScope acquisition type (TPQA "Acquisition type"): the NI 5922 flexible
+/// resolution ADC trades resolution for speed (24 bit at 100 kSa/s ... 16 bit
+/// at 15 MSa/s).
+enum NiScopeAcquisitionType {
+  normal('Normal'),
+  flexres('Flexible resolution');
+
+  final String label;
+  const NiScopeAcquisitionType(this.label);
+}
+
 class NiScopeConfig {
   List<NiScopeChannelConfig> channels;
+  NiScopeAcquisitionType acquisitionType;
   double extClockHz; // 0 = internal
   NiScopeClockSource extClockSource;
   bool streaming;
@@ -290,6 +302,7 @@ class NiScopeConfig {
 
   NiScopeConfig({
     List<NiScopeChannelConfig>? channels,
+    this.acquisitionType = NiScopeAcquisitionType.normal,
     this.extClockHz = 0,
     this.extClockSource = NiScopeClockSource.clkIn,
     this.streaming = false,
@@ -300,6 +313,7 @@ class NiScopeConfig {
 
   Json toJson() => {
     'channels': [for (final c in channels) c.toJson()],
+    'acquisitionType': acquisitionType.name,
     'extClockHz': extClockHz,
     'extClockSource': extClockSource.name,
     'streaming': streaming,
@@ -311,6 +325,7 @@ class NiScopeConfig {
     channels: j['channels'] == null
         ? null
         : [for (final c in jMapList(j['channels'])) NiScopeChannelConfig.fromJson(c)],
+    acquisitionType: enumByName(NiScopeAcquisitionType.values, j['acquisitionType'], NiScopeAcquisitionType.normal),
     extClockHz: jDouble(j['extClockHz']),
     extClockSource: enumByName(NiScopeClockSource.values, j['extClockSource'], NiScopeClockSource.clkIn),
     streaming: jBool(j['streaming']),

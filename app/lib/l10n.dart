@@ -37,7 +37,10 @@ String trMessage(String m) {
     final x = re.firstMatch(m);
     if (x != null) {
       // groups may be messages themselves ("Processing record 2: <error>")
-      return ru.replaceAllMapped(RegExp(r'\$(\d)'), (g) => trMessage(x.group(int.parse(g[1]!)) ?? ''));
+      return ru.replaceAllMapped(RegExp(r'\$(\d)'), (g) {
+        final v = x.group(int.parse(g[1]!)) ?? '';
+        return v.length < m.length ? trMessage(v) : v; // a whole-message group is not re-translated
+      });
     }
   }
   return m;
@@ -55,6 +58,15 @@ final _messagePatterns = <(RegExp, String)>[
     r'Внимание: перегрузка (сигнал обрезан) в канале(ах) $1',
   ),
   (RegExp(r'^Correction file not found: (.*)$'), r'Файл коррекции не найден: $1'),
+  (
+    RegExp(r'^(.*nonconformant arguments.*)$'),
+    r'Ошибка внутри алгоритма Octave: «$1». Чаще всего причина — слишком короткая запись '
+        r'(меньше 5 периодов сети) или неподходящие параметры алгоритма.',
+  ),
+  (
+    RegExp(r"Missing 'i' channel of phase #(\d+)"),
+    r'Нет канала тока для фазы $1: алгоритму мощности нужны делитель и шунт с одинаковым индексом фазы в «Коррекциях».',
+  ),
   (
     RegExp(r'Distance between the harmonics in spectrum must be at least (\d+) \(detected (\d+)\)'),
     r'Запись слишком короткая для этого алгоритма: между гармониками в спектре нужно не меньше $1 бинов (сейчас $2). '

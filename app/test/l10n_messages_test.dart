@@ -21,6 +21,11 @@ void main() {
       startsWith('Обработка записи 1: Запись слишком короткая для этого алгоритма: между гармониками в спектре нужно не меньше 30 бинов (сейчас 11).'),
     );
     expect(trMessage('something else'), 'something else');
+    expect(
+      trMessage('Processing record 3: =: nonconformant arguments (op1 is 1x1, op2 is 1x0) [thd_wfft:120]'),
+      startsWith('Обработка записи 3: Ошибка внутри алгоритма Octave: «=: nonconformant arguments'),
+    );
+    expect(trMessage("QWTB algorithm executer: Missing 'i' channel of phase #1!"), startsWith('Нет канала тока для фазы 1'));
     L10n.apply('en');
     expect(trMessage('Done'), 'Done');
   });

@@ -47,6 +47,39 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  /// Checks of the QWTB processing setup against the measurement setup.
+  Future<List<String>> _processingProblems(AppState st) async {
+    final m = st.settings.measurement;
+    if (!m.processingEnabled || m.processing.mode != ProcessingMode.qwtb) return const [];
+    final out = <String>[];
+    final alg = m.processing.algorithmId;
+    // lowest input grid frequency of interest: 40 Hz
+    final periods = m.samplesCount / m.fs * 40;
+    if (periods < 5) {
+      out.add(tr('The record holds less than 5 mains periods: the QWTB algorithms may fail or give wrong results.'));
+    } else if (alg == 'TWM-THDWFFT' && periods < 30) {
+      out.add(tr('TWM-THDWFFT needs at least 30 periods of the fundamental in the record (e.g. 0.75 s at 40 Hz).'));
+    }
+    try {
+      final info = await st.algorithmInfo(alg);
+      final t = st.settings.corrections.transducers;
+      bool pair(int ph) =>
+          t.any((x) => x.phaseIndex == ph && x.type == TransducerType.divider) &&
+          t.any((x) => x.phaseIndex == ph && x.type == TransducerType.shunt);
+      if (info.hasUi && !t.any((x) => pair(x.phaseIndex))) {
+        out.add(
+          trf(
+            '{0} computes power: it needs a voltage and a current transducer (divider and shunt) with the same phase index in HW corrections.',
+            [alg],
+          ),
+        );
+      }
+    } catch (_) {
+      // no calculation engine: the processing reports it itself
+    }
+    return out;
+  }
+
   List<_Page> _pages(BackendFeatures f) => [
     _Page.measure,
     _Page.results,
@@ -75,6 +108,19 @@ class _MainScreenState extends State<MainScreen> {
     if (m.folder.trim().isEmpty && (m.saveRecords || !m.continuous)) {
       showError(context, tr('Select the folder for measurement data in the measurement setup first.'));
       return;
+    }
+    // processing that is bound to fail: say it before the measurement
+    final procProblems = await _processingProblems(st);
+    if (!mounted) return;
+    if (procProblems.isNotEmpty) {
+      final go = await confirm(
+        context,
+        tr('Processing setup'),
+        '${procProblems.join('\n\n')}\n\n${tr('Start anyway?')}',
+        ok: tr('Start'),
+        cancel: tr('Cancel'),
+      );
+      if (!go || !mounted) return;
     }
     final mux = st.settings.digitizer.multiplexer;
     final errs = st.settings.corrections.validate(

@@ -376,6 +376,16 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        FieldRow([
+          Choice<NiScopeAcquisitionType>(
+            label: tr('Acquisition type'),
+            value: n.acquisitionType,
+            items: NiScopeAcquisitionType.values,
+            width: 230,
+            itemLabel: (v) => tr(v.label),
+            onChanged: (v) => setState(() => n.acquisitionType = v),
+          ),
+        ]),
         RowsEditor<NiScopeChannelConfig>(
           title: tr('ADC Channels (NI 5922 cards, channel ID from 0)'),
           rows: n.channels,
