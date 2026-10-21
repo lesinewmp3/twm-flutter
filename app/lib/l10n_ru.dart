@@ -513,6 +513,8 @@ const Map<String, String> ruStrings = {
   'External': 'Внешний',
   'Level': 'По уровню',
   'DFT bin: {0} Hz, record length: {1} s': 'Шаг ДПФ: {0} Гц, длина записи: {1} с',
+  'Less than 5 periods of 50 Hz in the record: mains frequency results (f, harmonics, THD, power) will be wrong.':
+      'В записи меньше 5 периодов 50 Гц: результаты на частоте сети (f, гармоники, THD, мощность) будут неверны.',
   'sub-records': 'подзаписей',
   'max': 'макс.',
   'samples': 'отсчётов',

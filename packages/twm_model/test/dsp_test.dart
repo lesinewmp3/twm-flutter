@@ -78,4 +78,17 @@ void main() {
     expect(h[2], double.infinity);
     expect(jsonEncode(r.toJson()), isNotEmpty);
   });
+
+  test('record shorter than 2 periods gives no frequency/THD instead of garbage', () {
+    // 1 ms of 50 Hz at 1 MSa/s (the settings that showed f = 508 Hz, THD = 223 %)
+    final x = sine(1000, 1e6, [(50, 1, 0)]);
+    final h = HarmonicAnalysis.of(x, 1e6, harmonics: 20);
+    expect(h.f0.isNaN, isTrue);
+    expect(h.thd.isNaN, isTrue);
+    expect(h.rms.isFinite, isTrue); // RMS of the samples is still defined
+    // 3 periods are fine
+    final y = sine(3000, 50000, [(50, 1, 0), (150, 0.1, 0)]);
+    final g = HarmonicAnalysis.of(y, 50000, harmonics: 5);
+    expect(g.f0, closeTo(50, 0.5));
+  });
 }

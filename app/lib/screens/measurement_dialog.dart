@@ -220,6 +220,14 @@ class _MeasDialogState extends State<_MeasDialog> {
                                 (m.subRecordsCount > 1 ? ' x ${m.subRecordsCount} ${tr('sub-records')}' : ''),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
+                          if (m.samplesCount / m.fs < 0.1)
+                            Text(
+                              tr(
+                                'Less than 5 periods of 50 Hz in the record: mains frequency results '
+                                '(f, harmonics, THD, power) will be wrong.',
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+                            ),
                         ],
                       ),
                     ),

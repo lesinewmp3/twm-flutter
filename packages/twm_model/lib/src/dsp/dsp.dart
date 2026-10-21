@@ -221,13 +221,16 @@ class HarmonicAnalysis {
       final d = y1 - 2 * y2 + y3;
       if (d != 0) delta = 0.5 * (y1 - y3) / d;
     }
-    final f0 = (kmax + delta) * sp.df;
+    // fewer than 2 periods of the fundamental: no meaningful frequency or
+    // harmonics (a 1 ms record of 50 Hz gave "f = 508 Hz, THD = 223 %")
+    final valid = kmax + delta >= 2;
+    final f0 = valid ? (kmax + delta) * sp.df : double.nan;
     final enbw = window.enbw;
     final amps = <double>[];
     final phs = <double>[];
     for (var h = 1; h <= harmonics; h++) {
       final kc = (h * (kmax + delta)).round();
-      if (kc >= a.length) {
+      if (!valid || kc >= a.length) {
         amps.add(double.nan);
         phs.add(double.nan);
         continue;
