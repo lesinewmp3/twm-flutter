@@ -29,6 +29,14 @@ String trf(String s, List<Object?> args) {
   return r;
 }
 
+/// Name of an on-line quantity ("Event duration u1"): the words before the
+/// channel tag are translated, the tag is kept.
+String trQuantity(String name) {
+  final i = name.lastIndexOf(' ');
+  if (i < 0) return tr(name);
+  return '${tr(name.substring(0, i))} ${name.substring(i + 1)}';
+}
+
 /// [trMessage] of every line of a multi-line backend text.
 String trLines(String m) => L10n.ru ? m.split('\n').map(trMessage).join('\n') : m;
 

@@ -308,6 +308,47 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                   onChanged: (v) => ch.timeShift = v,
                 ),
               ]),
+              // disturbance in every record (UPS transfer, sag, interruption)
+              FieldRow([
+                Check(
+                  label: tr('Event (sag / interruption)'),
+                  value: ch.event != null,
+                  onChanged: (v) => setState(() => ch.event = v ? SimEvent() : null),
+                ),
+                if (ch.event != null) ...[
+                  NumField(
+                    label: tr('Event start'),
+                    unit: 's',
+                    value: ch.event!.start,
+                    width: 130,
+                    min: 0,
+                    onChanged: (v) => ch.event!.start = v,
+                  ),
+                  NumField(
+                    label: tr('Event duration'),
+                    unit: 's',
+                    value: ch.event!.duration,
+                    width: 150,
+                    min: 0,
+                    onChanged: (v) => ch.event!.duration = v,
+                  ),
+                  NumField(
+                    label: tr('Residual level'),
+                    value: ch.event!.level,
+                    width: 150,
+                    min: 0,
+                    tooltip: tr('0 = interruption, 0.4 = sag to 40 %'),
+                    onChanged: (v) => ch.event!.level = v,
+                  ),
+                  NumField(
+                    label: tr('Phase jump'),
+                    unit: 'rad',
+                    value: ch.event!.phaseJump,
+                    width: 130,
+                    onChanged: (v) => ch.event!.phaseJump = v,
+                  ),
+                ],
+              ]),
               Wrap(
                 spacing: 8,
                 runSpacing: 4,

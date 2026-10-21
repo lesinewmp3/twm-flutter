@@ -77,6 +77,22 @@ class _OnlineViewState extends State<OnlineView> {
                 onChanged: (v) => upd((c) => c.window = v),
               ),
               Check(label: tr('On/Off statistic'), value: o.statistics, onChanged: (v) => upd((c) => c.statistics = v)),
+              Check(
+                label: tr('Sag / interruption / transfer analysis'),
+                value: o.transferAnalysis,
+                onChanged: (v) => upd((c) => c.transferAnalysis = v),
+              ),
+              if (o.transferAnalysis)
+                NumField(
+                  label: tr('Event threshold'),
+                  unit: '%',
+                  value: o.transferThreshold,
+                  min: 1,
+                  max: 90,
+                  width: 140,
+                  tooltip: tr('Deviation from the steady waveform that marks an event, % of the peak'),
+                  onChanged: (v) => upd((c) => c.transferThreshold = v),
+                ),
               NumField(
                 label: tr('Average cycles'),
                 value: o.averageCycles.toDouble(),
@@ -229,7 +245,7 @@ class _OnlineViewState extends State<OnlineView> {
           for (final q in r.quantities)
             TableRow(
               children: [
-                _c(q.name, bold: true),
+                _c(trQuantity(q.name), bold: true),
                 _c(q.unit),
                 _c(f(q.value)),
                 if (stats) ...[_c(f(q.mean)), _c(f(q.std)), _c(f(q.uA)), _c(f(q.errorPercent)), _c('${q.count}')],

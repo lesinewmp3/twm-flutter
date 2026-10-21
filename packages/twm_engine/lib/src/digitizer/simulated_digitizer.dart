@@ -125,8 +125,8 @@ class SimulatedDigitizer extends VirtualDigitizer {
     for (var c = 0; c < ch; c++) {
       final cc = _cfg.channels[c];
       v.fillRange(0, count, cc.dc);
-      if (_cfg.jitterRms > 0) {
-        _harmonicsJitter(v, cc, ts);
+      if (_cfg.jitterRms > 0 || cc.event != null) {
+        _harmonicsExact(v, cc, ts);
       } else {
         for (final h in cc.harmonics) {
           _addTone(v, h, cc.timeShift, ts);
@@ -184,13 +184,23 @@ class SimulatedDigitizer extends VirtualDigitizer {
     }
   }
 
-  /// Exact per sample evaluation with sampling jitter.
-  void _harmonicsJitter(Float64List v, SimChannelConfig cc, double ts) {
+  /// Exact per sample evaluation: sampling jitter, events (sag/interruption
+  /// with a phase jump after it, the time of the event is relative to the
+  /// record start).
+  void _harmonicsExact(Float64List v, SimChannelConfig cc, double ts) {
+    final ev = cc.event;
     for (var i = 0; i < v.length; i++) {
-      final dt = _gauss() * _cfg.jitterRms;
+      final dt = _cfg.jitterRms > 0 ? _gauss() * _cfg.jitterRms : 0.0;
+      final tr = (_pos + i) * ts; // time in the record
+      var k = 1.0, jump = 0.0;
+      if (ev != null) {
+        if (tr >= ev.start && tr < ev.start + ev.duration) k = ev.level;
+        if (tr >= ev.start + ev.duration) jump = ev.phaseJump;
+      }
       for (final h in cc.harmonics) {
         final cyc = _frac(h.freq * _t0) + _frac(h.freq * cc.timeShift) + _frac(h.freq * ts * (_pos + i)) + h.freq * dt;
-        v[i] += h.amp * math.sin(2 * math.pi * cyc + h.phase);
+        // harmonics follow the fundamental phase jump (h x jump)
+        v[i] += k * h.amp * math.sin(2 * math.pi * cyc + h.phase + jump * h.freq / cc.harmonics.first.freq);
       }
     }
   }

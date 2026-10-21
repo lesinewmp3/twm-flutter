@@ -3,11 +3,13 @@
 /// optional running statistics over the last N acquisitions.
 library;
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../json.dart';
 import '../models/measurement.dart';
 import 'dsp.dart';
+import 'transfer_analysis.dart';
 
 class OnlineAnalysisConfig {
   bool enabled;
@@ -26,16 +28,23 @@ class OnlineAnalysisConfig {
   /// 0 = off.
   double monitorWindowMs;
 
+  /// Event (sag / interruption / UPS transfer) analysis of the voltages and
+  /// its detection threshold [% of the nominal peak].
+  bool transferAnalysis;
+  double transferThreshold;
+
   OnlineAnalysisConfig({
     this.enabled = true,
     this.harmonicAnalyzer = true,
-    this.harmonics = 20,
+    this.harmonics = 40, // IEC 61000-4-7 THD range
     this.window = WindowType.hann,
     this.statistics = false,
     this.averageCycles = 10,
     this.saveResults = false,
     this.resultsFile = '',
     this.monitorWindowMs = 80,
+    this.transferAnalysis = false,
+    this.transferThreshold = 10,
   });
 
   Json toJson() => {
@@ -48,18 +57,22 @@ class OnlineAnalysisConfig {
     'saveResults': saveResults,
     'resultsFile': resultsFile,
     'monitorWindowMs': monitorWindowMs,
+    'transferAnalysis': transferAnalysis,
+    'transferThreshold': transferThreshold,
   };
 
   factory OnlineAnalysisConfig.fromJson(Json j) => OnlineAnalysisConfig(
     enabled: jBool(j['enabled'], true),
     harmonicAnalyzer: jBool(j['harmonicAnalyzer'], true),
-    harmonics: jInt(j['harmonics'], 20),
+    harmonics: jInt(j['harmonics'], 40),
     window: enumByName(WindowType.values, j['window'], WindowType.hann),
     statistics: jBool(j['statistics']),
     averageCycles: jInt(j['averageCycles'], 10),
     saveResults: jBool(j['saveResults']),
     resultsFile: jString(j['resultsFile']),
     monitorWindowMs: jDouble(j['monitorWindowMs'], 80),
+    transferAnalysis: jBool(j['transferAnalysis']),
+    transferThreshold: jDouble(j['transferThreshold'], 10),
   );
 }
 
@@ -198,6 +211,13 @@ class OnlineAnalyzer {
       if (config.harmonicAnalyzer) {
         q.add(_q('THD $tag', '%', h.thd * 100));
         harm[tag] = h.amplitudes;
+      }
+      if (config.transferAnalysis && tag.startsWith('u')) {
+        final t = TransferAnalysis.analyze(x, fs, h.f0, threshold: config.transferThreshold / 100);
+        q.add(_q('Event start $tag', 'ms', t.detected ? t.start * 1000 : double.nan));
+        q.add(_q('Event duration $tag', 'ms', t.detected ? t.duration * 1000 : 0));
+        q.add(_q('Event depth $tag', '%', t.detected ? t.depth * 100 : double.nan));
+        q.add(_q('Phase jump $tag', 'deg', t.detected ? t.phaseJump * 180 / math.pi : double.nan));
       }
     }
     // phases: pair u<k> with i<k>

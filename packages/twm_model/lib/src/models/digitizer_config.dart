@@ -95,6 +95,25 @@ class SimHarmonic {
   factory SimHarmonic.fromJson(Json j) => SimHarmonic(jDouble(j['f']), jDouble(j['A']), jDouble(j['ph']));
 }
 
+/// Disturbance in every simulated record (UPS transfer to bypass, sag,
+/// interruption): from [start] [s after the record start] for [duration] the
+/// harmonics are scaled by [level] (0 = interruption, 0.4 = sag to 40 %),
+/// after it the phase jumps by [phaseJump] [rad].
+class SimEvent {
+  double start;
+  double duration;
+  double level;
+  double phaseJump;
+  SimEvent({this.start = 0.1, this.duration = 0.004, this.level = 0, this.phaseJump = 0});
+  Json toJson() => {'start': start, 'duration': duration, 'level': level, 'phaseJump': phaseJump};
+  factory SimEvent.fromJson(Json j) => SimEvent(
+    start: jDouble(j['start'], 0.1),
+    duration: jDouble(j['duration'], 0.004),
+    level: jDouble(j['level']),
+    phaseJump: jDouble(j['phaseJump']),
+  );
+}
+
 class SimChannelConfig {
   String name;
   double range; // [V] peak
@@ -102,6 +121,7 @@ class SimChannelConfig {
   double noiseRms;
   List<SimHarmonic> harmonics;
   double timeShift; // simulated channel delay [s]
+  SimEvent? event;
 
   SimChannelConfig({
     this.name = 'channel',
@@ -110,6 +130,7 @@ class SimChannelConfig {
     this.noiseRms = 1e-6,
     List<SimHarmonic>? harmonics,
     this.timeShift = 0,
+    this.event,
   }) : harmonics = harmonics ?? [SimHarmonic(50, 1)];
 
   Json toJson() => {
@@ -119,6 +140,7 @@ class SimChannelConfig {
     'noiseRms': noiseRms,
     'timeShift': timeShift,
     'harmonics': [for (final h in harmonics) h.toJson()],
+    if (event != null) 'event': event!.toJson(),
   };
 
   factory SimChannelConfig.fromJson(Json j) => SimChannelConfig(
@@ -128,6 +150,7 @@ class SimChannelConfig {
     noiseRms: jDouble(j['noiseRms'], 1e-6),
     timeShift: jDouble(j['timeShift']),
     harmonics: j['harmonics'] == null ? null : [for (final h in jMapList(j['harmonics'])) SimHarmonic.fromJson(h)],
+    event: j['event'] == null ? null : SimEvent.fromJson(jMap(j['event'])),
   );
 }
 

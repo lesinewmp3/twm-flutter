@@ -22,7 +22,7 @@ class _LiveViewState extends State<LiveView> {
   int _diffHi = 0, _diffLo = 1;
   final Set<int> _hidden = {};
 
-  static const _tileQuantities = ['RMS', 'f', 'THD', 'P', 'Q', 'PF'];
+  static const _tileQuantities = ['RMS', 'f', 'THD', 'P', 'Q', 'PF', 'Event'];
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +197,8 @@ class _LiveViewState extends State<LiveView> {
     for (final q in r.quantities) {
       final kind = q.name.split(' ').first;
       if (!_tileQuantities.contains(kind)) continue;
-      out.add(StatTile(q.name, formatDisplay(q.value), q.unit));
+      if (q.name.startsWith('Event') && !q.name.startsWith('Event duration')) continue;
+      out.add(StatTile(trQuantity(q.name), formatDisplay(q.value), q.unit));
       if (out.length >= 10) break;
     }
     return out;
