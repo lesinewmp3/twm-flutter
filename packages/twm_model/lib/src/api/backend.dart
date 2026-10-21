@@ -8,6 +8,7 @@ import '../models/digitizer.dart';
 import '../models/digitizer_config.dart';
 import '../models/measurement.dart';
 import '../models/qwtb.dart';
+import '../dsp/dsp.dart';
 import '../dsp/online_analyzer.dart';
 import 'events.dart';
 
@@ -237,6 +238,33 @@ class WaveformData {
   );
 }
 
+/// Amplitude spectra of a stored record, computed from all its samples
+/// (decimating the waveform first would alias fast content).
+class SpectrumData {
+  final List<String> names;
+
+  /// Peak amplitudes per channel, display decimated (max per bin group).
+  final List<List<double>> amplitudes;
+
+  /// Frequency step of [amplitudes].
+  final double df;
+  final int fullLength;
+  const SpectrumData(this.names, this.amplitudes, this.df, this.fullLength);
+
+  Json toJson() => {
+    'names': names,
+    'amplitudes': [for (final a in amplitudes) [for (final v in a) jNum(v)]],
+    'df': df,
+    'fullLength': fullLength,
+  };
+  factory SpectrumData.fromJson(Json j) => SpectrumData(
+    jStringList(j['names']),
+    [for (final c in (j['amplitudes'] as List? ?? [])) jDoubleList(c)],
+    jDouble(j['df']),
+    jInt(j['fullLength']),
+  );
+}
+
 class OctaveStatus {
   final bool running;
   final String version;
@@ -342,6 +370,13 @@ abstract class TwmBackend {
   // sessions
   Future<SessionSummary> sessionSummary(String sessionPath);
   Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000});
+  Future<SpectrumData> recordSpectrum(
+    String sessionPath,
+    int group,
+    int record, {
+    WindowType window = WindowType.hann,
+    int maxPoints = 8192,
+  });
 
   // processing (GNU Octave / Matlab)
   Future<OctaveStatus> octaveStart(OctaveConfig cfg);

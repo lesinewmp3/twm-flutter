@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:twm_model/twm_model.dart';
 
@@ -162,6 +163,28 @@ Future<WaveformData> readRecordOf(FileStore store, String sessionPath, int group
   final r = await SessionReader.open(store, sessionPath);
   final d = await r.readRecord(group, record, maxPoints: maxPoints);
   return WaveformData(d.names, [for (final c in d.channels) c.toList()], d.ts, d.fullLength);
+}
+
+Future<SpectrumData> recordSpectrumOf(
+  FileStore store,
+  String sessionPath,
+  int group,
+  int record,
+  WindowType window,
+  int maxPoints,
+) async {
+  final r = await SessionReader.open(store, sessionPath);
+  final d = await r.readRecord(group, record);
+  final amps = <List<double>>[];
+  var df = 0.0;
+  for (final c in d.channels) {
+    final sp = Spectrum.of(c, 1 / d.ts, window: window);
+    final y = sp.forDisplay(maxPoints);
+    amps.add(y);
+    df = sp.df * (sp.amp.length / math.max(1, y.length)).ceilToDouble();
+    if (y.length == sp.amp.length) df = sp.df;
+  }
+  return SpectrumData(d.names, amps, df, d.fullLength);
 }
 
 /// Summary of a correction INFO file in the store.

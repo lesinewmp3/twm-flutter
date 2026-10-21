@@ -46,21 +46,36 @@ class SessionReader {
     final tstamps = gi.matrix('record relative timestamps [s]')[rep - 1];
     final v = await RecordFileReader.read(store, store.path.join(root, rel), varName: dataVariable);
     final ch = <Float64List>[];
-    var step = 1;
-    if (maxPoints > 0 && v.cols > maxPoints) step = (v.cols / maxPoints).ceil();
+    // display decimation: min/max envelope (two points per bucket), so fast
+    // content is shown as a band instead of being aliased into slow waves
+    var bucket = 1;
+    if (maxPoints > 0 && v.cols > maxPoints) bucket = (v.cols / math.max(1, maxPoints ~/ 2)).ceil();
     for (var c = 0; c < v.rows; c++) {
       final full = v.row(c, gain: gains[c], offset: offs[c]);
-      ch.add(step == 1 ? full : _decimate(full, step));
+      ch.add(bucket == 1 ? full : envelope(full, bucket));
     }
-    return RecordData(channels: ch, ts: ts * step, fullLength: v.cols, timestamps: tstamps, names: channelDescriptors);
+    return RecordData(
+      channels: ch,
+      ts: bucket == 1 ? ts : ts * bucket / 2,
+      fullLength: v.cols,
+      timestamps: tstamps,
+      names: channelDescriptors,
+    );
   }
 
-  static Float64List _decimate(Float64List x, int step) {
-    // simple stride decimation keeping every step-th sample
-    final n = (x.length / step).ceil();
-    final out = Float64List(n);
-    for (var i = 0; i < n; i++) {
-      out[i] = x[math.min(i * step, x.length - 1)];
+  /// Min and max of each [bucket] samples, in their time order.
+  static Float64List envelope(Float64List x, int bucket) {
+    final nb = (x.length / bucket).ceil();
+    final out = Float64List(2 * nb);
+    for (var b = 0; b < nb; b++) {
+      final a = b * bucket, e = math.min(x.length, a + bucket);
+      var mn = a, mx = a;
+      for (var i = a + 1; i < e; i++) {
+        if (x[i] < x[mn]) mn = i;
+        if (x[i] > x[mx]) mx = i;
+      }
+      out[2 * b] = x[mn <= mx ? mn : mx];
+      out[2 * b + 1] = x[mn <= mx ? mx : mn];
     }
     return out;
   }

@@ -231,6 +231,15 @@ class BrowserBackend implements TwmBackend {
   Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) =>
       readRecordOf(store, sessionPath, group, record, maxPoints);
 
+  @override
+  Future<SpectrumData> recordSpectrum(
+    String sessionPath,
+    int group,
+    int record, {
+    WindowType window = WindowType.hann,
+    int maxPoints = 8192,
+  }) => recordSpectrumOf(store, sessionPath, group, record, window, maxPoints);
+
   // ---------------------------------------------------------- processing --
 
   static const _noOctave =

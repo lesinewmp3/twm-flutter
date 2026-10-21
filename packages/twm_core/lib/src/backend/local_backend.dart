@@ -335,6 +335,15 @@ class LocalBackend implements TwmBackend {
   Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) =>
       readRecordOf(_store, sessionPath, group, record, maxPoints);
 
+  @override
+  Future<SpectrumData> recordSpectrum(
+    String sessionPath,
+    int group,
+    int record, {
+    WindowType window = WindowType.hann,
+    int maxPoints = 8192,
+  }) => recordSpectrumOf(_store, sessionPath, group, record, window, maxPoints);
+
   // ---------------------------------------------------------- processing --
 
   OctaveBridge _bridge(OctaveConfig cfg) {

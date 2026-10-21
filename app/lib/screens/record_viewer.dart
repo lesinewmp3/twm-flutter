@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
@@ -38,6 +36,7 @@ class _RecordViewerState extends State<RecordViewerPanel> {
   int _record = 1;
   int _maxPoints = 20000;
   WaveformData? _data;
+  SpectrumData? _spec; // of the whole record, for the spectrum view
   String _msg = '';
   bool _busy = false;
   bool _spectrum = false;
@@ -82,9 +81,13 @@ class _RecordViewerState extends State<RecordViewerPanel> {
     if (s == null || s.recordsPerGroup.isEmpty || s.recordsPerGroup[_group - 1] == 0) return;
     setState(() => _busy = true);
     try {
-      final d = await AppScope.read(context).backend.readRecord(_session, _group, _record, maxPoints: _maxPoints);
+      final b = AppScope.read(context).backend;
+      final d = await b.readRecord(_session, _group, _record, maxPoints: _maxPoints);
+      // spectrum from all samples: the decimated waveform would alias fast content
+      final sp = _spectrum ? await b.recordSpectrum(_session, _group, _record) : null;
       setState(() {
         _data = d;
+        _spec = sp;
         _msg =
             '${d.fullLength} ${tr('samples per channel')}'
             '${d.channels.isNotEmpty && d.channels.first.length < d.fullLength ? ' (${tr('decimated to')} ${d.channels.first.length})' : ''}';
@@ -107,17 +110,9 @@ class _RecordViewerState extends State<RecordViewerPanel> {
       for (var c = 0; c < d.channels.length; c++) {
         final name = '#${c + 1} ${c < d.names.length ? d.names[c] : ''}';
         if (_spectrum) {
-          // note: decimated records give spectrum up to the reduced Nyquist frequency
-          final sp = Spectrum.of(Float64List.fromList(d.channels[c]), 1 / d.ts, window: WindowType.hann);
-          final y = sp.forDisplay(8192);
-          series.add(
-            ChartSeries(
-              name,
-              y,
-              dx: sp.df * (sp.amp.length / y.length).ceilToDouble(),
-              color: chartColors[c % chartColors.length],
-            ),
-          );
+          final sp = _spec;
+          if (sp == null || c >= sp.amplitudes.length) continue;
+          series.add(ChartSeries(name, sp.amplitudes[c], dx: sp.df, color: chartColors[c % chartColors.length]));
         } else {
           series.add(ChartSeries(name, d.channels[c], dx: d.ts, color: chartColors[c % chartColors.length]));
         }
@@ -189,7 +184,14 @@ class _RecordViewerState extends State<RecordViewerPanel> {
                   _read();
                 },
               ),
-              Check(label: tr('Spectrum'), value: _spectrum, onChanged: (v) => setState(() => _spectrum = v)),
+              Check(
+                label: tr('Spectrum'),
+                value: _spectrum,
+                onChanged: (v) {
+                  setState(() => _spectrum = v);
+                  if (v && _spec == null) _read();
+                },
+              ),
               if (_busy) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
             ],
           ),

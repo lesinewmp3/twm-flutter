@@ -64,6 +64,14 @@ class BackendDispatcher {
           jInt(a['record'], 1),
           maxPoints: jInt(a['maxPoints'], 5000),
         )).toJson();
+      case 'recordSpectrum':
+        return (await b.recordSpectrum(
+          path(),
+          jInt(a['group'], 1),
+          jInt(a['record'], 1),
+          window: enumByName(WindowType.values, a['window'], WindowType.hann),
+          maxPoints: jInt(a['maxPoints'], 8192),
+        )).toJson();
       case 'octaveStart':
         return (await b.octaveStart(oct())).toJson();
       case 'octaveRestart':

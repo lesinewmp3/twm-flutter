@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../dsp/dsp.dart';
 import '../json.dart';
 import '../models/digitizer_config.dart';
 import '../models/measurement.dart';
@@ -103,6 +104,23 @@ abstract class RpcBackend implements TwmBackend {
       WaveformData.fromJson(
         await _obj('readRecord', {'path': sessionPath, 'group': group, 'record': record, 'maxPoints': maxPoints}),
       );
+
+  @override
+  Future<SpectrumData> recordSpectrum(
+    String sessionPath,
+    int group,
+    int record, {
+    WindowType window = WindowType.hann,
+    int maxPoints = 8192,
+  }) async => SpectrumData.fromJson(
+    await _obj('recordSpectrum', {
+      'path': sessionPath,
+      'group': group,
+      'record': record,
+      'window': window.name,
+      'maxPoints': maxPoints,
+    }),
+  );
 
   @override
   Future<OctaveStatus> octaveStart(OctaveConfig cfg) async =>
