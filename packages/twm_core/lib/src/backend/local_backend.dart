@@ -110,6 +110,10 @@ class LocalBackend implements TwmBackend {
         s.octave.octprogPath = paths.octprog;
         s.octave.qwtbPath = p.join(paths.octprog, 'qwtb');
       }
+      // the bundled corrections move with the app (AppImage mounts at a new path each run)
+      if (s.corrections.transducersRoot.isEmpty || !Directory(s.corrections.transducersRoot).existsSync()) {
+        s.corrections.transducersRoot = p.join(paths.corrections, 'transducers');
+      }
       return s;
     } catch (_) {
       return _defaults();

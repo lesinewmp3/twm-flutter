@@ -1,0 +1,83 @@
+# Builds single-file desktop packages:
+#   Linux:   TWM-Flutter-x86_64.AppImage
+#   Windows: TWM-Flutter-Setup.exe (installer) and TWM-Flutter-windows-portable.zip
+# Run manually (Actions -> Desktop packages -> Run workflow) or push a tag v*;
+# for a tag the files are attached to a GitHub Release.
+name: Desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libfuse2
+          curl -sSLo /usr/local/bin/appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          sudo chmod +x /usr/local/bin/appimagetool
+      - run: tools/package_linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TWM-Flutter-linux
+          path: dist/TWM-Flutter-x86_64.AppImage
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: Build
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - name: Assemble bundle
+        shell: pwsh
+        run: |
+          $b = "app/build/windows/x64/runner/Release"
+          Copy-Item -Recurse octave, data $b
+          # MSVC runtime, so the app starts on a PC without the VC++ redistributable
+          foreach ($f in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
+            Copy-Item "$env:WINDIR/System32/$f" $b
+          }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "$b/*" -DestinationPath dist/TWM-Flutter-windows-portable.zip
+      - name: Installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe" tools/windows_installer.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TWM-Flutter-windows
+          path: |
+            dist/TWM-Flutter-Setup.exe
+            dist/TWM-Flutter-windows-portable.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
