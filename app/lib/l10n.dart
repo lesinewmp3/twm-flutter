@@ -29,6 +29,9 @@ String trf(String s, List<Object?> args) {
   return r;
 }
 
+/// [trMessage] of every line of a multi-line backend text.
+String trLines(String m) => L10n.ru ? m.split('\n').map(trMessage).join('\n') : m;
+
 /// Messages coming from the backend (engine, drivers, Octave) are English;
 /// the ones a user meets most are translated by pattern.
 String trMessage(String m) {
@@ -39,7 +42,9 @@ String trMessage(String m) {
       // groups may be messages themselves ("Processing record 2: <error>")
       return ru.replaceAllMapped(RegExp(r'\$(\d)'), (g) {
         final v = x.group(int.parse(g[1]!)) ?? '';
-        return v.length < m.length ? trMessage(v) : v; // a whole-message group is not re-translated
+        if (v.length >= m.length) return v; // a whole-message group is not re-translated
+        final t = trMessage(v);
+        return t == v ? tr(v) : t; // e.g. a digitizer name
       });
     }
   }
@@ -77,6 +82,19 @@ final _messagePatterns = <(RegExp, String)>[
     r'Не удаётся запустить «$1»: $2. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
   ),
   (RegExp(r'^Digitizing record (\d+)(/\d+)?\.\.\.$'), r'Оцифровка записи $1$2...'),
+  (
+    RegExp(r'^Simulated digitizer, (\d+) bit, (\d+) channel\(s\)\.$'),
+    r'Симулятор дигитайзера, $1 бит, каналов: $2.',
+  ),
+  (
+    RegExp(r'^#(\d+) (.*): range (\S+) V, (\d+) harmonic\(s\), noise (\S+) V rms$'),
+    r'#$1 $2: диапазон $3 В, составляющих: $4, шум $5 В СКЗ',
+  ),
+  (
+    RegExp(r'^Driver for "(.*)" is not available in this build\.$'),
+    r'Драйвер «$1» в этой сборке недоступен.',
+  ),
+  (RegExp(r'^Driver not verified on real instruments\.$'), 'Драйвер не проверен на реальных приборах.'),
   (RegExp(r'^Processing record (\d+)\.\.\.$'), r'Обработка записи $1...'),
   (RegExp(r'^Initializing digitizer\.\.\.$'), 'Инициализация дигитайзера...'),
   (RegExp(r'^Configuring digitizer\.\.\.$'), 'Настройка дигитайзера...'),

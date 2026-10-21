@@ -410,7 +410,9 @@ class _ResultsViewState extends State<ResultsView> {
             padding: const EdgeInsets.all(6),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Text(
-              _row >= 0 && _row < _table.descriptions.length ? 'Info: ${_table.descriptions[_row]}' : 'Info:',
+              _row >= 0 && _row < _table.descriptions.length
+                  ? '${tr('Info')}: ${_table.descriptions[_row]}'
+                  : '${tr('Info')}:',
             ),
           ),
         ],

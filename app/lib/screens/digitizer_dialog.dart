@@ -68,11 +68,11 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
       _busy = false;
       _msgError = !r.ok;
       _msg = r.ok
-          ? '${r.message}\n\nChannels:\n${r.channelIdns.map((e) => '  $e').join('\n')}'
-                '${r.auxIdns.isEmpty ? '' : '\nAuxiliary HW:\n${r.auxIdns.map((e) => '  $e').join('\n')}'}'
+          ? '${trLines(r.message)}\n\n${tr('Channels')}:\n${r.channelIdns.map((e) => '  $e').join('\n')}'
+                '${r.auxIdns.isEmpty ? '' : '\n${tr('Auxiliary HW')}:\n${r.auxIdns.map((e) => '  $e').join('\n')}'}'
                 '${r.capabilities == null ? '' : '\n\nfs: ${formatNum(r.capabilities!.minFs)} - ${formatNum(r.capabilities!.maxFs)} Sa/s, '
-                          'max samples: ${r.capabilities!.maxSamplesCount}'}'
-          : r.message;
+                          '${tr('max samples')}: ${r.capabilities!.maxSamplesCount}'}'
+          : trLines(r.message);
     });
     if (r.ok) st.channelIdns = r.channelIdns;
   }
@@ -143,7 +143,7 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
                             constraints: const BoxConstraints(minHeight: 120),
                             padding: const EdgeInsets.all(8),
                             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            child: Text(_info, style: const TextStyle(fontSize: 12)),
+                            child: Text(trLines(_info), style: const TextStyle(fontSize: 12)),
                           ),
                           const SizedBox(height: 12),
                           Choice<OnCloseAction>(

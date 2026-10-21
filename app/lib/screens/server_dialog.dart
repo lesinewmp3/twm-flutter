@@ -52,9 +52,11 @@ class _ServerDialogState extends State<_ServerDialog> {
       return AlertDialog(
         title: Text(tr('TWM server')),
         content: Text(
-          'This client is connected to ${st.backend.description}.\n'
-          'The server can be hosted only by the desktop application with local backend, or by the headless '
-          '"twm_server" program.',
+          trf(
+            'This client is connected to {0}.\nThe server can be hosted only by the desktop application with local '
+            'backend, or by the headless "twm_server" program.',
+            [tr(st.backend.description)],
+          ),
         ),
         actions: [FilledButton(onPressed: () => Navigator.pop(context), child: Text(tr('Close')))],
       );

@@ -91,7 +91,7 @@ class _BatchDialogState extends State<_BatchDialog> {
             Row(
               children: [
                 Expanded(
-                  child: Text('${tr('Measurement session')}: ${_session.isEmpty ? '(select)' : dirName(_session)}'),
+                  child: Text('${tr('Measurement session')}: ${_session.isEmpty ? tr('(select)') : dirName(_session)}'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _running
@@ -176,7 +176,7 @@ class _BatchDialogState extends State<_BatchDialog> {
                   child: Text(
                     _setup.mode == ProcessingMode.raw
                         ? 'RAW m-code'
-                        : '${_setup.algorithmId}, uncertainty ${_setup.uncertainty.key}',
+                        : '${_setup.algorithmId}, ${tr('uncertainty')}: ${tr(_setup.uncertainty.key)}',
                   ),
                 ),
               ],

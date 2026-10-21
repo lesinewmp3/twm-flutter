@@ -12,7 +12,7 @@ enum DigitizerType {
   hp3458a('HP/Keysight 3458A (+Fluke 8588A)'),
   cdaq('NI cDAQ 9238'),
   keysightDso('Keysight DSO 90000'),
-  soundCard('Sound card (DirectSound)'),
+  soundCard('Sound card'),
   ads127l21('CMI ADS127L21');
 
   final String label;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n.dart';
+
 /// Parses number with SI prefix or exponent: "10k", "1.5e-6", "100u".
 /// Decimal comma is accepted and converted (TWM accepts only dots).
 double? parseSi(String s) {
@@ -247,7 +249,7 @@ class Choice<T> extends StatelessWidget {
           for (final i in items)
             DropdownMenuItem(
               value: i,
-              child: Text(itemLabel(i), overflow: TextOverflow.ellipsis),
+              child: Text(tr(itemLabel(i)), overflow: TextOverflow.ellipsis),
             ),
         ],
         onChanged: enabled ? (v) => v == null ? null : onChanged(v) : null,

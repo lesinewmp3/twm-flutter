@@ -148,7 +148,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                     children: [
                       Expanded(
                         child: _pkgList(
-                          'Installed packages',
+                          tr('Installed packages'),
                           installed,
                           _selInstalled,
                           (v) => setState(() => _selInstalled = v),
@@ -178,7 +178,7 @@ class _OctaveDialogState extends State<_OctaveDialog> {
                       ),
                       Expanded(
                         child: _pkgList(
-                          'Packages to load',
+                          tr('Packages to load'),
                           cfg.packages,
                           _selLoad,
                           (v) => setState(() => _selLoad = v),
