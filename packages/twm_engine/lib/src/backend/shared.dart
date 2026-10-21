@@ -27,6 +27,7 @@ class MeasEventMapper {
 
   late final _waveforms = _Throttle(liveInterval);
   late final _statuses = _Throttle(liveInterval);
+  final _monitor = _Throttle(const Duration(milliseconds: 25));
 
   Future<void> handle(MeasEvent e) async {
     final s = settings;
@@ -55,10 +56,26 @@ class MeasEventMapper {
           }
         }
         _waveforms.add(() => emit(_waveform(e, channelSpectra(), res)));
+      case MeasLiveData():
+        final f = e.frame;
+        _monitor.add(
+          () => emit(
+            LiveEvent(
+              e.record,
+              e.names,
+              [for (final c in f.channels) c.toList()],
+              f.dx,
+              x0: f.x0,
+              span: f.span,
+              triggered: f.triggered,
+            ),
+          ),
+        );
       case MeasRecordStored():
         emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
       case MeasFinished():
         // the last record and status first
+        _monitor.flush();
         _statuses.flush();
         _waveforms.flush();
         emit(FinishedEvent(e.sessionPath, aborted: e.aborted, error: e.error?.toString() ?? ''));

@@ -11,6 +11,7 @@ import '../session/record_file.dart';
 import '../session/session_writer.dart';
 import '../store/file_store.dart';
 import 'live_collector.dart';
+import 'live_monitor.dart';
 
 /// Events emitted by the running measurement (status line, progress bar,
 /// waveform preview, new record/result notifications).
@@ -41,6 +42,14 @@ class MeasRecordData extends MeasEvent {
   /// Samples per channel of the whole record (0 = same as [full]).
   final int recordSamples;
   const MeasRecordData(this.record, this.channels, this.ts, this.names, this.full, this.fullTs, {this.recordSamples = 0});
+}
+
+/// Live monitor frame of the record being acquired (see [LiveMonitor]).
+class MeasLiveData extends MeasEvent {
+  final int record;
+  final LiveFrame frame;
+  final List<String> names;
+  const MeasLiveData(this.record, this.frame, this.names);
 }
 
 class MeasRecordStored extends MeasEvent {
@@ -79,10 +88,17 @@ class MeasurementEngine {
   /// (longer records are analysed by their beginning).
   final int fullDataLimit;
 
+  /// Live monitor window [s] (0 = no live frames) and the shortest time
+  /// between two frames.
+  final double monitorWindow;
+  final Duration monitorInterval;
+
   final _events = StreamController<MeasEvent>.broadcast();
   bool _stop = false;
   bool _running = false;
   final _sinceYield = Stopwatch()..start();
+  final _sinceLive = Stopwatch()..start();
+  AuxData? _lastAux; // scaling for live frames of drivers giving it at the record end
 
   MeasurementEngine({
     required this.store,
@@ -94,6 +110,8 @@ class MeasurementEngine {
     this.multiplexer,
     this.previewPoints = 4000,
     this.fullDataLimit = 2000000,
+    this.monitorWindow = 0,
+    this.monitorInterval = const Duration(milliseconds: 25),
   });
 
   Stream<MeasEvent> get events => _events.stream;
@@ -234,9 +252,13 @@ class MeasurementEngine {
                       fullLimit: fullDataLimit,
                     ))
                   : null;
-              final a = await _acquire(rf, lc, r, records, sub, subs * muxCycles, setup.fullScaleCode);
+              final mon = sub == 0 && monitorWindow > 0
+                  ? LiveMonitor(channels: setup.channelsCount, window: (monitorWindow * setup.fs).round().clamp(2, 1 << 21))
+                  : null;
+              final a = await _acquire(rf, lc, mon, r, records, sub, subs * muxCycles, setup.fullScaleCode);
               if (a == null) break;
               aux ??= a;
+              _lastAux = a;
               subStamps.add(a.timestamps.isEmpty ? 0 : a.timestamps.first - aux.timestamps.first);
               total += config.samplesCount;
               if (mux.enabled && mux.delayBeforeSwitch > 0) await _sleep(mux.delayBeforeSwitch);
@@ -292,6 +314,7 @@ class MeasurementEngine {
   Future<AuxData?> _acquire(
     RecordFileWriter? rf,
     LiveCollector? live,
+    LiveMonitor? mon,
     int r,
     int records,
     int sub,
@@ -312,6 +335,15 @@ class MeasurementEngine {
         await rf?.write(pk);
         fetched += pk.count;
         live?.add(pk);
+        if (mon != null) {
+          mon.add(pk);
+          final sc = aux ?? _lastAux;
+          if (sc != null && _sinceLive.elapsed >= monitorInterval) {
+            _sinceLive.reset();
+            final f = mon.frame(sc.gains, sc.offsets, sc.increment);
+            if (f != null) _events.add(MeasLiveData(r, f, digitizer.channelIdns));
+          }
+        }
       }
       final prog = (sub + fetched / math.max(1, config.samplesCount)) / subCount;
       _status(

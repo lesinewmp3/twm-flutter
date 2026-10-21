@@ -16,6 +16,7 @@ sealed class BackendEvent {
     'finished' => FinishedEvent.fromJson(j),
     'console' => ConsoleEvent.fromJson(j),
     'processing' => ProcessingEvent.fromJson(j),
+    'live' => LiveEvent.fromJson(j),
     _ => StatusEvent('unknown event ${j['type']}'),
   };
 }
@@ -83,6 +84,54 @@ class WaveformEvent extends BackendEvent {
     spectra: [for (final c in (j['spectra'] as List? ?? [])) jDoubleList(c)],
     df: jDouble(j['df']),
     online: j['online'] == null ? null : jMap(j['online']),
+  );
+}
+
+/// Oscilloscope-like live view: the newest samples of the record being
+/// acquired, starting at a rising crossing of the first channel (software
+/// trigger), up to ~30 frames per second.
+class LiveEvent extends BackendEvent {
+  final int record;
+  final List<String> names;
+  final List<List<double>> channels;
+
+  /// Time step of [channels], time of their first point after the trigger
+  /// crossing, window length [s].
+  final double dx;
+  final double x0;
+  final double span;
+  final bool triggered;
+
+  const LiveEvent(
+    this.record,
+    this.names,
+    this.channels,
+    this.dx, {
+    this.x0 = 0,
+    this.span = 0,
+    this.triggered = false,
+  });
+  @override
+  String get type => 'live';
+  @override
+  Json toJson() => {
+    'type': type,
+    'record': record,
+    'names': names,
+    'channels': [for (final c in channels) [for (final v in c) jNum(v)]],
+    'dx': dx,
+    'x0': x0,
+    'span': span,
+    'triggered': triggered,
+  };
+  factory LiveEvent.fromJson(Json j) => LiveEvent(
+    jInt(j['record']),
+    jStringList(j['names']),
+    [for (final c in (j['channels'] as List? ?? [])) jDoubleList(c)],
+    jDouble(j['dx']),
+    x0: jDouble(j['x0']),
+    span: jDouble(j['span']),
+    triggered: jBool(j['triggered']),
   );
 }
 

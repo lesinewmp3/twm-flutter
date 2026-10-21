@@ -203,6 +203,7 @@ class BrowserBackend implements TwmBackend {
       config: s.measurement,
       corrections: s.corrections,
       processor: s.measurement.processingEnabled ? (session, g, r, last) => _processRecord(session, ps, g, r) : null,
+      monitorWindow: s.online.monitorWindowMs / 1000,
     );
     _engine = engine;
     final mapper = MeasEventMapper(store, s, _emit);

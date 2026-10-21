@@ -26,6 +26,10 @@ class AppState extends ChangeNotifier {
   WaveformEvent? lastWaveform;
   OnlineResult? lastOnline;
 
+  /// Live monitor frames (~30/s): listened to by the monitor chart only,
+  /// so they do not rebuild the whole screen.
+  final live = ValueNotifier<LiveEvent?>(null);
+
   // ------------------------------------------------------ processing state
   bool processing = false;
   int resultsVersion = 0; // incremented on every new result
@@ -56,6 +60,12 @@ class AppState extends ChangeNotifier {
   }
 
   void _onEvent(BackendEvent e) {
+    if (e is LiveEvent) {
+      final first = live.value == null;
+      live.value = e;
+      if (first) notifyListeners(); // the measurement page shows the monitor
+      return;
+    }
     switch (e) {
       case StatusEvent():
         status = e.message;
@@ -83,6 +93,8 @@ class AppState extends ChangeNotifier {
           }
         }
         saveSettings();
+      case LiveEvent():
+        break; // handled above
       case ConsoleEvent():
         console.add(e);
         if (console.length > 2000) console.removeRange(0, console.length - 2000);
@@ -134,6 +146,7 @@ class AppState extends ChangeNotifier {
     lastRunError = '';
     status = 'Starting...';
     lastWaveform = null;
+    live.value = null;
     notifyListeners();
     try {
       final p = await backend.startMeasurement(settings);
@@ -157,6 +170,7 @@ class AppState extends ChangeNotifier {
     _sub.cancel();
     _saveTimer?.cancel();
     backend.saveSettings(settings);
+    live.dispose();
     super.dispose();
   }
 }

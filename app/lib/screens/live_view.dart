@@ -18,6 +18,7 @@ class LiveView extends StatefulWidget {
 class _LiveViewState extends State<LiveView> {
   bool _logSpectrum = true;
   bool _diff = false;
+  bool _monitor = true; // live oscilloscope-like view, else the whole record
   int _diffHi = 0, _diffLo = 1;
   final Set<int> _hidden = {};
 
@@ -27,19 +28,22 @@ class _LiveViewState extends State<LiveView> {
   Widget build(BuildContext context) {
     final st = AppScope.of(context);
     final w = st.lastWaveform;
-    if (w == null) return _empty(context, st);
-    final n = w.channels.length;
+    if (w == null && st.live.value == null) return _empty(context, st);
+    final n = w?.channels.length ?? st.live.value!.channels.length;
     final hi = _diffHi.clamp(0, n - 1), lo = _diffLo.clamp(0, n - 1);
     final waves = [
-      for (var c = 0; c < n; c++)
-        if (!_hidden.contains(c))
-          ChartSeries(_label(w, c), w.channels[c], dx: w.ts, color: chartColors[c % chartColors.length]),
+      if (w != null)
+        for (var c = 0; c < n; c++)
+          if (!_hidden.contains(c))
+            ChartSeries(_label(w.names, c), w.channels[c], dx: w.ts, color: chartColors[c % chartColors.length]),
     ];
     final spectra = [
-      for (var c = 0; c < w.spectra.length; c++)
-        if (!_hidden.contains(c))
-          ChartSeries(_label(w, c), w.spectra[c], dx: w.df, color: chartColors[c % chartColors.length]),
+      if (w != null)
+        for (var c = 0; c < w.spectra.length; c++)
+          if (!_hidden.contains(c))
+            ChartSeries(_label(w.names, c), w.spectra[c], dx: w.df, color: chartColors[c % chartColors.length]),
     ];
+    final monitor = _monitor && st.live.value != null;
     final tiles = _tiles(st.lastOnline);
     return LayoutBuilder(
       builder: (context, box) {
@@ -51,14 +55,43 @@ class _LiveViewState extends State<LiveView> {
             children: [
               if (tiles.isNotEmpty) ...[Wrap(spacing: 12, runSpacing: 12, children: tiles), const SizedBox(height: 16)],
               Panel(
-                title: '${tr('Waveforms')} · ${tr('record')} ${w.record}',
+                title: monitor
+                    ? tr('Waveforms')
+                    : '${tr('Waveforms')} · ${tr('record')} ${w?.record ?? st.live.value!.record}',
                 actions: [
+                  SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    segments: [
+                      ButtonSegment(value: true, label: Text(tr('Monitor')), icon: const Icon(Icons.monitor_heart_outlined, size: 18)),
+                      ButtonSegment(value: false, label: Text(tr('Whole record')), icon: const Icon(Icons.timeline, size: 18)),
+                    ],
+                    selected: {_monitor},
+                    onSelectionChanged: (v) => setState(() => _monitor = v.first),
+                  ),
+                  if (_monitor) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: tr('Monitor window (applies at the next start)'),
+                      child: Choice<double>(
+                        label: tr('Window'),
+                        value: st.settings.online.monitorWindowMs,
+                        items: const [20, 40, 80, 200, 1000],
+                        width: 110,
+                        itemLabel: (v) => '${v.round()} ${tr('ms')}',
+                        onChanged: (v) => st.update((s) => s.online.monitorWindowMs = v),
+                      ),
+                    ),
+                  ],
                   for (var c = 0; c < n; c++)
                     Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: FilterChip(
                         label: Text('#${c + 1}'),
-                        tooltip: c < w.names.length ? w.names[c] : null,
+                        tooltip: () {
+                          final names = w?.names ?? st.live.value?.names ?? const <String>[];
+                          return c < names.length ? names[c] : null;
+                        }(),
                         selected: !_hidden.contains(c),
                         onSelected: (v) => setState(() => v ? _hidden.remove(c) : _hidden.add(c)),
                       ),
@@ -66,7 +99,12 @@ class _LiveViewState extends State<LiveView> {
                 ],
                 child: SizedBox(
                   height: chartH * (_diff && n > 1 ? 0.5 : 0.55),
-                  child: LineChart(series: waves, xLabel: tr('time [s]'), yLabel: tr('voltage [V]')),
+                  child: monitor
+                      ? ValueListenableBuilder<LiveEvent?>(
+                          valueListenable: st.live,
+                          builder: (context, lv, _) => _monitorChart(lv!),
+                        )
+                      : LineChart(series: waves, xLabel: tr('time [s]'), yLabel: tr('voltage [V]')),
                 ),
               ),
               const SizedBox(height: 16),
@@ -100,18 +138,23 @@ class _LiveViewState extends State<LiveView> {
                       ? const SizedBox.shrink()
                       : SizedBox(
                           height: chartH * 0.4,
-                          child: LineChart(
-                            xLabel: tr('time [s]'),
-                            yLabel: 'Vh - Vl [V]',
-                            series: [
-                              ChartSeries(
-                                '#${hi + 1} - #${lo + 1}',
-                                [for (var i = 0; i < w.channels[hi].length; i++) w.channels[hi][i] - w.channels[lo][i]],
-                                dx: w.ts,
-                                color: chartColors[4],
-                              ),
-                            ],
-                          ),
+                          child: w == null
+                              ? const SizedBox.shrink()
+                              : LineChart(
+                                  xLabel: tr('time [s]'),
+                                  yLabel: 'Vh - Vl [V]',
+                                  series: [
+                                    ChartSeries(
+                                      '#${hi + 1} - #${lo + 1}',
+                                      [
+                                        for (var i = 0; i < w.channels[hi].length; i++)
+                                          w.channels[hi][i] - w.channels[lo][i],
+                                      ],
+                                      dx: w.ts,
+                                      color: chartColors[4],
+                                    ),
+                                  ],
+                                ),
                         ),
                 ),
                 const SizedBox(height: 16),
@@ -154,7 +197,7 @@ class _LiveViewState extends State<LiveView> {
     for (final q in r.quantities) {
       final kind = q.name.split(' ').first;
       if (!_tileQuantities.contains(kind)) continue;
-      out.add(StatTile(q.name, formatNum(q.value, digits: 7), q.unit));
+      out.add(StatTile(q.name, formatDisplay(q.value), q.unit));
       if (out.length >= 10) break;
     }
     return out;
@@ -187,8 +230,47 @@ class _LiveViewState extends State<LiveView> {
     );
   }
 
-  static String _label(WaveformEvent w, int c) {
-    final n = c < w.names.length ? w.names[c] : '';
+  /// Live monitor: newest samples aligned to the trigger, stable axes.
+  Widget _monitorChart(LiveEvent lv) {
+    final series = [
+      for (var c = 0; c < lv.channels.length; c++)
+        if (!_hidden.contains(c))
+          ChartSeries(
+            _label(lv.names, c),
+            lv.channels[c],
+            x0: lv.x0 * 1000,
+            dx: lv.dx * 1000,
+            color: chartColors[c % chartColors.length],
+          ),
+    ];
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: LineChart(
+            series: series,
+            xLabel: tr('time [ms]'),
+            yLabel: tr('voltage [V]'),
+            stableY: true,
+            fixedX: (0, lv.span * 1000),
+          ),
+        ),
+        Positioned(
+          right: 18,
+          top: 12,
+          child: Text(
+            '${tr('record')} ${lv.record} · ${lv.triggered ? tr('sync') : tr('auto')}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _label(List<String> names, int c) {
+    final n = c < names.length ? names[c] : '';
     return '#${c + 1}${n.isEmpty ? '' : ' $n'}';
   }
 }

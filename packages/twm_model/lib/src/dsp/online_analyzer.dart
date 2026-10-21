@@ -22,6 +22,10 @@ class OnlineAnalysisConfig {
   bool saveResults;
   String resultsFile;
 
+  /// Live monitor (oscilloscope-like view while recording) window [ms],
+  /// 0 = off.
+  double monitorWindowMs;
+
   OnlineAnalysisConfig({
     this.enabled = true,
     this.harmonicAnalyzer = true,
@@ -31,6 +35,7 @@ class OnlineAnalysisConfig {
     this.averageCycles = 10,
     this.saveResults = false,
     this.resultsFile = '',
+    this.monitorWindowMs = 80,
   });
 
   Json toJson() => {
@@ -42,6 +47,7 @@ class OnlineAnalysisConfig {
     'averageCycles': averageCycles,
     'saveResults': saveResults,
     'resultsFile': resultsFile,
+    'monitorWindowMs': monitorWindowMs,
   };
 
   factory OnlineAnalysisConfig.fromJson(Json j) => OnlineAnalysisConfig(
@@ -53,6 +59,7 @@ class OnlineAnalysisConfig {
     averageCycles: jInt(j['averageCycles'], 10),
     saveResults: jBool(j['saveResults']),
     resultsFile: jString(j['resultsFile']),
+    monitorWindowMs: jDouble(j['monitorWindowMs'], 80),
   );
 }
 

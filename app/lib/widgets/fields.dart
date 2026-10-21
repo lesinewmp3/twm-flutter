@@ -17,6 +17,15 @@ double? parseSi(String s) {
   return v == null ? null : v * mul;
 }
 
+/// Instrument display: always [digits] significant digits (no trimmed
+/// zeros), so the reading keeps its width and precision while updating.
+String formatDisplay(double v, {int digits = 7}) {
+  if (!v.isFinite) return '-';
+  final a = v.abs();
+  if (a != 0 && (a >= 1e7 || a < 1e-4)) return v.toStringAsExponential(digits - 1);
+  return v.toStringAsPrecision(digits);
+}
+
 String formatNum(double v, {int digits = 10}) {
   if (v.isNaN) return 'NaN';
   if (v == v.roundToDouble() && v.abs() < 1e12) return v.toInt().toString();

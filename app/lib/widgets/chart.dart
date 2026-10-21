@@ -42,6 +42,13 @@ class LineChart extends StatefulWidget {
   final bool logY;
   final bool showLegend;
 
+  /// Oscilloscope-like amplitude axis for live data: grows at once, shrinks
+  /// only when the signal stayed much smaller for a while, nice limits.
+  final bool stableY;
+
+  /// Fixed time axis (live monitor window) instead of the data range.
+  final (double, double)? fixedX;
+
   const LineChart({
     super.key,
     required this.series,
@@ -49,6 +56,8 @@ class LineChart extends StatefulWidget {
     this.yLabel = '',
     this.logY = false,
     this.showLegend = true,
+    this.stableY = false,
+    this.fixedX,
   });
 
   @override
@@ -58,6 +67,33 @@ class LineChart extends StatefulWidget {
 class _LineChartState extends State<LineChart> {
   Rect? _view; // visible data range (null = autoscale)
   Offset? _hover;
+  double? _yLo, _yHi; // stable amplitude axis
+  DateTime? _smallSince;
+
+  Rect _autoBounds() {
+    var r = _dataBounds();
+    final fx = widget.fixedX;
+    if (fx != null && fx.$2 > fx.$1) r = Rect.fromLTRB(fx.$1, r.top, fx.$2, r.bottom);
+    if (!widget.stableY || widget.logY) return r;
+    final lo = r.top, hi = r.bottom; // top = minimum
+    final now = DateTime.now();
+    if (_yLo == null || lo < _yLo! || hi > _yHi!) {
+      final t = niceTicks(lo, hi, 6);
+      final step = t.length > 1 ? t[1] - t[0] : (hi - lo);
+      _yLo = step > 0 ? (lo / step).floorToDouble() * step : lo;
+      _yHi = step > 0 ? (hi / step).ceilToDouble() * step : hi;
+      _smallSince = null;
+    } else if (hi - lo < 0.45 * (_yHi! - _yLo!)) {
+      _smallSince ??= now;
+      if (now.difference(_smallSince!) > const Duration(milliseconds: 1500)) {
+        _yLo = null; // re-fit on the next frame
+        _smallSince = null;
+      }
+    } else {
+      _smallSince = null;
+    }
+    return _yLo == null ? r : Rect.fromLTRB(r.left, _yLo!, r.right, _yHi!);
+  }
 
   Rect _dataBounds() {
     var xmin = double.infinity, xmax = -double.infinity;
@@ -105,7 +141,7 @@ class _LineChartState extends State<LineChart> {
     final theme = Theme.of(context);
     return LayoutBuilder(
       builder: (context, c) {
-        final bounds = _view ?? _dataBounds();
+        final bounds = _view ?? _autoBounds();
         _ChartPainter painter(bool hoverLayer) => _ChartPainter(
           series: widget.series,
           view: bounds,

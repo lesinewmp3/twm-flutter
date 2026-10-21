@@ -307,6 +307,7 @@ class LocalBackend implements TwmBackend {
       processor: s.measurement.processingEnabled
           ? (session, g, r, last) => _processRecord(session, ps, s.octave, g, r, last)
           : null,
+      monitorWindow: s.online.monitorWindowMs / 1000,
     );
     _engine = engine;
     final sub = engine.events.listen(mapper.handle);

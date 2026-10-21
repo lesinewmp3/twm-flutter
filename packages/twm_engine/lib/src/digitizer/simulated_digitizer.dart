@@ -111,7 +111,8 @@ class SimulatedDigitizer extends VirtualDigitizer {
       // wait until the rest of the record (or the next block) exists
       final need = math.min(_n - _pos, 200000);
       final us = ((_pos + need) / _fs * rt * 1e6 - _armClock.elapsedMicroseconds).ceil();
-      await Future<void>.delayed(Duration(microseconds: us.clamp(100, 20000)));
+      // at most 10 ms: data flow like a real streaming digitizer (smooth live view)
+      await Future<void>.delayed(Duration(microseconds: us.clamp(100, 10000)));
       return FetchResult(
         status: DigitizerStatus(sampling: true, fetched: _pos, total: _n),
       );
