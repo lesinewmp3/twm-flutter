@@ -234,7 +234,7 @@ class MeasurementEngine {
                       fullLimit: fullDataLimit,
                     ))
                   : null;
-              final a = await _acquire(rf, lc, r, records, sub, subs * muxCycles);
+              final a = await _acquire(rf, lc, r, records, sub, subs * muxCycles, setup.fullScaleCode);
               if (a == null) break;
               aux ??= a;
               subStamps.add(a.timestamps.isEmpty ? 0 : a.timestamps.first - aux.timestamps.first);
@@ -289,16 +289,26 @@ class MeasurementEngine {
     return sessionFile;
   }
 
-  Future<AuxData?> _acquire(RecordFileWriter? rf, LiveCollector? live, int r, int records, int sub, int subCount) async {
+  Future<AuxData?> _acquire(
+    RecordFileWriter? rf,
+    LiveCollector? live,
+    int r,
+    int records,
+    int sub,
+    int subCount,
+    int fullScale,
+  ) async {
     await digitizer.initiate();
     AuxData? aux;
     var fetched = 0;
+    final overloaded = <int>{};
     while (true) {
       await _breathe();
       final res = await digitizer.fetch();
       if (res.aux != null) aux = res.aux;
       final pk = res.packet;
       if (pk != null && pk.count > 0) {
+        if (fullScale > 0) _checkOverload(pk, fullScale, overloaded, r, records);
         await rf?.write(pk);
         fetched += pk.count;
         live?.add(pk);
@@ -317,6 +327,29 @@ class MeasurementEngine {
     }
     if (_stop && fetched < config.samplesCount) return null;
     return aux;
+  }
+
+  /// Clipped samples make every result wrong without any visible sign in
+  /// the numbers: stop the measurement unless the overload is ignored.
+  void _checkOverload(DataPacket pk, int fullScale, Set<int> overloaded, int r, int records) {
+    final s = pk.samples, ch = pk.channels;
+    final before = overloaded.length;
+    for (var c = 0; c < ch; c++) {
+      if (overloaded.contains(c + 1)) continue;
+      for (var i = c; i < s.length; i += ch) {
+        final v = s[i];
+        if (v >= fullScale || v <= -fullScale) {
+          overloaded.add(c + 1);
+          break;
+        }
+      }
+    }
+    if (overloaded.length == before) return;
+    final list = (overloaded.toList()..sort()).join(', ');
+    if (!digitizerConfig.ignoreOverload) {
+      throw DigitizerException('Overload (clipped signal) of channel(s) $list - increase the range.');
+    }
+    _status('Warning: overload (clipped signal) of channel(s) $list', record: r, records: records);
   }
 
   void _emitRecordData(int r, LiveCollector? live, AuxData aux) {

@@ -176,6 +176,7 @@ class SoundCardDigitizer extends VirtualDigitizer {
     trigger: _trigger,
     isInt16: _c.bits == 16,
     bitResolution: _c.bits,
+    fullScaleCode: _c.bits == 16 ? 32767 : 2147483647,
     deviceAttributes: [
       DeviceAttribute('capture device', [_c.device]),
     ],

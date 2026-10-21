@@ -85,6 +85,10 @@ class DigitizerSetup {
   final int bitResolution;
   final List<DeviceAttribute> deviceAttributes;
 
+  /// Largest |code| of the ADC: samples reaching it are clipped. 0 = not
+  /// known (the driver checks the overload itself or cannot).
+  final int fullScaleCode;
+
   const DigitizerSetup({
     required this.samplesCount,
     required this.channelsCount,
@@ -97,6 +101,7 @@ class DigitizerSetup {
     this.isInt16 = false,
     required this.bitResolution,
     this.deviceAttributes = const [],
+    this.fullScaleCode = 0,
   });
 }
 
