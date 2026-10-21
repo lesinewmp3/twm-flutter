@@ -207,9 +207,18 @@ class DartProcessor {
     ];
     if (rid > 0) return one(r.records[(rid - 1).clamp(0, r.records.length - 1)]);
     if (rid < 0) return one(r.records.last);
-    // average of all records (element-wise)
+    // average of all records (element-wise); phases wrapped to the display
+    // range first, as qwtb_average_results.m does
     final all = [for (final x in r.records) one(x)];
     final base = all.first;
+    final half = cfg.phase == PhaseMode.pmPi || cfg.phase == PhaseMode.pm180;
+    double wrap(double v) => half ? (v + math.pi) % (2 * math.pi) - math.pi : v % (2 * math.pi);
+    double val(List<List<ResultQuantity>> x, int c, int q, int k) {
+      if (k >= x[c][q].value.length) return double.nan;
+      final v = x[c][q].value[k];
+      return base[c][q].isPhase ? wrap(v) : v;
+    }
+
     return [
       for (var c = 0; c < base.length; c++)
         [
@@ -224,12 +233,10 @@ class DartProcessor {
               graphX: base[c][q].graphX,
               value: [
                 for (var k = 0; k < base[c][q].value.length; k++)
-                  all.fold<double>(0, (s, x) => s + (k < x[c][q].value.length ? x[c][q].value[k] : double.nan)) /
-                      all.length,
+                  all.fold<double>(0, (s, x) => s + val(x, c, q, k)) / all.length,
               ],
               unc: [
-                for (var k = 0; k < base[c][q].value.length; k++)
-                  _ua([for (final x in all) k < x[c][q].value.length ? x[c][q].value[k] : double.nan]),
+                for (var k = 0; k < base[c][q].value.length; k++) _ua([for (final x in all) val(x, c, q, k)]),
               ],
             ),
         ],

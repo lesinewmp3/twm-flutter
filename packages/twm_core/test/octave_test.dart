@@ -53,6 +53,10 @@ void main() {
 
   test('measure with simulator, process TWM-PWRTDI, read results', () async {
     final dc = DigitizerConfig()..simulated.realtimeFactor = 0;
+    // noise: the records differ, so their average differs from each of them
+    for (final c in dc.simulated.channels) {
+      c.noiseRms = 1e-4;
+    }
     final mc = MeasurementConfig(
       fs: 10000,
       samplesCount: 20000,
@@ -93,5 +97,16 @@ void main() {
     // P = U1*I1*cos(phi) for harmonics present in both: only 50 Hz
     final expected = 7.0710678 * 0.5 / 2 * math.cos(0.2);
     expect(pq.value.first, closeTo(expected, 1e-3));
+    // result 0 is the average of the records
+    Future<double> pOf(int rid) async => (await q.resultData(
+      root,
+      'TWM-PWRTDI',
+      ResultViewConfig(resultId: rid, variables: ['P']),
+    )).channels.first.firstWhere((x) => x.name == 'P').value.first;
+    final p1 = await pOf(1), p2 = await pOf(2);
+    expect((p1 - p2).abs(), greaterThan(1e-9));
+    final avg = await q.resultData(root, 'TWM-PWRTDI', ResultViewConfig(resultId: 0, variables: ['P']));
+    expect(avg.resultId, 0);
+    expect(avg.channels.first.firstWhere((x) => x.name == 'P').value.first, closeTo((p1 + p2) / 2, 1e-12));
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

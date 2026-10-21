@@ -145,9 +145,25 @@ end
 
 function out = do_result_data(meas_root, res_id, alg_id, cfg, var_list)
   % numeric data of the results for plotting in the GUI
-  [results, avg, unca, res_id] = qwtb_load_results(meas_root, res_id, alg_id, cfg, var_list);
-  if res_id == 0
+  [results, avg, unca, res_id, are_scalar, is_avg] = qwtb_load_results(meas_root, res_id, alg_id, cfg, var_list);
+  if is_avg
+    % average of all records (res_id is then the first record's index); the
+    % uncertainty combined with the type A one as in qwtb_get_results()
     res = avg;
+    for c = 1:numel(res)
+      for v = 1:numel(res{c})
+        % qwtb_average_results() stops averaging a channel at its first big/string variable
+        if any(cellfun(@(x) x{c}{v}.is_big || x{c}{v}.is_string, results))
+          break;
+        end
+        r = res{c}{v};
+        if isfield(r, 'unc') && ~isempty(r.unc) && isfield(r, 'conf_level')
+          k = loc2covg(r.conf_level, 50);
+          res{c}{v}.unc = (r.unc.^2 + (unca{c}{v}.val*k).^2).^0.5;
+        end
+      end
+    end
+    res_id = 0;
   else
     res = results{res_id};
   end

@@ -392,6 +392,21 @@ Future<void> main(List<String> args) async {
       ).run();
       final dir = p.dirname(session);
 
+      Map<String, Map<String, List<double>>> byTag(ResultData d) => {
+        for (final ch in d.channels)
+          if (ch.isNotEmpty) ch.first.tag: {for (final x in ch) x.name: x.value},
+      };
+      // results of the last processing: 0 average, -1 last, > 0 record
+      Future<Map<String, Map<String, List<double>>>> octaveAt(String alg, int rid) async =>
+          byTag(await q.resultData(dir, alg, ResultViewConfig(resultId: rid, maxDim: ResultDim.vector, maxArray: 100)));
+      Future<Map<String, Map<String, List<double>>>> dartAt(String alg, int rid) async => byTag(
+        await DartProcessor(store).resultData(
+          session,
+          alg,
+          ResultViewConfig(resultId: rid, maxDim: ResultDim.vector, maxArray: 100),
+        ),
+      );
+
       Future<Map<String, Map<String, List<double>>>> octave(String alg, [List<AlgorithmParameter> prm = const []]) async {
         await SessionWriter.writeQwtbSetup(store, dir, ProcessingSetup(algorithmId: alg, parameters: prm));
         for (var r = 1; r <= c.records; r++) {
@@ -404,15 +419,7 @@ Future<void> main(List<String> args) async {
             return {};
           }
         }
-        final d = await q.resultData(
-          dir,
-          alg,
-          ResultViewConfig(resultId: c.records > 1 ? 0 : -1, maxDim: ResultDim.vector, maxArray: 100),
-        );
-        return {
-          for (final ch in d.channels)
-            if (ch.isNotEmpty) ch.first.tag: {for (final x in ch) x.name: x.value},
-        };
+        return octaveAt(alg, c.records > 1 ? 0 : -1);
       }
 
       Future<Map<String, Map<String, List<double>>>> dart(String alg, [List<AlgorithmParameter> prm = const []]) async {
@@ -420,15 +427,7 @@ Future<void> main(List<String> args) async {
         for (var r = 1; r <= c.records; r++) {
           await dp.process(session, ProcessingSetup(algorithmId: alg, parameters: prm), record: r);
         }
-        final d = await dp.resultData(
-          session,
-          alg,
-          ResultViewConfig(resultId: c.records > 1 ? 0 : -1, maxDim: ResultDim.vector, maxArray: 100),
-        );
-        return {
-          for (final ch in d.channels)
-            if (ch.isNotEmpty) ch.first.tag: {for (final x in ch) x.name: x.value},
-        };
+        return dartAt(alg, c.records > 1 ? 0 : -1);
       }
 
       double? pick(Map<String, Map<String, List<double>>> r, String tag, String name, [int idx = 0]) {
@@ -467,11 +466,36 @@ Future<void> main(List<String> args) async {
         final psfeO = await octave('TWM-PSFE');
         final psfeD = await dart('TWM-PSFE');
         add('f [Hz]', c.f1, o: pick(psfeO, 'u1', 'f'), d: pick(psfeD, 'u1', 'f'), onl: on('f u1'));
-        // phase of i relative to u (absolute phases depend on the start time)
+        // phase of i relative to u in each record, averaged: the absolute phases
+        // depend on the start time of the record, so their average over the
+        // records (TWM's result average) is not a meaningful quantity
         double? dph(Map<String, Map<String, List<double>>> r) {
           final a = pick(r, 'u1', 'phi'), b = pick(r, 'i1', 'phi');
           if (a == null || b == null) return null;
           return math.atan2(math.sin(b - a), math.cos(b - a));
+        }
+
+        Future<double?> dphRecords(Future<Map<String, Map<String, List<double>>>> Function(String, int) at) async {
+          var sc = 0.0, ss = 0.0;
+          for (var r = 1; r <= c.records; r++) {
+            final d = dph(await at('TWM-PSFE', c.records > 1 ? r : -1));
+            if (d == null) return null;
+            sc += math.cos(d);
+            ss += math.sin(d);
+          }
+          return math.atan2(ss, sc);
+        }
+
+        // the Dart port must give the same absolute phase as QWTB in each record
+        double? phaseVsQwtb;
+        if (psfeO.isNotEmpty) {
+          for (var r = 1; r <= c.records; r++) {
+            final rid = c.records > 1 ? r : -1;
+            final a = pick(await octaveAt('TWM-PSFE', rid), 'u1', 'phi'), b = pick(await dartAt('TWM-PSFE', rid), 'u1', 'phi');
+            if (a == null || b == null) continue;
+            final d = math.atan2(math.sin(b - a), math.cos(b - a));
+            if (phaseVsQwtb == null || d.abs() > phaseVsQwtb.abs()) phaseVsQwtb = d;
+          }
         }
 
         final onDph = () {
@@ -480,7 +504,15 @@ Future<void> main(List<String> args) async {
           return math.atan2(math.sin(b - a), math.cos(b - a));
         }();
         final t1 = c.u.tone(c.f1), t2 = c.i.tone(c.f1);
-        add('phi(i)-phi(u) [rad]', t2.ph - t1.ph, o: dph(psfeO), d: dph(psfeD), onl: onDph, abs: true);
+        add(
+          'phi(i)-phi(u) [rad]',
+          t2.ph - t1.ph,
+          o: psfeO.isEmpty ? null : await dphRecords(octaveAt),
+          d: await dphRecords(dartAt),
+          onl: onDph,
+          abs: true,
+        );
+        add('phi(u) Dart vs QWTB [rad]', 0, d: phaseVsQwtb, abs: true);
 
         // THD to the 40th harmonic (IEC 61000-4-7 range)
         final thdO = await octave('TWM-THDWFFT', [
