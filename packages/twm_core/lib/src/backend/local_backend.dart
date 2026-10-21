@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:twm_model/twm_model.dart';
 
 import 'package:twm_engine/twm_engine.dart';
-import '../drivers/aux/multiplexers.dart';
+import '../drivers/auxiliary/multiplexers.dart';
 import '../store/io_file_store.dart';
 import '../octave/octave_bridge.dart';
 import '../octave/qwtb_service.dart';
