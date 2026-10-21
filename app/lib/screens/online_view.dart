@@ -152,7 +152,7 @@ class _OnlineViewState extends State<OnlineView> {
                                     ),
                                     Expanded(
                                       child: LineChart(
-                                        xLabel: 'acquisition #',
+                                        xLabel: tr('acquisition #'),
                                         yLabel: _graph!,
                                         series: [
                                           ChartSeries(_graph!, _history[_graph] ?? const [], color: chartColors[0]),
@@ -168,12 +168,12 @@ class _OnlineViewState extends State<OnlineView> {
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     Text(
-                                      'Harmonics ${e.key} (f0 = ${r.f0.isNaN ? '-' : formatNum(r.f0)} Hz)',
+                                      '${tr('Harmonics')} ${e.key} (f0 = ${r.f0.isNaN ? '-' : formatNum(r.f0)} ${tr('Hz')})',
                                       style: Theme.of(context).textTheme.labelLarge,
                                     ),
                                     Expanded(
                                       child: LineChart(
-                                        xLabel: 'harmonic #',
+                                        xLabel: tr('harmonic #'),
                                         yLabel: e.key.startsWith('i') ? 'A' : 'V',
                                         logY: true,
                                         showLegend: false,
@@ -214,10 +214,10 @@ class _OnlineViewState extends State<OnlineView> {
             decoration: BoxDecoration(color: th.colorScheme.surfaceContainerHigh),
             children: [
               for (final h in [
-                'Quantity',
-                'Unit',
-                'Value',
-                if (stats) ...['Mean', 'Std. dev.', 'u_A', 'Error %', 'N'],
+                tr('Quantity'),
+                tr('Unit'),
+                tr('Value'),
+                if (stats) ...[tr('Mean'), tr('Std. dev.'), 'u_A', tr('Error %'), 'N'],
                 '',
               ])
                 Padding(

@@ -127,8 +127,9 @@ class SessionWriter {
     final s = Info();
     // digitizer
     var digRel = '';
-    if (corr.digitizerPath.isNotEmpty && await store.exists(corr.digitizerPath)) {
-      digRel = await _copyCorrection(corr.digitizerPath, 'DIGITIZER', null);
+    final digPath = _native(corr.digitizerPath);
+    if (digPath.isNotEmpty && await store.exists(digPath)) {
+      digRel = await _copyCorrection(digPath, 'DIGITIZER', null);
     }
     // transducers
     final trPaths = <String>[];
@@ -139,9 +140,9 @@ class SessionWriter {
     final mux = multiplexer;
     for (var k = 0; k < corr.transducers.length; k++) {
       final t = corr.transducers[k];
-      var src = t.path;
+      var src = _native(t.path);
       if (!store.path.isAbsolute(src) && corr.transducersRoot.isNotEmpty) {
-        src = store.path.join(corr.transducersRoot, src);
+        src = store.path.join(_native(corr.transducersRoot), src);
       }
       final tdir = 'T${(k + 1).toString().padLeft(2, '0')}';
       trPaths.add(await _copyCorrection(src, 'TRANSDUCERS', tdir));
@@ -169,6 +170,11 @@ class SessionWriter {
     s.setVector('transducer inverted', inv);
     _setupSection = s;
   }
+
+  /// Correction paths may use DOS separators (TWM and the corrections panel
+  /// store relative paths so): on POSIX they must become '/' or the file
+  /// 'dummy.vd\dummy.info' is not found.
+  String _native(String path) => store.path.separator == '/' ? path.replaceAll('\\', '/') : path;
 
   /// Copies folder containing the correction INFO file and returns relative
   /// path of the copied INFO file. Folder copy keeps relative CSV/channel links.

@@ -89,18 +89,33 @@ class _NumFieldState extends State<NumField> {
     super.dispose();
   }
 
+  double _limit(double v) {
+    if (widget.min != null && v < widget.min!) v = widget.min!;
+    if (widget.max != null && v > widget.max!) v = widget.max!;
+    return widget.integer ? v.roundToDouble() : v;
+  }
+
+  /// Every valid entry is applied at once: a value typed and followed
+  /// directly by a click on OK must not be lost (the field may keep focus).
+  void _typed(String text) {
+    final v = parseSi(text);
+    if (v == null) return;
+    if (_invalid) setState(() => _invalid = false);
+    final x = _limit(v);
+    if (x != widget.value) widget.onChanged(x);
+  }
+
+  /// Enter / focus lost: validate and show the applied value.
   void _commit() {
-    var v = parseSi(_c.text);
+    final v = parseSi(_c.text);
     if (v == null) {
       setState(() => _invalid = true);
       return;
     }
-    if (widget.min != null && v < widget.min!) v = widget.min!;
-    if (widget.max != null && v > widget.max!) v = widget.max!;
-    if (widget.integer) v = v.roundToDouble();
+    final x = _limit(v);
     setState(() => _invalid = false);
-    _c.text = _fmt(v);
-    if (v != widget.value) widget.onChanged(v);
+    _c.text = _fmt(x);
+    if (x != widget.value) widget.onChanged(x);
   }
 
   @override
@@ -112,6 +127,7 @@ class _NumFieldState extends State<NumField> {
         focusNode: _focus,
         enabled: widget.enabled,
         onSubmitted: (_) => _commit(),
+        onChanged: _typed,
         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.,kMGmunpµ ]'))],
         decoration: InputDecoration(
           labelText: widget.label,

@@ -90,7 +90,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DialogHeader(
-                'HW corrections',
+                tr('HW corrections'),
                 bottom: TabBar(
                   tabs: [
                     Tab(text: tr('Transducers')),
@@ -161,6 +161,8 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                         value: t.path,
                         backend: b,
                         extensions: const ['.info'],
+                        // the path is relative to the root: open the browser there
+                        initialDir: t.path.isEmpty ? c.transducersRoot : dirName(_abs(t.path)),
                         onChanged: (v) => _loadTransducer(t, v),
                       ),
                     ),
@@ -192,7 +194,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     value: t.phaseIndex.toDouble(),
                     integer: true,
                     min: 1,
-                    width: 100,
+                    width: 130,
                     onChanged: (v) => setState(() => t.phaseIndex = v.round()),
                   ),
                   Choice<int>(
@@ -207,7 +209,7 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     label: tr('Low'),
                     value: t.lowChannel,
                     items: [0, ...chItems],
-                    width: 120,
+                    width: 170,
                     itemLabel: (k) => k == 0 ? tr('Not used') : '#$k',
                     onChanged: (v) => setState(() => t.lowChannel = v),
                   ),

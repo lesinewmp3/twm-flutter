@@ -28,3 +28,46 @@ String trf(String s, List<Object?> args) {
   }
   return r;
 }
+
+/// Messages coming from the backend (engine, drivers, Octave) are English;
+/// the ones a user meets most are translated by pattern.
+String trMessage(String m) {
+  if (!L10n.ru) return m;
+  for (final (re, ru) in _messagePatterns) {
+    final x = re.firstMatch(m);
+    if (x != null) {
+      // groups may be messages themselves ("Processing record 2: <error>")
+      return ru.replaceAllMapped(RegExp(r'\$(\d)'), (g) => trMessage(x.group(int.parse(g[1]!)) ?? ''));
+    }
+  }
+  return m;
+}
+
+final _messagePatterns = <(RegExp, String)>[
+  (
+    RegExp(r'^Overload \(clipped signal\) of channel\(s\) ([\d, ]+) - increase the range\.$'),
+    r'Перегрузка (сигнал обрезан) в канале(ах) $1 — увеличьте диапазон.',
+  ),
+  (
+    RegExp(r'^Warning: overload \(clipped signal\) of channel\(s\) ([\d, ]+)$'),
+    r'Внимание: перегрузка (сигнал обрезан) в канале(ах) $1',
+  ),
+  (RegExp(r'^Correction file not found: (.*)$'), r'Файл коррекции не найден: $1'),
+  (
+    RegExp(r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path.*$'),
+    r'Не удаётся запустить «$1»: $2. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
+  ),
+  (RegExp(r'^Processing record (\d+): (.*)$'), r'Обработка записи $1: $2'),
+  (RegExp(r'^Digitizing record (\d+)(/\d+)?\.\.\.$'), r'Оцифровка записи $1$2...'),
+  (RegExp(r'^Processing record (\d+)\.\.\.$'), r'Обработка записи $1...'),
+  (RegExp(r'^Initializing digitizer\.\.\.$'), 'Инициализация дигитайзера...'),
+  (RegExp(r'^Configuring digitizer\.\.\.$'), 'Настройка дигитайзера...'),
+  (RegExp(r'^Pre-record delay\.\.\.$'), 'Пауза перед записью...'),
+  (RegExp(r'^Starting\.\.\.$'), 'Запуск...'),
+  (RegExp(r'^Stopping\.\.\.$'), 'Остановка...'),
+  (RegExp(r'^Done$'), 'Готово'),
+  (RegExp(r'^Stopped$'), 'Остановлено'),
+  (RegExp(r'^Processing done$'), 'Обработка завершена'),
+  (RegExp(r'^Processing stopped$'), 'Обработка остановлена'),
+  (RegExp(r'^Error: (.*)$'), r'Ошибка: $1'),
+];

@@ -174,7 +174,7 @@ class _BrowserDialogState extends State<_BrowserDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        FilledButton(onPressed: _ok, child: Text(widget.mode == BrowseMode.saveFile ? 'Save' : 'Select')),
+        FilledButton(onPressed: _ok, child: Text(widget.mode == BrowseMode.saveFile ? tr('Save') : tr('Select'))),
       ],
     );
   }
@@ -196,6 +196,10 @@ class PathField extends StatelessWidget {
   final List<String> extensions;
   final double? width;
 
+  /// Folder the browser opens in (else the folder of [value]); for fields
+  /// showing paths relative to some root.
+  final String initialDir;
+
   const PathField({
     super.key,
     required this.label,
@@ -205,6 +209,7 @@ class PathField extends StatelessWidget {
     this.mode = BrowseMode.openFile,
     this.extensions = const [],
     this.width,
+    this.initialDir = '',
   });
 
   @override
@@ -218,7 +223,14 @@ class PathField extends StatelessWidget {
           tooltip: tr('Browse...'),
           icon: const Icon(Icons.folder_open),
           onPressed: () async {
-            final r = await browse(context, backend, title: label, initial: value, mode: mode, extensions: extensions);
+            final r = await browse(
+              context,
+              backend,
+              title: label,
+              initial: initialDir.isNotEmpty ? initialDir : value,
+              mode: mode,
+              extensions: extensions,
+            );
             if (r != null) onChanged(r);
           },
         ),

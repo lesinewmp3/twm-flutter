@@ -361,7 +361,7 @@ class _MeasDialogState extends State<_MeasDialog> {
                         Text(
                           m.processing.mode == ProcessingMode.raw
                               ? 'RAW m-code'
-                              : '${m.processing.algorithmId}, uncertainty: ${m.processing.uncertainty.key}',
+                              : '${m.processing.algorithmId}, ${tr('uncertainty')}: ${m.processing.uncertainty.key}',
                         ),
                       ]),
                     ),

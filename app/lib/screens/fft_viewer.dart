@@ -154,7 +154,7 @@ class _FftViewerState extends State<_FftViewer> {
               Expanded(
                 child: series.isEmpty
                     ? Center(child: Text(tr('No spectrum available.')))
-                    : LineChart(series: series, xLabel: 'frequency [Hz]', yLabel: 'amplitude', logY: _log),
+                    : LineChart(series: series, xLabel: tr('frequency [Hz]'), yLabel: tr('amplitude'), logY: _log),
               ),
             ],
           ),

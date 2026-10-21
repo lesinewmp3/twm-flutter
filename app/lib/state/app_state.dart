@@ -30,6 +30,10 @@ class AppState extends ChangeNotifier {
   bool processing = false;
   int resultsVersion = 0; // incremented on every new result
   final List<String> errors = [];
+
+  /// Error of the last measurement or processing (shown in the status until
+  /// the next start, so a failed run is not mistaken for a finished one).
+  String lastRunError = '';
   final List<ConsoleEvent> console = [];
   String rawOutput = '';
 
@@ -67,7 +71,10 @@ class AppState extends ChangeNotifier {
         viewedSession = '';
       case FinishedEvent():
         measuring = false;
-        if (e.error.isNotEmpty) addError(e.error);
+        if (e.error.isNotEmpty) {
+          lastRunError = e.error;
+          addError(e.error);
+        }
         if (e.sessionPath.isNotEmpty) {
           currentSession = e.sessionPath;
           // auto increment of %id% in measurement name
@@ -84,7 +91,10 @@ class AppState extends ChangeNotifier {
         }
       case ProcessingEvent():
         processing = e.busy;
-        if (e.error.isNotEmpty) addError('Processing record ${e.record}: ${e.error}');
+        if (e.error.isNotEmpty) {
+          lastRunError = e.error;
+          addError('Processing record ${e.record}: ${e.error}');
+        }
         if (!e.busy && e.error.isEmpty) resultsVersion++;
     }
     notifyListeners();
@@ -121,6 +131,7 @@ class AppState extends ChangeNotifier {
 
   Future<String> startMeasurement() async {
     measuring = true;
+    lastRunError = '';
     status = 'Starting...';
     lastWaveform = null;
     notifyListeners();

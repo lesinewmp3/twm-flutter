@@ -34,6 +34,18 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   _Page _page = _Page.measure;
   int _seenErrors = 0;
+  int _toastedErrors = -1;
+
+  /// New errors pop up at the bottom (the badge alone is easy to miss).
+  void _toastNewErrors(AppState st) {
+    if (_toastedErrors < 0) _toastedErrors = st.errors.length; // older ones are in the log
+    if (st.errors.length <= _toastedErrors) return;
+    _toastedErrors = st.errors.length;
+    final msg = trMessage(st.errors.last.replaceFirst(RegExp(r'^\[[0-9:]+\] '), ''));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showError(context, msg);
+    });
+  }
 
   List<_Page> _pages(BackendFeatures f) => [
     _Page.measure,
@@ -106,6 +118,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final st = AppScope.of(context);
+    _toastNewErrors(st);
     final f = st.backend.features;
     final pages = _pages(f);
     if (!pages.contains(_page)) _page = _Page.measure;
@@ -201,7 +214,7 @@ class _MainScreenState extends State<MainScreen> {
         width: 640,
         child: st.errors.isEmpty
             ? Text(tr('No errors.'))
-            : SingleChildScrollView(child: SelectableText(st.errors.reversed.join('\n\n'))),
+            : SingleChildScrollView(child: SelectableText(st.errors.reversed.map(trMessage).join('\n\n'))),
       ),
       actions: [
         TextButton(
@@ -390,15 +403,20 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final busy = st.measuring || st.processing;
+    final failed = !busy && st.lastRunError.isNotEmpty;
     final color = st.measuring
         ? t.colorScheme.primary
         : st.processing
         ? Colors.orange.shade700
+        : failed
+        ? t.colorScheme.error
         : Colors.green.shade600;
     final label = st.measuring
         ? (st.record > 0 ? '${tr('Record')} ${st.record}${st.records > 0 ? '/${st.records}' : ''}' : tr('Measuring'))
         : st.processing
         ? tr('Processing')
+        : failed
+        ? tr('Error')
         : tr('Ready');
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
@@ -424,11 +442,11 @@ class _StatusPill extends StatelessWidget {
             label,
             style: TextStyle(color: color, fontWeight: FontWeight.w600),
           ),
-          if (busy && st.status.isNotEmpty) ...[
+          if ((busy && st.status.isNotEmpty) || failed) ...[
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                st.status,
+                failed ? trMessage(st.lastRunError) : trMessage(st.status),
                 overflow: TextOverflow.ellipsis,
                 style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant),
               ),
