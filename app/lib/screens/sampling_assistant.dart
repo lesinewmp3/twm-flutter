@@ -10,9 +10,9 @@ import '../l10n.dart';
 /// Sampling setup assistant (TWM guide figure 3.25): computes sampling rate
 /// and samples count for coherent sampling of a fundamental frequency.
 Future<({double fs, int n})?> showSamplingAssistant(BuildContext context, double fs, int n) =>
-    showDialog<({double fs, int n})>(
+    showScopedDialog<({double fs, int n})>(
       context: context,
-      builder: (_) => AppScope(state: AppScope.read(context), child: _Assistant(fs, n)),
+      builder: (_) => _Assistant(fs, n),
     );
 
 class _Assistant extends StatefulWidget {

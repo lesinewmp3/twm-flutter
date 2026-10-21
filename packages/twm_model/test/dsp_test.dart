@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -61,5 +62,20 @@ void main() {
     expect(s.values, [2, 3, 4]);
     expect(s.average, 3);
     expect(s.std, closeTo(1, 1e-12));
+  });
+
+  test('online result with NaN survives JSON (live waveform event)', () {
+    final r = OnlineResult(
+      [const OnlineQuantity('RMS u1', 'V', 1.0)],
+      {'u1': [1.0, double.nan, double.infinity]},
+      double.nan,
+    );
+    final ev = WaveformEvent(1, ['u1'], [[0.0, double.nan]], 1e-3, online: r.toJson());
+    final back = WaveformEvent.fromJson(jsonDecode(jsonEncode(jSafe(ev.toJson()))) as Json);
+    expect(back.channels[0][1].isNaN, isTrue);
+    final h = OnlineResult.fromJson(back.online!).harmonics['u1']!;
+    expect(h[1].isNaN, isTrue);
+    expect(h[2], double.infinity);
+    expect(jsonEncode(r.toJson()), isNotEmpty);
   });
 }

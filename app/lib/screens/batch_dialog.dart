@@ -10,10 +10,10 @@ import '../l10n.dart';
 
 /// QWTB batch processing panel (TWM guide figure 3.36, TPQA "TWM
 /// processing panel"): processing of previously recorded measurements.
-Future<void> showBatchDialog(BuildContext context) => showDialog(
+Future<void> showBatchDialog(BuildContext context) => showScopedDialog(
   context: context,
   barrierDismissible: false,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _BatchDialog()),
+  builder: (_) => const _BatchDialog(),
 );
 
 class _BatchDialog extends StatefulWidget {

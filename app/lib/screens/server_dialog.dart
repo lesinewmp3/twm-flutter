@@ -10,9 +10,9 @@ import '../l10n.dart';
 
 /// TWM server panel (TWM guide figure 3.37). The original named pipe server
 /// is replaced by HTTP + WebSocket API, which also serves the web UI.
-Future<void> showServerDialog(BuildContext context) => showDialog(
+Future<void> showServerDialog(BuildContext context) => showScopedDialog(
   context: context,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _ServerDialog()),
+  builder: (_) => const _ServerDialog(),
 );
 
 class _ServerDialog extends StatefulWidget {

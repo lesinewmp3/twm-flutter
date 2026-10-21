@@ -12,10 +12,10 @@ import '../l10n.dart';
 /// HW corrections panel (TWM guide 3.1.4.3, TPQA guide 3.3.3.2): list of
 /// transducers with mapping to digitizer channels, and the digitizer
 /// correction file.
-Future<void> showCorrectionsDialog(BuildContext context) => showDialog(
+Future<void> showCorrectionsDialog(BuildContext context) => showScopedDialog(
   context: context,
   barrierDismissible: false,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _CorrectionsDialog()),
+  builder: (_) => const _CorrectionsDialog(),
 );
 
 class _CorrectionsDialog extends StatefulWidget {

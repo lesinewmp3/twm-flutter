@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
 /// Global state of the application (the TWM main panel and its local
@@ -158,4 +158,20 @@ class AppScope extends InheritedNotifier<AppState> {
 
   /// Access without subscribing to changes.
   static AppState read(BuildContext context) => context.getInheritedWidgetOfExactType<AppScope>()!.notifier!;
+}
+
+/// [showDialog] with [AppScope] above the dialog content. The state is taken
+/// from [context] right away: the caller (a menu item that is rebuilt in a
+/// different layout, a list row) may be unmounted when the dialog rebuilds.
+Future<T?> showScopedDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+}) {
+  final state = AppScope.read(context);
+  return showDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    builder: (c) => AppScope(state: state, child: builder(c)),
+  );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:twm_model/twm_model.dart';
@@ -95,7 +96,14 @@ class IsolateBackend extends RpcBackend {
     TwmServer? server;
     final serverLog = <String>[];
     // events and results are JSON values - re-encoding guarantees they are sendable
-    backend.events.listen((e) => out.send({'event': jsonDecode(jsonEncode(e.toJson()))}));
+    // (jSafe: NaN/Inf as strings - a raw NaN made jsonEncode throw and killed the isolate)
+    backend.events.listen((e) {
+      try {
+        out.send({'event': jsonDecode(jsonEncode(jSafe(e.toJson())))});
+      } catch (err) {
+        stderr.writeln('twm-backend: event ${e.runtimeType} not sent: $err');
+      }
+    });
     inbox.listen((m) async {
       if (m is! Map) return;
       final id = m['id'];
@@ -132,7 +140,7 @@ class IsolateBackend extends RpcBackend {
           default:
             r = await d.call(method, args);
         }
-        out.send({'id': id, 'result': jsonDecode(jsonEncode(r))});
+        out.send({'id': id, 'result': jsonDecode(jsonEncode(jSafe(r)))});
       } catch (e) {
         out.send({'id': id, 'error': '$e'});
       }

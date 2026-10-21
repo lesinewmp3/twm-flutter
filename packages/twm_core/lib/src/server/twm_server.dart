@@ -141,7 +141,7 @@ class TwmServer {
     _server = await HttpServer.bind(host, port);
     log?.call('TWM server listening on http://$host:${_server!.port}');
     _sub = backend.events.listen((e) {
-      final msg = jsonEncode(e.toJson());
+      final msg = jsonEncode(jSafe(e.toJson()));
       for (final s in _sockets.toList()) {
         try {
           s.add(msg);
@@ -205,7 +205,7 @@ class TwmServer {
       res.headers.contentType = ContentType.json;
       try {
         final r = await d.call(method, args);
-        res.write(jsonEncode({'result': r}));
+        res.write(jsonEncode({'result': jSafe(r)}));
       } catch (e) {
         res.write(jsonEncode({'error': '$e'}));
       }

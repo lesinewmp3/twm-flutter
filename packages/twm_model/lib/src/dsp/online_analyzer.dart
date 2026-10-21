@@ -109,7 +109,7 @@ class OnlineResult {
 
   Json toJson() => {
     'quantities': [for (final q in quantities) q.toJson()],
-    'harmonics': harmonics,
+    'harmonics': {for (final e in harmonics.entries) e.key: [for (final v in e.value) jNum(v)]},
     'f0': jNum(f0),
   };
   factory OnlineResult.fromJson(Json j) => OnlineResult(

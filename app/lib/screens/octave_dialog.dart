@@ -8,9 +8,9 @@ import '../l10n.dart';
 
 /// Processing environment configuration (TWM guide figure 3.4) with the
 /// GNU Octave package assistant (figure 3.5).
-Future<void> showOctaveDialog(BuildContext context) => showDialog(
+Future<void> showOctaveDialog(BuildContext context) => showScopedDialog(
   context: context,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _OctaveDialog()),
+  builder: (_) => const _OctaveDialog(),
 );
 
 class _OctaveDialog extends StatefulWidget {

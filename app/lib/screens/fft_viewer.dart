@@ -10,9 +10,9 @@ import '../l10n.dart';
 /// Spectrum viewer (TWM guide figure 3.33): shows the spectra calculated by
 /// the selected algorithm (quantities listed as 'spectrum' in
 /// qwtb_list.info), or the live spectrum of the last record.
-Future<void> showFftViewer(BuildContext context) => showDialog(
+Future<void> showFftViewer(BuildContext context) => showScopedDialog(
   context: context,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _FftViewer()),
+  builder: (_) => const _FftViewer(),
 );
 
 class _FftViewer extends StatefulWidget {

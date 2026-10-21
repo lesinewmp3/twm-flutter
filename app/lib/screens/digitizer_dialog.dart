@@ -11,10 +11,10 @@ import '../l10n.dart';
 
 /// "Digitizer configuration" panel (TWM guide 3.1.4.2, TPQA WB setup and
 /// LF-Setup DMMs panels).
-Future<void> showDigitizerDialog(BuildContext context) => showDialog(
+Future<void> showDigitizerDialog(BuildContext context) => showScopedDialog(
   context: context,
   barrierDismissible: false,
-  builder: (_) => AppScope(state: AppScope.read(context), child: const _DigitizerDialog()),
+  builder: (_) => const _DigitizerDialog(),
 );
 
 class _DigitizerDialog extends StatefulWidget {

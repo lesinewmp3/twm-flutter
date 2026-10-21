@@ -11,10 +11,10 @@ import '../l10n.dart';
 
 /// New measurement configuration (TWM guide figure 3.21). Returns true on OK.
 Future<bool> showMeasurementDialog(BuildContext context) async =>
-    await showDialog<bool>(
+    await showScopedDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AppScope(state: AppScope.read(context), child: const _MeasDialog()),
+      builder: (_) => const _MeasDialog(),
     ) ??
     false;
 

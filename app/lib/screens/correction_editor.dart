@@ -11,10 +11,10 @@ import '../l10n.dart';
 // =================================================================== CSV ====
 
 /// CSV correction matrix editor (TWM guide figure 3.18). Returns saved path.
-Future<String?> showCsvEditor(BuildContext context, String path, {CsvItem? template}) => showDialog<String>(
+Future<String?> showCsvEditor(BuildContext context, String path, {CsvItem? template}) => showScopedDialog<String>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => AppScope(state: AppScope.read(context), child: _CsvEditor(path, template)),
+  builder: (_) => _CsvEditor(path, template),
 );
 
 class _CsvEditor extends StatefulWidget {
@@ -161,10 +161,10 @@ class _CsvEditorState extends State<_CsvEditor> {
 
 /// Transducer correction editor (TWM guide figure 3.17). Returns the saved
 /// path or null.
-Future<String?> showTransducerEditor(BuildContext context, String path) => showDialog<String>(
+Future<String?> showTransducerEditor(BuildContext context, String path) => showScopedDialog<String>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => AppScope(state: AppScope.read(context), child: _TransducerEditor(path)),
+  builder: (_) => _TransducerEditor(path),
 );
 
 class _TransducerEditor extends StatefulWidget {
@@ -405,10 +405,10 @@ class _TransducerEditorState extends State<_TransducerEditor> {
 
 /// Digitizer (or channel) correction editor (TWM guide figure 3.20).
 Future<String?> showDigitizerCorrectionEditor(BuildContext context, String path, {bool channel = false}) =>
-    showDialog<String>(
+    showScopedDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AppScope(state: AppScope.read(context), child: _DigitizerEditor(path, channel)),
+      builder: (_) => _DigitizerEditor(path, channel),
     );
 
 class _DigitizerEditor extends StatefulWidget {

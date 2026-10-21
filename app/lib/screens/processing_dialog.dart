@@ -9,10 +9,10 @@ import '../l10n.dart';
 /// Processing configuration panel (TWM guide figures 3.27 - 3.29, TPQA
 /// "QWTB processing algorithms"). Returns modified copy or null.
 Future<ProcessingSetup?> showProcessingDialog(BuildContext context, ProcessingSetup setup) =>
-    showDialog<ProcessingSetup>(
+    showScopedDialog<ProcessingSetup>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AppScope(state: AppScope.read(context), child: _ProcDialog(setup.copy())),
+      builder: (_) => _ProcDialog(setup.copy()),
     );
 
 class _ProcDialog extends StatefulWidget {

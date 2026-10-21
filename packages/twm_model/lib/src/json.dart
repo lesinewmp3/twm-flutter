@@ -19,6 +19,15 @@ Object? jNum(double v) {
   return v;
 }
 
+/// Deep copy of a JSON-like value with every NaN/Inf replaced by [jNum], so
+/// `jsonEncode` never fails on values a `toJson` passed through unchecked.
+Object? jSafe(Object? v) {
+  if (v is double) return jNum(v);
+  if (v is Map) return {for (final e in v.entries) e.key.toString(): jSafe(e.value)};
+  if (v is List) return [for (final e in v) jSafe(e)];
+  return v;
+}
+
 double jDouble(Object? v, [double fallback = 0]) {
   if (v is num) return v.toDouble();
   if (v is String) {
