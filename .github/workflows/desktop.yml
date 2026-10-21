@@ -51,7 +51,9 @@ jobs:
         shell: pwsh
         run: |
           $b = "app/build/windows/x64/runner/Release"
-          Copy-Item -Recurse octave, data $b
+          Copy-Item -Recurse octave $b
+          # the bundle already has data/ (flutter_assets): merge into it
+          Copy-Item -Recurse -Force data/* "$b/data"
           # MSVC runtime, so the app starts on a PC without the VC++ redistributable
           foreach ($f in 'msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll') {
             Copy-Item "$env:WINDIR/System32/$f" $b
