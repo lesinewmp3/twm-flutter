@@ -333,8 +333,14 @@ class LocalBackend implements TwmBackend {
   Future<SessionSummary> sessionSummary(String sessionPath) => sessionSummaryOf(_store, sessionPath);
 
   @override
-  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) =>
-      readRecordOf(_store, sessionPath, group, record, maxPoints);
+  Future<WaveformData> readRecord(
+    String sessionPath,
+    int group,
+    int record, {
+    int maxPoints = 5000,
+    int from = 0,
+    int count = 0,
+  }) => readRecordOf(_store, sessionPath, group, record, maxPoints, from: from, count: count);
 
   @override
   Future<SpectrumData> recordSpectrum(

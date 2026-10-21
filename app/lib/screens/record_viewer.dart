@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
@@ -36,6 +38,8 @@ class _RecordViewerState extends State<RecordViewerPanel> {
   int _record = 1;
   int _maxPoints = 20000;
   WaveformData? _data;
+  WaveformData? _zoom; // zoomed part at full resolution
+  Timer? _zoomTimer;
   SpectrumData? _spec; // of the whole record, for the spectrum view
   String _msg = '';
   bool _busy = false;
@@ -76,6 +80,43 @@ class _RecordViewerState extends State<RecordViewerPanel> {
     }
   }
 
+  /// Zoomed in a decimated record: load the visible part at full resolution
+  /// (like the deep memory of a scope), back to the whole record on reset.
+  void _onView(Rect? v) {
+    _zoomTimer?.cancel();
+    final d = _data;
+    if (v == null || d == null) {
+      if (_zoom != null) setState(() => _zoom = null);
+      return;
+    }
+    _zoomTimer = Timer(const Duration(milliseconds: 200), () async {
+      final ts = d.fullTs > 0 ? d.fullTs : d.ts;
+      final from = (v.left / ts).floor().clamp(0, d.fullLength);
+      final to = (v.right / ts).ceil().clamp(0, d.fullLength);
+      if (to - from >= d.fullLength * 0.9 || to <= from) {
+        if (_zoom != null && mounted) setState(() => _zoom = null);
+        return;
+      }
+      try {
+        final z = await AppScope.read(context).backend.readRecord(
+          _session,
+          _group,
+          _record,
+          maxPoints: _maxPoints,
+          from: from,
+          count: to - from,
+        );
+        if (mounted) setState(() => _zoom = z);
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _zoomTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _read() async {
     final s = _sum;
     if (s == null || s.recordsPerGroup.isEmpty || s.recordsPerGroup[_group - 1] == 0) return;
@@ -83,6 +124,7 @@ class _RecordViewerState extends State<RecordViewerPanel> {
     try {
       final b = AppScope.read(context).backend;
       final d = await b.readRecord(_session, _group, _record, maxPoints: _maxPoints);
+      _zoom = null;
       // spectrum from all samples: the decimated waveform would alias fast content
       final sp = _spectrum ? await b.recordSpectrum(_session, _group, _record) : null;
       setState(() {
@@ -114,7 +156,9 @@ class _RecordViewerState extends State<RecordViewerPanel> {
           if (sp == null || c >= sp.amplitudes.length) continue;
           series.add(ChartSeries(name, sp.amplitudes[c], dx: sp.df, color: chartColors[c % chartColors.length]));
         } else {
-          series.add(ChartSeries(name, d.channels[c], dx: d.ts, color: chartColors[c % chartColors.length]));
+          final w = _zoom ?? d;
+          if (c >= w.channels.length) continue;
+          series.add(ChartSeries(name, w.channels[c], x0: w.x0, dx: w.ts, color: chartColors[c % chartColors.length]));
         }
       }
     }
@@ -207,6 +251,7 @@ class _RecordViewerState extends State<RecordViewerPanel> {
                     xLabel: _spectrum ? tr('frequency [Hz]') : tr('time [s]'),
                     yLabel: _spectrum ? tr('amplitude [V]') : tr('voltage [V]'),
                     logY: _spectrum,
+                    onViewChanged: _spectrum ? null : _onView,
                   ),
           ),
         ],

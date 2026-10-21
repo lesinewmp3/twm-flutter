@@ -265,6 +265,20 @@ void main() {
     await click(find.text('Записи'));
     await settle(2500);
     await shot('records_waveform');
+    // zoom with the mouse wheel: the visible part is loaded at full resolution
+    final plot = tester.getRect(find.byType(CustomPaint).last);
+    for (var k = 0; k < 30; k++) {
+      await tester.sendEventToBinding(
+        PointerScrollEvent(position: plot.center, scrollDelta: const Offset(0, -40), kind: PointerDeviceKind.mouse),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await settle(1500);
+    await shot('records_zoomed');
+    await tester.tapAt(plot.center);
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.tapAt(plot.center); // double click: whole record again
+    await settle(800);
     await click(find.text('Спектр'));
     await settle(4000);
     await shot('records_spectrum');

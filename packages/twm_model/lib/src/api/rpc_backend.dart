@@ -100,10 +100,23 @@ abstract class RpcBackend implements TwmBackend {
       SessionSummary.fromJson(await _obj('sessionSummary', {'path': sessionPath}));
 
   @override
-  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000}) async =>
-      WaveformData.fromJson(
-        await _obj('readRecord', {'path': sessionPath, 'group': group, 'record': record, 'maxPoints': maxPoints}),
-      );
+  Future<WaveformData> readRecord(
+    String sessionPath,
+    int group,
+    int record, {
+    int maxPoints = 5000,
+    int from = 0,
+    int count = 0,
+  }) async => WaveformData.fromJson(
+    await _obj('readRecord', {
+      'path': sessionPath,
+      'group': group,
+      'record': record,
+      'maxPoints': maxPoints,
+      'from': from,
+      'count': count,
+    }),
+  );
 
   @override
   Future<SpectrumData> recordSpectrum(

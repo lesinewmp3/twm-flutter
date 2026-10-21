@@ -36,7 +36,9 @@ class SessionReader {
 
   /// Reads record [rep] of group [g]; returns scaled channels, optionally
   /// decimated (min/max envelope preserving) to [maxPoints] per channel.
-  Future<RecordData> readRecord(int g, int rep, {int maxPoints = 0}) async {
+  ///
+  /// [from], [count]: a part of the record (zoomed view), 0 = to the end.
+  Future<RecordData> readRecord(int g, int rep, {int maxPoints = 0, int from = 0, int count = 0}) async {
     final gi = group(g);
     final files = gi.textList('record sample data files');
     final rel = files[rep - 1].replaceAll('\\', '/');
@@ -46,13 +48,17 @@ class SessionReader {
     final tstamps = gi.matrix('record relative timestamps [s]')[rep - 1];
     final v = await RecordFileReader.read(store, store.path.join(root, rel), varName: dataVariable);
     final ch = <Float64List>[];
+    final a = from.clamp(0, v.cols);
+    final b = count <= 0 ? v.cols : math.min(v.cols, a + count);
+    final len = b - a;
     // display decimation: min/max envelope (two points per bucket), so fast
     // content is shown as a band instead of being aliased into slow waves
     var bucket = 1;
-    if (maxPoints > 0 && v.cols > maxPoints) bucket = (v.cols / math.max(1, maxPoints ~/ 2)).ceil();
+    if (maxPoints > 0 && len > maxPoints) bucket = (len / math.max(1, maxPoints ~/ 2)).ceil();
     for (var c = 0; c < v.rows; c++) {
-      final full = v.row(c, gain: gains[c], offset: offs[c]);
-      ch.add(bucket == 1 ? full : envelope(full, bucket));
+      final row = v.row(c, gain: gains[c], offset: offs[c]);
+      final part = a == 0 && b == v.cols ? row : Float64List.sublistView(row, a, b);
+      ch.add(bucket == 1 ? Float64List.fromList(part) : envelope(part, bucket));
     }
     return RecordData(
       channels: ch,
@@ -60,6 +66,8 @@ class SessionReader {
       fullLength: v.cols,
       timestamps: tstamps,
       names: channelDescriptors,
+      from: a,
+      fullTs: ts,
     );
   }
 
@@ -87,11 +95,17 @@ class RecordData {
   final int fullLength;
   final List<double> timestamps;
   final List<String> names;
+
+  /// First sample of [channels] in the record, sample period of the record.
+  final int from;
+  final double fullTs;
   RecordData({
     required this.channels,
     required this.ts,
     required this.fullLength,
     required this.timestamps,
     required this.names,
+    this.from = 0,
+    this.fullTs = 0,
   });
 }

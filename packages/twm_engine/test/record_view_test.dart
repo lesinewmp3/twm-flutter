@@ -32,6 +32,14 @@ void main() {
     expect(peak, closeTo(0.6, 2e-3), reason: '50 Hz + ripple crest kept');
     expect(low, closeTo(-0.6, 2e-3));
 
+    // zoomed part: 400 samples at full resolution, time of the first point
+    final z = await readRecordOf(store, session, 1, 1, 2000, from: 200000, count: 400);
+    expect(z.channels.first.length, 400);
+    expect(z.ts, closeTo(1 / 2e6, 1e-15));
+    expect(z.x0, closeTo(0.1, 1e-12));
+    final zmax = z.channels.first.reduce(math.max), zmin = z.channels.first.reduce(math.min);
+    expect(zmax - zmin, greaterThan(0.19), reason: 'ripple 0.1 amplitude visible sample by sample');
+
     final sp = await recordSpectrumOf(store, session, 1, 1, WindowType.flatTop, 1 << 30);
     final a = sp.amplitudes.first;
     var kmax = 1000; // above 50 Hz region

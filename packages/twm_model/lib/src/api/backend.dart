@@ -227,14 +227,27 @@ class WaveformData {
   final List<List<double>> channels;
   final double ts;
   final int fullLength;
-  const WaveformData(this.names, this.channels, this.ts, this.fullLength);
 
-  Json toJson() => {'names': names, 'channels': channels, 'ts': ts, 'fullLength': fullLength};
+  /// Time of the first point (part of a record) and sample period of the record.
+  final double x0;
+  final double fullTs;
+  const WaveformData(this.names, this.channels, this.ts, this.fullLength, {this.x0 = 0, this.fullTs = 0});
+
+  Json toJson() => {
+    'names': names,
+    'channels': [for (final c in channels) [for (final v in c) jNum(v)]],
+    'ts': ts,
+    'fullLength': fullLength,
+    'x0': x0,
+    'fullTs': fullTs,
+  };
   factory WaveformData.fromJson(Json j) => WaveformData(
     jStringList(j['names']),
     [for (final c in (j['channels'] as List? ?? [])) jDoubleList(c)],
     jDouble(j['ts']),
     jInt(j['fullLength']),
+    x0: jDouble(j['x0']),
+    fullTs: jDouble(j['fullTs']),
   );
 }
 
@@ -369,7 +382,15 @@ abstract class TwmBackend {
 
   // sessions
   Future<SessionSummary> sessionSummary(String sessionPath);
-  Future<WaveformData> readRecord(String sessionPath, int group, int record, {int maxPoints = 5000});
+  /// [from], [count]: samples of a part of the record (zoomed view), 0 = all.
+  Future<WaveformData> readRecord(
+    String sessionPath,
+    int group,
+    int record, {
+    int maxPoints = 5000,
+    int from = 0,
+    int count = 0,
+  });
   Future<SpectrumData> recordSpectrum(
     String sessionPath,
     int group,

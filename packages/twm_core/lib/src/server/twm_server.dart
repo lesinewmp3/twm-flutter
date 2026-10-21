@@ -63,6 +63,8 @@ class BackendDispatcher {
           jInt(a['group'], 1),
           jInt(a['record'], 1),
           maxPoints: jInt(a['maxPoints'], 5000),
+          from: jInt(a['from']),
+          count: jInt(a['count']),
         )).toJson();
       case 'recordSpectrum':
         return (await b.recordSpectrum(

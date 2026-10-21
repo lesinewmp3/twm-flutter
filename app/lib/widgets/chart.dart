@@ -49,6 +49,10 @@ class LineChart extends StatefulWidget {
   /// Fixed time axis (live monitor window) instead of the data range.
   final (double, double)? fixedX;
 
+  /// The visible range after zoom/pan by the user (null = reset), e.g. to
+  /// load the zoomed part of a long record at full resolution.
+  final ValueChanged<Rect?>? onViewChanged;
+
   const LineChart({
     super.key,
     required this.series,
@@ -58,6 +62,7 @@ class LineChart extends StatefulWidget {
     this.showLegend = true,
     this.stableY = false,
     this.fixedX,
+    this.onViewChanged,
   });
 
   @override
@@ -69,6 +74,11 @@ class _LineChartState extends State<LineChart> {
   Offset? _hover;
   double? _yLo, _yHi; // stable amplitude axis
   DateTime? _smallSince;
+
+  void _setView(Rect? v) {
+    setState(() => _view = v);
+    widget.onViewChanged?.call(v);
+  }
 
   Rect _autoBounds() {
     var r = _dataBounds();
@@ -166,28 +176,26 @@ class _LineChartState extends State<LineChart> {
                     final b = bounds;
                     final px = ((e.localPosition.dx - plot.left) / plot.width).clamp(0.0, 1.0);
                     final py = ((plot.bottom - e.localPosition.dy) / plot.height).clamp(0.0, 1.0);
-                    setState(() {
-                      if (shift) {
-                        final cy = b.top + py * b.height;
-                        _view = Rect.fromLTRB(b.left, cy - (cy - b.top) * f, b.right, cy + (b.bottom - cy) * f);
-                      } else {
-                        final cx = b.left + px * b.width;
-                        _view = Rect.fromLTRB(cx - (cx - b.left) * f, b.top, cx + (b.right - cx) * f, b.bottom);
-                      }
-                    });
+                    if (shift) {
+                      final cy = b.top + py * b.height;
+                      _setView(Rect.fromLTRB(b.left, cy - (cy - b.top) * f, b.right, cy + (b.bottom - cy) * f));
+                    } else {
+                      final cx = b.left + px * b.width;
+                      _setView(Rect.fromLTRB(cx - (cx - b.left) * f, b.top, cx + (b.right - cx) * f, b.bottom));
+                    }
                   }
                 },
                 child: MouseRegion(
                   onHover: (e) => setState(() => _hover = e.localPosition),
                   onExit: (_) => setState(() => _hover = null),
                   child: GestureDetector(
-                    onDoubleTap: () => setState(() => _view = null),
+                    onDoubleTap: () => _setView(null),
                     onPanUpdate: (d) {
                       final plot = _ChartPainter.plotRect(c.biggest);
                       final b = bounds;
                       final dx = -d.delta.dx / plot.width * b.width;
                       final dy = d.delta.dy / plot.height * b.height;
-                      setState(() => _view = b.translate(dx, dy));
+                      _setView(b.translate(dx, dy));
                     },
                     // data layer is kept (and rasterized) apart from the hover
                     // cursor: moving the mouse repaints only the cursor
@@ -270,18 +278,22 @@ class _ChartPainter extends CustomPainter {
       ..color = grid
       ..strokeWidth = 1;
     // x ticks
-    for (final t in niceTicks(xmin, xmax, (plot.width / 90).floor().clamp(2, 12))) {
+    final xt = niceTicks(xmin, xmax, (plot.width / 90).floor().clamp(2, 12));
+    final xstep = xt.length > 1 ? xt[1] - xt[0] : null;
+    for (final t in xt) {
       final x = px(t);
       canvas.drawLine(Offset(x, plot.top), Offset(x, plot.bottom), gridPaint);
-      _text(canvas, formatTick(t), Offset(x, plot.bottom + 3), ts, center: true);
+      _text(canvas, formatTick(t, xstep), Offset(x, plot.bottom + 3), ts, center: true);
     }
     // y ticks
-    for (final t in niceTicks(ymin, ymax, (plot.height / 40).floor().clamp(2, 10))) {
+    final yt = niceTicks(ymin, ymax, (plot.height / 40).floor().clamp(2, 10));
+    final ystep = !logY && yt.length > 1 ? yt[1] - yt[0] : null;
+    for (final t in yt) {
       final y = py(t);
       canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), gridPaint);
       _text(
         canvas,
-        logY ? formatTick(math.pow(10, t).toDouble()) : formatTick(t),
+        logY ? formatTick(math.pow(10, t).toDouble()) : formatTick(t, ystep),
         Offset(plot.left - 4, y - 6),
         ts,
         right: true,
@@ -461,8 +473,24 @@ List<double> niceTicks(double a, double b, int count) {
   return out;
 }
 
-String formatTick(double v) {
+/// Tick label; with the tick [step] the number of decimals follows the step
+/// (no repeated labels like 0.478 0.478 when zoomed) and large values get
+/// k/M suffixes (frequency axis).
+String formatTick(double v, [double? step]) {
   if (v == 0) return '0';
+  if (step != null && step > 0 && step.isFinite) {
+    final a = v.abs();
+    if (a >= 1e4 && step >= 1e3) {
+      final (div, suf) = a >= 1e6 && step >= 1e5 ? (1e6, 'M') : (1e3, 'k');
+      final st = step / div;
+      final dec = st >= 1 ? 0 : (-math.log(st) / math.ln10 - 1e-9).ceil().clamp(0, 6);
+      return '${(v / div).toStringAsFixed(dec)}$suf';
+    }
+    if (step >= 1e-6 && a < 1e5) {
+      final dec = step >= 1 ? 0 : (-math.log(step) / math.ln10 - 1e-9).ceil().clamp(0, 9);
+      return v.toStringAsFixed(dec);
+    }
+  }
   final a = v.abs();
   if (a >= 1e5 || a < 1e-3) return v.toStringAsExponential(1);
   if (a >= 100) return v.toStringAsFixed(0);

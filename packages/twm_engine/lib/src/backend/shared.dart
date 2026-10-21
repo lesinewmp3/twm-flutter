@@ -176,10 +176,25 @@ Future<SessionSummary> sessionSummaryOf(FileStore store, String sessionPath) asy
   );
 }
 
-Future<WaveformData> readRecordOf(FileStore store, String sessionPath, int group, int record, int maxPoints) async {
+Future<WaveformData> readRecordOf(
+  FileStore store,
+  String sessionPath,
+  int group,
+  int record,
+  int maxPoints, {
+  int from = 0,
+  int count = 0,
+}) async {
   final r = await SessionReader.open(store, sessionPath);
-  final d = await r.readRecord(group, record, maxPoints: maxPoints);
-  return WaveformData(d.names, [for (final c in d.channels) c.toList()], d.ts, d.fullLength);
+  final d = await r.readRecord(group, record, maxPoints: maxPoints, from: from, count: count);
+  return WaveformData(
+    d.names,
+    [for (final c in d.channels) c.toList()],
+    d.ts,
+    d.fullLength,
+    x0: d.from * d.fullTs,
+    fullTs: d.fullTs,
+  );
 }
 
 Future<SpectrumData> recordSpectrumOf(
