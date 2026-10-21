@@ -63,7 +63,7 @@ class OctaveBridge {
     }
     final o = config.octavePath;
     final exe = Platform.isWindows ? 'octave-cli.exe' : 'octave-cli';
-    if (o.isEmpty) return exe;
+    if (o.isEmpty) return Platform.isWindows ? (_findWindowsOctave(exe) ?? exe) : exe;
     if (FileSystemEntity.isDirectorySync(o)) {
       for (final sub in ['', 'bin', p.join('mingw64', 'bin'), p.join('mingw32', 'bin')]) {
         final f = p.join(o, sub, exe);
@@ -72,6 +72,36 @@ class OctaveBridge {
       return p.join(o, exe);
     }
     return o;
+  }
+
+  /// The Windows installer of GNU Octave does not add it to PATH: picks the
+  /// newest `<Program Files>\GNU Octave\Octave-*\mingw64\bin\octave-cli.exe`.
+  static String? _findWindowsOctave(String exe) {
+    final roots = {
+      Platform.environment['ProgramFiles'] ?? r'C:\Program Files',
+      Platform.environment['LOCALAPPDATA'] == null ? null : p.join(Platform.environment['LOCALAPPDATA']!, 'Programs'),
+    }.whereType<String>();
+    final found = <String>[];
+    for (final r in roots) {
+      final d = Directory(p.join(r, 'GNU Octave'));
+      if (!d.existsSync()) continue;
+      for (final v in d.listSync().whereType<Directory>()) {
+        final f = p.join(v.path, 'mingw64', 'bin', exe);
+        if (File(f).existsSync()) found.add(f);
+      }
+    }
+    if (found.isEmpty) return null;
+    // "Octave-10.1.0" must win over "Octave-9.2.0"
+    List<int> ver(String f) =>
+        RegExp(r'\d+').allMatches(p.basename(p.dirname(p.dirname(p.dirname(f))))).map((m) => int.parse(m[0]!)).toList();
+    int cmp(List<int> a, List<int> b) {
+      for (var i = 0; i < a.length && i < b.length; i++) {
+        if (a[i] != b[i]) return a[i] - b[i];
+      }
+      return a.length - b.length;
+    }
+    found.sort((a, b) => cmp(ver(a), ver(b)));
+    return found.last;
   }
 
   /// Starts the engine (if not running) and initializes paths/packages.
