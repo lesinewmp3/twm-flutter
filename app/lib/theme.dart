@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'l10n.dart';
+
 /// Light modern theme of the application (dark variant kept for the
 /// theme toggle).
 class TwmTheme {
@@ -173,7 +175,7 @@ class StatTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Text(unit, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+              Text(trUnit(unit), style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
             ],
           ),
         ],

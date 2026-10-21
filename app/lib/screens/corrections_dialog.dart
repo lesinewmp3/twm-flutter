@@ -184,8 +184,8 @@ class _CorrectionsDialogState extends State<_CorrectionsDialog> {
                     child: Text(
                       t.path.isEmpty
                           ? '(no file)'
-                          : '${t.type == TransducerType.shunt ? 'SHUNT' : 'DIVIDER'}  ratio ${formatNum(t.nominalRatio)}'
-                                '${t.type == TransducerType.shunt ? ' V/A' : ''}\n${t.name}',
+                          : '${t.type == TransducerType.shunt ? tr('SHUNT') : tr('DIVIDER')}, ${tr('ratio')} ${formatNum(t.nominalRatio)}'
+                                '${t.type == TransducerType.shunt ? ' ${trUnit('V/A')}' : ''}\n${t.name}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),

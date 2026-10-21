@@ -29,6 +29,30 @@ String trf(String s, List<Object?> args) {
   return r;
 }
 
+const _ruUnits = {
+  'V': 'В',
+  'mV': 'мВ',
+  'A': 'А',
+  'Hz': 'Гц',
+  'kHz': 'кГц',
+  'W': 'Вт',
+  'var': 'вар',
+  'VA': 'В·А',
+  'rad': 'рад',
+  'deg': '°',
+  's': 'с',
+  'ms': 'мс',
+  'Vpk': 'В пик',
+  'V rms': 'В СКЗ',
+  's rms': 'с СКЗ',
+  'Sa/s': 'отсч/с',
+  'smpl': 'отсч',
+  'V/A': 'В/А',
+};
+
+/// Unit symbol in the UI language (Russian documents use Cyrillic symbols).
+String trUnit(String u) => L10n.ru ? (_ruUnits[u] ?? u) : u;
+
 /// Name of an on-line quantity ("Event duration u1"): the words before the
 /// channel tag are translated, the tag is kept.
 String trQuantity(String name) {

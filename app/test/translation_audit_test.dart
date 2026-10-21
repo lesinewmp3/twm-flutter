@@ -141,6 +141,33 @@ void main() {
     });
   }
 
+  testWidgets('dialogs with filled settings', (tester) async {
+    final st = await state(tester);
+    const root = '/home/e/papka_dlya_claude/twm_flutter/data/corrections/transducers';
+    st.settings.corrections.transducers = [
+      TransducerConfig(path: r'dummy.vd\dummy.info', highChannel: 1, nominalRatio: 1),
+      TransducerConfig(path: r'dummy.cs\dummy.info', type: TransducerType.shunt, highChannel: 2, nominalRatio: 1),
+    ];
+    st.settings.corrections.transducersRoot = root;
+    st.settings.digitizer.simulated.channels.first.event = SimEvent();
+    for (final (name, open) in <(String, Future<Object?> Function(BuildContext))>[
+      ('corrections with transducers', showCorrectionsDialog),
+      ('simulator with event', showDigitizerDialog),
+    ]) {
+      await pumpApp(
+        tester,
+        st,
+        Scaffold(body: Builder(builder: (c) => TextButton(onPressed: () => open(c), child: const Text('open')))),
+      );
+      await tester.tap(find.text('open'));
+      await settle(tester);
+      found[name] = _untranslated(tester);
+      expect(found[name], isEmpty, reason: 'untranslated texts');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(minutes: 10));
+    }
+  });
+
   testWidgets('main screen pages with data', (tester) async {
     final st = await state(tester);
     // data as after a measurement
@@ -148,7 +175,14 @@ void main() {
       [for (var i = 0; i < 100; i++) i.toDouble()],
       [for (var i = 0; i < 100; i++) -i.toDouble()],
     ], 1e-4, spectra: [List.filled(50, 1e-3), List.filled(50, 1e-3)], df: 10);
-    st.lastOnline = OnlineResult([const OnlineQuantity('RMS u1', 'V', 5)], {'u1': [5.0, 0.1]}, 50);
+    st.settings.online.transferAnalysis = true;
+    st.lastOnline = OnlineResult([
+      const OnlineQuantity('RMS u1', 'V', 5),
+      const OnlineQuantity('Event start u1', 'ms', 123.4),
+      const OnlineQuantity('Event duration u1', 'ms', 3.7),
+      const OnlineQuantity('Event depth u1', '%', 0),
+      const OnlineQuantity('Phase jump u1', 'deg', 30),
+    ], {'u1': [5.0, 0.1]}, 50);
     await pumpApp(tester, st, MainScreen(onToggleTheme: () {}));
     await settle(tester);
     for (final page in ['Измерение', 'Результаты', 'Онлайн-анализ', 'Записи', 'Консоль']) {

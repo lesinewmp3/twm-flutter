@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +19,18 @@ double? parseSi(String s) {
   }
   final v = double.tryParse(t);
   return v == null ? null : v * mul;
+}
+
+/// Width that shows the floating [label] of a field completely (Russian
+/// labels are longer than the English ones the widths were chosen for).
+double fieldWidth(BuildContext context, String label, double width) {
+  final style = Theme.of(context).textTheme.bodySmall;
+  final tp = TextPainter(
+    text: TextSpan(text: label, style: style),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout();
+  return math.max(width, tp.width + 34);
 }
 
 /// Instrument display: always [digits] significant digits (no trimmed
@@ -132,7 +146,7 @@ class _NumFieldState extends State<NumField> {
   @override
   Widget build(BuildContext context) {
     final f = SizedBox(
-      width: widget.width,
+      width: fieldWidth(context, widget.label, widget.width),
       child: TextField(
         controller: _c,
         focusNode: _focus,
@@ -142,7 +156,7 @@ class _NumFieldState extends State<NumField> {
         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.,kMGmunpµ ]'))],
         decoration: InputDecoration(
           labelText: widget.label,
-          suffixText: widget.unit,
+          suffixText: widget.unit == null ? null : trUnit(widget.unit!),
           isDense: true,
           errorText: _invalid ? 'invalid number' : null,
         ),
@@ -208,7 +222,7 @@ class _TextEntryState extends State<TextEntry> {
         suffixIcon: widget.suffix,
       ),
     );
-    return widget.width == null ? f : SizedBox(width: widget.width, child: f);
+    return widget.width == null ? f : SizedBox(width: fieldWidth(context, widget.label, widget.width!), child: f);
   }
 }
 
@@ -238,8 +252,19 @@ class Choice<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final has = items.contains(value);
+    // wide enough for the label and the longest item (+ the arrow)
+    var w = fieldWidth(context, label, width);
+    final st = Theme.of(context).textTheme.titleMedium;
+    for (final i in items.take(50)) {
+      final tp = TextPainter(
+        text: TextSpan(text: tr(itemLabel(i)), style: st),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      w = math.max(w, math.min(tp.width + 56, 420.0));
+    }
     return SizedBox(
-      width: width,
+      width: w,
       child: DropdownButtonFormField<T>(
         initialValue: has ? value : null,
         isExpanded: true,

@@ -220,7 +220,7 @@ class _OnlineViewState extends State<OnlineView> {
 
   Widget _grid(OnlineResult r, bool stats) {
     final th = Theme.of(context);
-    String f(double v) => v.isNaN ? '-' : formatNum(v, digits: 8);
+    String f(double v) => v.isNaN ? '-' : formatDisplay(v, digits: 8);
     return SingleChildScrollView(
       child: Table(
         border: TableBorder.all(color: th.dividerColor),
@@ -246,7 +246,7 @@ class _OnlineViewState extends State<OnlineView> {
             TableRow(
               children: [
                 _c(trQuantity(q.name), bold: true),
-                _c(q.unit),
+                _c(trUnit(q.unit)),
                 _c(f(q.value)),
                 if (stats) ...[_c(f(q.mean)), _c(f(q.std)), _c(f(q.uA)), _c(f(q.errorPercent)), _c('${q.count}')],
                 IconButton(
