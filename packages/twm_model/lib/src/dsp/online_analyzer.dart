@@ -129,15 +129,26 @@ class OnlineAnalyzer {
   /// [channels] are the scaled digitizer channels; [transducers] define
   /// voltage/current channels and their ratio (output -> input quantity)
   /// and pairing into phases. Without transducers each channel is a voltage.
-  OnlineResult analyze(List<Float64List> channels, double fs, List<TransducerConfig> transducers) {
+  /// [spectra] of the channels with [OnlineAnalysisConfig.window], if already
+  /// computed, are reused for the single ended channels.
+  OnlineResult analyze(
+    List<Float64List> channels,
+    double fs,
+    List<TransducerConfig> transducers, {
+    List<Spectrum>? spectra,
+  }) {
     final q = <OnlineQuantity>[];
     final harm = <String, List<double>>{};
     final sig = <String, Float64List>{};
+    final spec = <String, Spectrum>{};
     final tags = <String>[];
+    Spectrum? channelSpectrum(int c) => spectra != null && c < spectra.length ? spectra[c] : null;
     if (transducers.isEmpty) {
       for (var c = 0; c < channels.length; c++) {
         final tag = 'u${c + 1}';
         sig[tag] = channels[c];
+        final sp = channelSpectrum(c);
+        if (sp != null) spec[tag] = sp;
         tags.add(tag);
       }
     } else {
@@ -155,6 +166,8 @@ class OnlineAnalyzer {
         }
         final tag = '${t.type == TransducerType.shunt ? 'i' : 'u'}${t.phaseIndex}';
         sig[tag] = x;
+        final sp = channelSpectrum(hi);
+        if (sp != null && (lo < 0 || lo >= channels.length)) spec[tag] = sp.scaled(k);
         tags.add(tag);
       }
     }
@@ -167,6 +180,7 @@ class OnlineAnalyzer {
         fs,
         harmonics: config.harmonicAnalyzer ? config.harmonics : 1,
         window: config.window,
+        spectrum: spec[tag],
       );
       if (f0.isNaN) f0 = h.f0;
       q.add(_q('RMS $tag', unit, h.rms));
@@ -184,7 +198,7 @@ class OnlineAnalyzer {
     for (final ph in phases) {
       final u = sig['u$ph'], i = sig['i$ph'];
       if (u == null || i == null) continue;
-      final p = PowerAnalysis.of(u, i);
+      final p = PowerAnalysis.of(u, i, window: config.window);
       q.add(_q('P L$ph', 'W', p.p));
       q.add(_q('Q L$ph', 'var', p.q));
       q.add(_q('S L$ph', 'VA', p.s));

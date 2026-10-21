@@ -10,6 +10,7 @@ import '../multiplexer/multiplexer.dart';
 import '../session/record_file.dart';
 import '../session/session_writer.dart';
 import '../store/file_store.dart';
+import 'live_collector.dart';
 
 /// Events emitted by the running measurement (status line, progress bar,
 /// waveform preview, new record/result notifications).
@@ -32,10 +33,14 @@ class MeasRecordData extends MeasEvent {
   final double ts;
   final List<String> names;
 
-  /// Full resolution data for the on-line analyser (may be null if too big).
+  /// Full resolution data for the on-line analyser: the whole record or its
+  /// first [MeasurementEngine.fullDataLimit] samples (see [recordSamples]).
   final List<Float64List>? full;
   final double fullTs;
-  const MeasRecordData(this.record, this.channels, this.ts, this.names, this.full, this.fullTs);
+
+  /// Samples per channel of the whole record (0 = same as [full]).
+  final int recordSamples;
+  const MeasRecordData(this.record, this.channels, this.ts, this.names, this.full, this.fullTs, {this.recordSamples = 0});
 }
 
 class MeasRecordStored extends MeasEvent {
@@ -70,12 +75,14 @@ class MeasurementEngine {
   /// Max points per channel of preview data.
   final int previewPoints;
 
-  /// Max samples per channel passed as full data to the on-line analyser.
+  /// Max samples per channel passed as full data to the on-line analyser
+  /// (longer records are analysed by their beginning).
   final int fullDataLimit;
 
   final _events = StreamController<MeasEvent>.broadcast();
   bool _stop = false;
   bool _running = false;
+  final _sinceYield = Stopwatch()..start();
 
   MeasurementEngine({
     required this.store,
@@ -103,6 +110,15 @@ class MeasurementEngine {
 
   void _status(String m, {double progress = 0, int record = 0, int records = 0}) =>
       _events.add(MeasStatus(m, progress: progress, record: record, records: records));
+
+  /// Lets the event loop run (stop requests, timers, RPC, UI frames in the
+  /// browser) when the digitizer returns data without waiting: `await` on
+  /// completed futures only runs microtasks and would starve everything else.
+  Future<void> _breathe() async {
+    if (_sinceYield.elapsedMilliseconds < 8) return;
+    await Future<void>.delayed(Duration.zero);
+    _sinceYield.reset();
+  }
 
   /// Runs the whole measurement. Completes when finished/aborted.
   Future<String> run({DateTime? now}) async {
@@ -198,7 +214,7 @@ class MeasurementEngine {
         final subOffsets = <int>[];
         final subStamps = <double>[];
         AuxData? aux;
-        final preview = <List<Float64List>>[];
+        LiveCollector? live;
         var total = 0;
         try {
           for (var s = 0; s < subs && !_stop; s++) {
@@ -209,7 +225,16 @@ class MeasurementEngine {
                 await _sleep(mux.delayAfterSwitch);
               }
               subOffsets.add(total);
-              final a = await _acquire(rf, preview, r, records, s * muxCycles + m, subs * muxCycles);
+              final sub = s * muxCycles + m;
+              final lc = sub == 0
+                  ? (live = LiveCollector(
+                      channels: setup.channelsCount,
+                      total: config.samplesCount,
+                      previewPoints: previewPoints,
+                      fullLimit: fullDataLimit,
+                    ))
+                  : null;
+              final a = await _acquire(rf, lc, r, records, sub, subs * muxCycles);
               if (a == null) break;
               aux ??= a;
               subStamps.add(a.timestamps.isEmpty ? 0 : a.timestamps.first - aux.timestamps.first);
@@ -224,7 +249,7 @@ class MeasurementEngine {
         if (_stop || aux == null) break;
 
         // emit display data
-        _emitRecordData(r, preview, aux);
+        _emitRecordData(r, live, aux);
 
         if (save) {
           final hasSub = subs > 1 || mux.enabled;
@@ -264,26 +289,19 @@ class MeasurementEngine {
     return sessionFile;
   }
 
-  Future<AuxData?> _acquire(
-    RecordFileWriter? rf,
-    List<List<Float64List>> preview,
-    int r,
-    int records,
-    int sub,
-    int subCount,
-  ) async {
+  Future<AuxData?> _acquire(RecordFileWriter? rf, LiveCollector? live, int r, int records, int sub, int subCount) async {
     await digitizer.initiate();
     AuxData? aux;
-    final chunks = <DataPacket>[];
     var fetched = 0;
     while (true) {
+      await _breathe();
       final res = await digitizer.fetch();
       if (res.aux != null) aux = res.aux;
       final pk = res.packet;
       if (pk != null && pk.count > 0) {
         await rf?.write(pk);
         fetched += pk.count;
-        chunks.add(pk);
+        live?.add(pk);
       }
       final prog = (sub + fetched / math.max(1, config.samplesCount)) / subCount;
       _status(
@@ -298,45 +316,21 @@ class MeasurementEngine {
       }
     }
     if (_stop && fetched < config.samplesCount) return null;
-    if (aux != null && sub == 0) {
-      preview.add(_scaleChunks(chunks, aux));
-    }
     return aux;
   }
 
-  List<Float64List> _scaleChunks(List<DataPacket> chunks, AuxData aux) {
-    if (chunks.isEmpty) return [];
-    final ch = chunks.first.channels;
-    final n = chunks.fold<int>(0, (s, c) => s + c.count);
-    final out = List.generate(ch, (_) => Float64List(n));
-    var pos = 0;
-    for (final c in chunks) {
-      for (var i = 0; i < c.count; i++) {
-        for (var k = 0; k < ch; k++) {
-          out[k][pos + i] = c.samples[i * ch + k] * aux.gains[k] + aux.offsets[k];
-        }
-      }
-      pos += c.count;
-    }
-    return out;
-  }
-
-  void _emitRecordData(int r, List<List<Float64List>> preview, AuxData aux) {
-    if (preview.isEmpty || preview.first.isEmpty) return;
-    final full = preview.first;
-    final n = full.first.length;
-    final step = n > previewPoints ? (n / previewPoints).ceil() : 1;
-    final dec = [
-      for (final c in full) step == 1 ? c : Float64List.fromList([for (var i = 0; i < n; i += step) c[i]]),
-    ];
+  void _emitRecordData(int r, LiveCollector? live, AuxData aux) {
+    if (live == null || live.received == 0) return;
+    final (preview, ts) = live.preview(aux.gains, aux.offsets, aux.increment);
     _events.add(
       MeasRecordData(
         r,
-        dec,
-        aux.increment * step,
+        preview,
+        ts,
         digitizer.channelIdns,
-        n <= fullDataLimit ? full : null,
+        live.full(aux.gains, aux.offsets),
         aux.increment,
+        recordSamples: live.received,
       ),
     );
   }

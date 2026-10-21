@@ -7,107 +7,9 @@ library;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// FFT of arbitrary length (radix-2 for powers of two, Bluestein otherwise).
-class Fft {
-  /// In-place complex FFT, [re]/[im] length must be a power of two.
-  static void radix2(Float64List re, Float64List im, {bool inverse = false}) {
-    final n = re.length;
-    if (n <= 1) return;
-    for (var i = 1, j = 0; i < n; i++) {
-      var bit = n >> 1;
-      for (; (j & bit) != 0; bit >>= 1) {
-        j ^= bit;
-      }
-      j ^= bit;
-      if (i < j) {
-        var t = re[i];
-        re[i] = re[j];
-        re[j] = t;
-        t = im[i];
-        im[i] = im[j];
-        im[j] = t;
-      }
-    }
-    for (var len = 2; len <= n; len <<= 1) {
-      final ang = 2 * math.pi / len * (inverse ? 1 : -1);
-      final wr = math.cos(ang), wi = math.sin(ang);
-      for (var i = 0; i < n; i += len) {
-        var cr = 1.0, ci = 0.0;
-        for (var k = 0; k < len ~/ 2; k++) {
-          final a = i + k, b = a + len ~/ 2;
-          final xr = re[b] * cr - im[b] * ci;
-          final xi = re[b] * ci + im[b] * cr;
-          re[b] = re[a] - xr;
-          im[b] = im[a] - xi;
-          re[a] += xr;
-          im[a] += xi;
-          final ncr = cr * wr - ci * wi;
-          ci = cr * wi + ci * wr;
-          cr = ncr;
-        }
-      }
-    }
-    if (inverse) {
-      for (var i = 0; i < n; i++) {
-        re[i] /= n;
-        im[i] /= n;
-      }
-    }
-  }
+import 'fft.dart';
 
-  static int _pow2(int n) {
-    var m = 1;
-    while (m < n) {
-      m <<= 1;
-    }
-    return m;
-  }
-
-  /// Complex FFT of any length. Returns (re, im).
-  static (Float64List, Float64List) transform(Float64List xr, [Float64List? xi]) {
-    final n = xr.length;
-    final im0 = xi ?? Float64List(n);
-    if (n & (n - 1) == 0) {
-      final re = Float64List.fromList(xr), im = Float64List.fromList(im0);
-      radix2(re, im);
-      return (re, im);
-    }
-    // Bluestein chirp-z
-    final m = _pow2(2 * n - 1);
-    final wr = Float64List(n), wi = Float64List(n);
-    for (var k = 0; k < n; k++) {
-      final a = math.pi * ((k * k) % (2 * n)) / n;
-      wr[k] = math.cos(a);
-      wi[k] = -math.sin(a);
-    }
-    final ar = Float64List(m), ai = Float64List(m);
-    for (var k = 0; k < n; k++) {
-      ar[k] = xr[k] * wr[k] - im0[k] * wi[k];
-      ai[k] = xr[k] * wi[k] + im0[k] * wr[k];
-    }
-    final br = Float64List(m), bi = Float64List(m);
-    br[0] = wr[0];
-    bi[0] = -wi[0];
-    for (var k = 1; k < n; k++) {
-      br[k] = br[m - k] = wr[k];
-      bi[k] = bi[m - k] = -wi[k];
-    }
-    radix2(ar, ai);
-    radix2(br, bi);
-    for (var k = 0; k < m; k++) {
-      final r = ar[k] * br[k] - ai[k] * bi[k];
-      ai[k] = ar[k] * bi[k] + ai[k] * br[k];
-      ar[k] = r;
-    }
-    radix2(ar, ai, inverse: true);
-    final re = Float64List(n), im = Float64List(n);
-    for (var k = 0; k < n; k++) {
-      re[k] = ar[k] * wr[k] - ai[k] * wi[k];
-      im[k] = ar[k] * wi[k] + ai[k] * wr[k];
-    }
-    return (re, im);
-  }
-}
+export 'fft.dart';
 
 enum WindowType {
   none('None (rectangular)'),
@@ -120,26 +22,48 @@ enum WindowType {
   final String label;
   const WindowType(this.label);
 
+  /// Cosine sum terms: w(x) = a0 - a1 cos(x) + a2 cos(2x) - ...
+  List<double> get terms => switch (this) {
+    WindowType.none => const [1.0],
+    WindowType.hann => const [0.5, 0.5],
+    WindowType.hamming => const [0.54, 0.46],
+    WindowType.blackman => const [0.42, 0.5, 0.08],
+    WindowType.blackmanHarris => const [0.35875, 0.48829, 0.14128, 0.01168],
+    WindowType.flatTop => const [0.21557895, 0.41663158, 0.277263158, 0.083578947, 0.006947368],
+  };
+
+  static final _cache = <(WindowType, int), Float64List>{};
+
+  /// Periodic window of length [n] (cached: the same length comes with every
+  /// record; do not modify the returned list).
   Float64List coefficients(int n) {
+    final key = (this, n);
+    final c = _cache[key];
+    if (c != null) return c;
+    final a = terms;
     final w = Float64List(n);
     for (var i = 0; i < n; i++) {
       final x = 2 * math.pi * i / n;
-      w[i] = switch (this) {
-        WindowType.none => 1.0,
-        WindowType.hann => 0.5 - 0.5 * math.cos(x),
-        WindowType.hamming => 0.54 - 0.46 * math.cos(x),
-        WindowType.blackman => 0.42 - 0.5 * math.cos(x) + 0.08 * math.cos(2 * x),
-        WindowType.blackmanHarris =>
-          0.35875 - 0.48829 * math.cos(x) + 0.14128 * math.cos(2 * x) - 0.01168 * math.cos(3 * x),
-        WindowType.flatTop =>
-          0.21557895 -
-              0.41663158 * math.cos(x) +
-              0.277263158 * math.cos(2 * x) -
-              0.083578947 * math.cos(3 * x) +
-              0.006947368 * math.cos(4 * x),
-      };
+      var v = a[0];
+      for (var k = 1; k < a.length; k++) {
+        v += (k.isOdd ? -a[k] : a[k]) * math.cos(k * x);
+      }
+      w[i] = v;
     }
+    if (_cache.length >= 6) _cache.remove(_cache.keys.first);
+    _cache[key] = w;
     return w;
+  }
+
+  /// Equivalent noise bandwidth [bins]: n*sum(w^2)/sum(w)^2, exact for the
+  /// periodic window when n > 2*terms.
+  double get enbw {
+    final a = terms;
+    var s2 = a[0] * a[0];
+    for (var k = 1; k < a.length; k++) {
+      s2 += 0.5 * a[k] * a[k];
+    }
+    return s2 / (a[0] * a[0]);
   }
 }
 
@@ -147,13 +71,15 @@ enum WindowType {
 /// by the window coherent gain.
 class Spectrum {
   final Float64List amp;
-  final Float64List phase;
   final double df;
-  const Spectrum(this.amp, this.phase, this.df);
+  final Float64List _re, _im;
+  Float64List? _phase;
+
+  Spectrum._(this.amp, this._re, this._im, this.df);
 
   static Spectrum of(Float64List x, double fs, {WindowType window = WindowType.none}) {
     final n = x.length;
-    if (n < 2) return Spectrum(Float64List(0), Float64List(0), 0);
+    if (n < 2) return Spectrum._(Float64List(0), Float64List(0), Float64List(0), 0);
     final w = window.coefficients(n);
     var wsum = 0.0;
     final xr = Float64List(n);
@@ -161,22 +87,51 @@ class Spectrum {
       xr[i] = x[i] * w[i];
       wsum += w[i];
     }
-    final (re, im) = Fft.transform(xr);
-    final h = n ~/ 2 + 1;
-    final amp = Float64List(h), ph = Float64List(h);
+    final (re, im) = Fft.real(xr);
+    final h = re.length;
+    final amp = Float64List(h);
     for (var k = 0; k < h; k++) {
       final s = (k == 0 || (n.isEven && k == n ~/ 2)) ? 1.0 : 2.0;
       amp[k] = s * math.sqrt(re[k] * re[k] + im[k] * im[k]) / wsum;
-      ph[k] = math.atan2(im[k], re[k]);
     }
-    return Spectrum(amp, ph, fs / n);
+    return Spectrum._(amp, re, im, fs / n);
+  }
+
+  /// Phase of every bin [rad] (computed on first use).
+  Float64List get phase => _phase ??= Float64List.fromList([
+    for (var k = 0; k < amp.length; k++) math.atan2(_im[k], _re[k]),
+  ]);
+
+  /// Phase of bin [k] [rad].
+  double phaseAt(int k) => math.atan2(_im[k], _re[k]);
+
+  /// Spectrum of the signal multiplied by [k] (transducer ratio).
+  Spectrum scaled(double k) {
+    if (k == 1) return this;
+    final n = amp.length;
+    final a = Float64List(n), re = Float64List(n), im = Float64List(n);
+    for (var i = 0; i < n; i++) {
+      a[i] = amp[i] * k.abs();
+      re[i] = _re[i] * k;
+      im[i] = _im[i] * k;
+    }
+    return Spectrum._(a, re, im, df);
   }
 
   /// Decimated (max per bin group) spectrum for display.
   List<double> forDisplay(int maxPoints) {
     if (amp.length <= maxPoints) return amp.toList();
     final step = (amp.length / maxPoints).ceil();
-    return [for (var i = 0; i < amp.length; i += step) amp.sublist(i, math.min(i + step, amp.length)).reduce(math.max)];
+    final out = <double>[];
+    for (var i = 0; i < amp.length; i += step) {
+      var m = amp[i];
+      final e = math.min(i + step, amp.length);
+      for (var k = i + 1; k < e; k++) {
+        if (amp[k] > m) m = amp[k];
+      }
+      out.add(m);
+    }
+    return out;
   }
 }
 
@@ -189,6 +144,34 @@ double rmsOf(List<double> x) {
     s += v * v;
   }
   return math.sqrt(s / x.length);
+}
+
+/// Weights for time domain averages (RMS, DC, power): Hann unless the
+/// rectangular window is chosen. Averaging over a non-integer number of
+/// periods with the rectangular window leaves an error ~ 1/(2 pi periods)
+/// (0.3 % for 50 periods); the Hann window suppresses it to ~ 1/(8 pi periods^3).
+Float64List? _timeWeights(WindowType w, int n) => w == WindowType.none || n < 8 ? null : WindowType.hann.coefficients(n);
+
+double _wmean(Float64List x, Float64List? w) {
+  if (x.isEmpty) return double.nan;
+  if (w == null) return meanOf(x);
+  var s = 0.0, sw = 0.0;
+  for (var i = 0; i < x.length; i++) {
+    s += w[i] * x[i];
+    sw += w[i];
+  }
+  return s / sw;
+}
+
+double _wrms(Float64List x, Float64List? w) {
+  if (x.isEmpty) return double.nan;
+  if (w == null) return rmsOf(x);
+  var s = 0.0, sw = 0.0;
+  for (var i = 0; i < x.length; i++) {
+    s += w[i] * x[i] * x[i];
+    sw += w[i];
+  }
+  return math.sqrt(s / sw);
 }
 
 /// Harmonic analysis of a single channel.
@@ -210,11 +193,18 @@ class HarmonicAnalysis {
   });
 
   /// Fundamental is located as the spectrum maximum (above DC) and refined
-  /// by parabolic interpolation of the windowed spectrum; harmonics are read
-  /// at k*f0 bins (picks the max within +-1 bin).
-  static HarmonicAnalysis of(Float64List x, double fs, {int harmonics = 10, WindowType window = WindowType.hann}) {
+  /// by interpolation of the windowed spectrum; harmonics are read at k*f0
+  /// bins (energy of the window main lobe). [spectrum] of [x] with [window]
+  /// can be passed when it is already computed (live spectrum).
+  static HarmonicAnalysis of(
+    Float64List x,
+    double fs, {
+    int harmonics = 10,
+    WindowType window = WindowType.hann,
+    Spectrum? spectrum,
+  }) {
     final n = x.length;
-    final sp = Spectrum.of(x, fs, window: window);
+    final sp = spectrum ?? Spectrum.of(x, fs, window: window);
     final a = sp.amp;
     var kmax = 1;
     for (var k = 2; k < a.length; k++) {
@@ -232,6 +222,7 @@ class HarmonicAnalysis {
       if (d != 0) delta = 0.5 * (y1 - y3) / d;
     }
     final f0 = (kmax + delta) * sp.df;
+    final enbw = window.enbw;
     final amps = <double>[];
     final phs = <double>[];
     for (var h = 1; h <= harmonics; h++) {
@@ -249,52 +240,44 @@ class HarmonicAnalysis {
         e += a[k] * a[k];
         if (a[k] > a[best]) best = k;
       }
-      final enbw = _enbw(window, n);
       amps.add(window == WindowType.none ? a[kc] : math.sqrt(e / enbw));
-      phs.add(sp.phase[best]);
+      phs.add(sp.phaseAt(best));
     }
     final fund = amps.isNotEmpty ? amps.first : double.nan;
     var hsum = 0.0;
     for (var i = 1; i < amps.length; i++) {
       if (amps[i].isFinite) hsum += amps[i] * amps[i];
     }
+    final tw = _timeWeights(window, n);
     return HarmonicAnalysis(
       f0: f0,
-      dc: meanOf(x),
-      rms: rmsOf(x),
+      dc: _wmean(x, tw),
+      rms: _wrms(x, tw),
       amplitudes: amps,
       phases: phs,
       thd: fund > 0 ? math.sqrt(hsum) / fund : double.nan,
     );
   }
-
-  /// Equivalent noise bandwidth [bins] of the window (normalized to the
-  /// coherent gain), used to convert main lobe energy to tone amplitude.
-  static double _enbw(WindowType w, int n) {
-    final c = w.coefficients(n);
-    var s1 = 0.0, s2 = 0.0;
-    for (final v in c) {
-      s1 += v;
-      s2 += v * v;
-    }
-    return n * s2 / (s1 * s1);
-  }
 }
 
-/// Power quantities of a voltage/current pair (time domain integration).
+/// Power quantities of a voltage/current pair (time domain integration,
+/// weighted by [window] - see [_timeWeights]).
 class PowerAnalysis {
   final double urms, irms, p, s, q, pf;
   const PowerAnalysis(this.urms, this.irms, this.p, this.s, this.q, this.pf);
 
-  static PowerAnalysis of(Float64List u, Float64List i) {
+  static PowerAnalysis of(Float64List u, Float64List i, {WindowType window = WindowType.none}) {
     final n = math.min(u.length, i.length);
-    var su = 0.0, si = 0.0, sp = 0.0;
+    final w = _timeWeights(window, n);
+    var su = 0.0, si = 0.0, sp = 0.0, sw = 0.0;
     for (var k = 0; k < n; k++) {
-      su += u[k] * u[k];
-      si += i[k] * i[k];
-      sp += u[k] * i[k];
+      final wk = w == null ? 1.0 : w[k];
+      su += wk * u[k] * u[k];
+      si += wk * i[k] * i[k];
+      sp += wk * u[k] * i[k];
+      sw += wk;
     }
-    final ur = math.sqrt(su / n), ir = math.sqrt(si / n), p = sp / n;
+    final ur = math.sqrt(su / sw), ir = math.sqrt(si / sw), p = sp / sw;
     final s = ur * ir;
     final q = math.sqrt(math.max(0, s * s - p * p));
     return PowerAnalysis(ur, ir, p, s, q, s > 0 ? p / s : double.nan);

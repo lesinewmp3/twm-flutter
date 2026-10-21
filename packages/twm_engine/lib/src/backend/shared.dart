@@ -34,10 +34,16 @@ class MeasEventMapper {
         _statuses.add(() => emit(StatusEvent(e.message, progress: e.progress, record: e.record, records: e.records)));
       case MeasRecordData():
         final full = e.full;
+        // channel spectra: shown live and reused by the on-line analysis
+        // (computed only if needed: most records of a fast acquisition are not shown)
+        List<Spectrum>? spectra;
+        List<Spectrum> channelSpectra() => spectra ??= full == null || full.isEmpty || full.first.length < 2
+            ? const <Spectrum>[]
+            : [for (final c in full) Spectrum.of(c, 1 / e.fullTs, window: s.online.window)];
         OnlineResult? res;
         if (s.online.enabled && full != null) {
           try {
-            res = online.analyze(full, 1 / e.fullTs, s.corrections.transducers);
+            res = online.analyze(full, 1 / e.fullTs, s.corrections.transducers, spectra: channelSpectra());
             final f = s.online.resultsFile;
             if (s.online.saveResults && f.isNotEmpty) {
               final head = await store.exists(f) ? '' : '${onlineCsvHeader(res)}\n';
@@ -47,7 +53,7 @@ class MeasEventMapper {
             emit(StatusEvent('On-line analysis failed: $err'));
           }
         }
-        _waveforms.add(() => emit(_waveform(e, res)));
+        _waveforms.add(() => emit(_waveform(e, channelSpectra(), res)));
       case MeasRecordStored():
         emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
       case MeasFinished():
@@ -58,18 +64,16 @@ class MeasEventMapper {
     }
   }
 
-  WaveformEvent _waveform(MeasRecordData e, OnlineResult? res) {
+  WaveformEvent _waveform(MeasRecordData e, List<Spectrum> channelSpectra, OnlineResult? res) {
     final spectra = <List<double>>[];
     var df = 0.0;
-    final full = e.full;
-    if (full != null && full.isNotEmpty) {
-      for (final c in full) {
-        final sp = Spectrum.of(c, 1 / e.fullTs, window: settings.online.window);
-        df = sp.df;
-        spectra.add(sp.forDisplay(4096));
-      }
+    for (final sp in channelSpectra) {
+      df = sp.df;
+      spectra.add(sp.forDisplay(4096));
+    }
+    if (channelSpectra.isNotEmpty) {
       // display decimation of the spectrum changes the bin width
-      final n = full.first.length ~/ 2 + 1;
+      final n = channelSpectra.first.amp.length;
       if (spectra.first.length < n) df *= (n / spectra.first.length).ceilToDouble();
     }
     return WaveformEvent(
@@ -95,16 +99,16 @@ class _Throttle {
   _Throttle(this.interval);
 
   void add(void Function() action) {
-    if (_timer != null) {
-      _pending = action;
+    // checked here and not only by the timer: a busy event loop delays timers
+    if (!_clock.isRunning || _clock.elapsed >= interval) {
+      _timer?.cancel();
+      _timer = null;
+      _pending = null;
+      _run(action);
       return;
     }
-    if (!_clock.isRunning || _clock.elapsed >= interval) {
-      _run(action);
-    } else {
-      _pending = action;
-      _timer = Timer(interval - _clock.elapsed, flush);
-    }
+    _pending = action;
+    _timer ??= Timer(interval - _clock.elapsed, flush);
   }
 
   void flush() {

@@ -12,6 +12,7 @@ export 'src/session/record_file.dart';
 export 'src/session/session_writer.dart';
 export 'src/session/session_reader.dart';
 export 'src/measurement/measurement_engine.dart';
+export 'src/measurement/live_collector.dart';
 export 'src/qwtb/qwtb_math.dart';
 export 'src/qwtb/dart_algorithms.dart';
 export 'src/qwtb/dart_processor.dart';

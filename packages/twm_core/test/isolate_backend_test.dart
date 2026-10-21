@@ -29,7 +29,10 @@ void main() {
       await sub.cancel();
       expect((fin as FinishedEvent).error, isEmpty);
       expect(b.measuring, isFalse);
-      expect(events.whereType<WaveformEvent>().length, 3);
+      // live data is throttled (max 10/s): the last record is always shown
+      final wf = events.whereType<WaveformEvent>();
+      expect(wf, isNotEmpty);
+      expect(wf.last.record, 3);
       final sum = await b.sessionSummary(fin.sessionPath);
       expect(sum.recordsPerGroup, [3]);
       // errors propagate
@@ -41,6 +44,27 @@ void main() {
       final r = await c.close();
       expect(r.statusCode, 200);
       await b.server('stop');
+    } finally {
+      await b.dispose();
+      tmp.deleteSync(recursive: true);
+    }
+  });
+
+  test('a dead backend isolate fails the calls instead of hanging', () async {
+    final tmp = Directory.systemTemp.createTempSync('twm_iso_dead');
+    final b = await IsolateBackend.spawn(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json');
+    try {
+      final events = <BackendEvent>[];
+      final sub = b.events.listen(events.add);
+      // simulate a crash of the backend isolate
+      b.debugKill();
+      await expectLater(
+        b.loadSettings().timeout(const Duration(seconds: 5)),
+        throwsA(isA<StateError>()),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await sub.cancel();
+      expect(events.whereType<FinishedEvent>().single.error, contains('stopped'));
     } finally {
       await b.dispose();
       tmp.deleteSync(recursive: true);

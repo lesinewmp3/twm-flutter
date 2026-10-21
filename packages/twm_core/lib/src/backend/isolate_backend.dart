@@ -19,6 +19,9 @@ class IsolateBackend extends RpcBackend {
   final Isolate _isolate;
   final _pending = <int, Completer<Object?>>{};
   int _id = 0;
+  final _guards = <ReceivePort>[];
+  bool _dead = false;
+  bool _disposing = false;
 
   IsolateBackend._(this._send, this._recv, this._isolate);
 
@@ -36,11 +39,46 @@ class IsolateBackend extends RpcBackend {
         early.add(m);
       }
     });
-    final iso = await Isolate.spawn(_main, [recv.sendPort, home, settingsFile], debugName: 'twm-backend');
+    // an uncaught error must not kill the backend silently (the UI would wait
+    // for answers forever): report it and keep running; if the isolate dies
+    // anyway, fail the pending calls
+    final errors = ReceivePort(), exits = ReceivePort();
+    final iso = await Isolate.spawn(
+      _main,
+      [recv.sendPort, home, settingsFile],
+      debugName: 'twm-backend',
+      errorsAreFatal: false,
+      onError: errors.sendPort,
+      onExit: exits.sendPort,
+    );
     final b = IsolateBackend._(await inbox.future, recv, iso);
+    b._guards.addAll([errors, exits]);
+    errors.listen((m) => b._onError(m is List && m.isNotEmpty ? '${m.first}' : '$m', m is List && m.length > 1 ? '${m[1]}' : ''));
+    exits.listen((_) => b._onExit());
     backend = b;
     early.forEach(b._onMessage);
     return b;
+  }
+
+  void _onError(String error, String stack) {
+    stderr.writeln('twm-backend: uncaught error: $error\n$stack');
+    if (_disposing) return;
+    onEvent(ConsoleEvent('Backend error: $error', isError: true).toJson());
+    onEvent(StatusEvent('Backend error: $error').toJson());
+  }
+
+  void _onExit() {
+    if (_dead) return;
+    _dead = true;
+    final err = StateError('The measurement backend has stopped.');
+    for (final c in _pending.values) {
+      c.completeError(err);
+    }
+    _pending.clear();
+    if (_disposing) return;
+    stderr.writeln('twm-backend: isolate exited unexpectedly');
+    onEvent(const FinishedEvent('', aborted: true, error: 'The measurement backend has stopped. Restart the application.').toJson());
+    onEvent(const StatusEvent('Error: the measurement backend has stopped. Restart the application.').toJson());
   }
 
   void _onMessage(dynamic m) {
@@ -61,6 +99,7 @@ class IsolateBackend extends RpcBackend {
 
   @override
   Future<Object?> invoke(String method, [Json args = const {}]) {
+    if (_dead) return Future.error(StateError('The measurement backend has stopped.'));
     final id = ++_id;
     final c = Completer<Object?>();
     _pending[id] = c;
@@ -71,17 +110,24 @@ class IsolateBackend extends RpcBackend {
   @override
   String get description => 'local';
 
+  /// Kills the backend isolate (tests of the crash handling).
+  void debugKill() => _isolate.kill(priority: Isolate.immediate);
+
   /// Starts ('start'), stops ('stop') or queries ('status') the network
   /// server hosted in the backend isolate.
   Future<Json> server(String action, {String host = '127.0.0.1', int port = 8080, String? token, String? web}) async =>
       jMap(await invoke('__server', {'action': action, 'host': host, 'port': port, 'token': token, 'web': web}));
 
   Future<void> dispose() async {
+    _disposing = true;
     try {
       await invoke('__dispose').timeout(const Duration(seconds: 5));
     } catch (_) {}
     _isolate.kill();
     _recv.close();
+    for (final p in _guards) {
+      p.close();
+    }
     await eventsController.close();
   }
 
