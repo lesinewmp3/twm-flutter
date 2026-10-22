@@ -66,6 +66,13 @@ void main() {
     expect((await check(settings(n: 1000))).single, contains('less than 5 mains periods'));
     expect((await check(settings(alg: 'TWM-THDWFFT', n: 5000))).single, contains('at least 30 periods'));
     expect(await check(settings(alg: 'TWM-THDWFFT', n: 8000)), isEmpty);
+    // TWM-WRMS / TWM-PWRTDI: 2000 samples (10 kSa/s, 0.2 s) fail, 3000 do not
+    expect((await check(settings(alg: 'TWM-WRMS', n: 2000))).single, contains('shorter than 3000 samples'));
+    expect(await check(settings(alg: 'TWM-WRMS', n: 3000)), isEmpty);
+    expect(
+      (await check(settings(alg: 'TWM-PWRTDI', n: 2000, pair: true), hasUi: true)).single,
+      contains('TWM-PWRTDI may fail'),
+    );
   });
 
   test('power algorithm needs a divider and a shunt of one phase', () async {

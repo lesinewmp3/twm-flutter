@@ -244,6 +244,7 @@ const Map<String, String> ruStrings = {
       'Веб-версия использует симулятор дигитайзера: задайте сигнал в разделе «Дигитайзер» и нажмите «Старт».',
   'Measurement': 'Измерение',
   'Results': 'Результаты',
+  '{0} may fail on records shorter than {1} samples: use more samples per record.': '{0} может отказать на записях короче {1} отсчётов: увеличьте число отсчётов в записи.',
   'Only the first {0} s of the {1} s record are analysed (memory limit): events later in the record are not seen here. Use shorter records or a lower sampling rate.': 'Анализируются только первые {0} с записи длиной {1} с (ограничение памяти): события дальше в записи здесь не видны. Уменьшите длину записи или частоту дискретизации.',
   'Continuous measurement without saving the records: the processing does not run.':
       'Непрерывное измерение без сохранения записей: обработка не выполняется.',

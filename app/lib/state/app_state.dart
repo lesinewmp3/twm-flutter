@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:twm_model/twm_model.dart';
 
+import 'start_checks.dart';
+
 /// Global state of the application (the TWM main panel and its local
 /// variables). UI widgets listen to it via [AppScope].
 class AppState extends ChangeNotifier {
@@ -61,6 +63,7 @@ class AppState extends ChangeNotifier {
   final _algInfo = <String, AlgorithmInfo>{};
 
   static const _shortHint = 'the record holds less than 5 mains periods';
+  static const _fewHint = 'the record holds less than $minPowerSamples samples';
 
   /// QWTB algorithm description (cached: needs the calculation engine).
   Future<AlgorithmInfo> algorithmInfo(String id) async => _algInfo[id] ??= await backend.algorithmInfo(id);
@@ -121,8 +124,14 @@ class AppState extends ChangeNotifier {
         if (e.error.isNotEmpty) {
           // most algorithm failures of the m-code come from too short records
           final m = settings.measurement;
+          final alg = m.processing.algorithmId;
           final short = m.samplesCount / m.fs * 40 < 5;
-          final err = short ? '${e.error} ($_shortHint)' : e.error;
+          final few = (alg == 'TWM-WRMS' || alg == 'TWM-PWRTDI') && m.samplesCount < minPowerSamples;
+          final err = short
+              ? '${e.error} ($_shortHint)'
+              : few
+              ? '${e.error} ($_fewHint)'
+              : e.error;
           lastRunError = err;
           addError('Processing record ${e.record}: $err');
         }

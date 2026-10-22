@@ -4,6 +4,9 @@ import '../l10n.dart';
 
 /// Checks of the QWTB processing setup against the measurement setup before
 /// the start: warnings for the user (empty: nothing to report).
+/// Shortest record TWM-WRMS / TWM-PWRTDI process reliably [samples].
+const minPowerSamples = 3000;
+
 Future<List<String>> processingProblems(
   AppSettings settings, {
   required Future<AlgorithmInfo> Function(String id) algorithmInfo,
@@ -33,6 +36,11 @@ Future<List<String>> processingProblems(
     out.add(tr('The record holds less than 5 mains periods: the QWTB algorithms may fail or give wrong results.'));
   } else if (alg == 'TWM-THDWFFT' && periods < 30) {
     out.add(tr('TWM-THDWFFT needs at least 30 periods of the fundamental in the record (e.g. 0.75 s at 40 Hz).'));
+  } else if ((alg == 'TWM-WRMS' || alg == 'TWM-PWRTDI') && m.samplesCount < minPowerSamples) {
+    // the original m-code takes nearly the whole short spectrum for harmonics
+    // and has no bins left for its noise estimate (simulator: up to 2000
+    // samples fail often, from 3000 samples never)
+    out.add(trf('{0} may fail on records shorter than {1} samples: use more samples per record.', [alg, minPowerSamples]));
   }
   try {
     final info = await algorithmInfo(alg);
