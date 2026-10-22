@@ -22,6 +22,7 @@ Name=TWM Flutter
 Comment=TracePQM wattmeter and PQ analyzer
 Exec=twm_app
 Icon=twm-flutter
+StartupWMClass=cz.tracepqm.twm_app
 Categories=Science;Engineering;
 DESK
 cat > "$appdir/AppRun" <<'RUN'
