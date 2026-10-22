@@ -55,6 +55,10 @@ class DaqMx {
   );
 
   static DaqMx? _i;
+
+  /// Uses the library at [path] instead of the installed one (tests).
+  static DaqMx load(String path) => _i = DaqMx(DynamicLibrary.open(path));
+
   static DaqMx get instance {
     if (_i != null) return _i!;
     for (final n in Platform.isWindows ? ['nicaiu.dll'] : ['libnidaqmx.so', 'libnidaqmx.so.1']) {
