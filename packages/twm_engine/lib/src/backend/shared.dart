@@ -25,6 +25,10 @@ class MeasEventMapper {
   int _skipped = 0;
   Completer<void>? _idle;
 
+  /// STOP ended the measurement: the record still being analysed is dropped
+  /// (it would show up in the next measurement started meanwhile).
+  bool _stopped = false;
+
   /// Live data (waveforms, spectra, status) is sent at most once per [liveInterval]:
   /// a fast continuous acquisition (e.g. 1000 short records/s) otherwise floods
   /// the UI. The newest data is always delivered, the on-line analysis still
@@ -76,7 +80,10 @@ class MeasEventMapper {
       case MeasFinished():
         // the last record and status first; after STOP the end is not
         // delayed by the analysis (the record being analysed comes later)
-        if (e.aborted) _waiting = null;
+        if (e.aborted) {
+          _waiting = null;
+          _stopped = true;
+        }
         final busy = _analyzing || _waiting != null;
         if (busy && !e.aborted) await (_idle ??= Completer<void>()).future;
         if (busy && e.aborted) {
@@ -102,6 +109,7 @@ class MeasEventMapper {
     unawaited(() async {
       try {
         var a = await analyzer.analyze(e.full!, 1 / e.fullTs);
+        if (_stopped) return;
         final n = e.full!.first.length;
         if (a.online != null && e.recordSamples > n) {
           a = RecordAnalysis(

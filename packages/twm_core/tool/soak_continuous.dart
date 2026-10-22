@@ -228,7 +228,11 @@ Future<void> main(List<String> args) async {
       // events: every record with the whole event inside it
       // (the analysis models two periods before and after the event)
       final per = 1 / f0;
+      // detectable in every record: even an event centred on a zero crossing
+      // deviates from the steady waveform by more than the threshold (10 %)
+      final worstDev = ev == null ? 0.0 : (1 - ev.level) * math.sin(math.min(math.pi / 2, math.pi * f0 * ev.duration));
       if (ev != null &&
+          worstDev > 0.15 &&
           s.online.transferAnalysis &&
           t * f0 >= 5 &&
           ev.start > 2.2 * per &&
