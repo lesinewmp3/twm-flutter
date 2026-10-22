@@ -87,6 +87,17 @@ cd packages/twm_core
 dart run bin/twm_server.dart --host 0.0.0.0 --port 8080 --web ../../app/build/web --token SECRET
 ```
 
+Один файл для Linux (AppImage: приложение + `octave/` + `data/`; GNU Octave ставится отдельно):
+
+```bash
+tools/package_linux.sh          # dist/TWM-Flutter-x86_64.AppImage для систем не старее сборочной
+tools/package_linux_docker.sh   # то же в контейнере Ubuntu 22.04: запускается на Ubuntu 22.04 и новее
+```
+
+Собранный на новой системе файл требует её версию GLib и не запустится на Ubuntu 22.04 — для раздачи
+используйте вариант с контейнером (или сборку GitHub Actions, она тоже на Ubuntu 22.04). Проверено
+в чистых контейнерах Ubuntu 22.04 и 24.04.
+
 Ресурсы (`octave/`, `data/`) приложение ищет через `TWM_HOME`, рядом с исполняемым файлом или в
 родительских каталогах. Настройки хранятся в `~/.config/twm_flutter/settings.json`
 (на Windows — `%APPDATA%\TWM-Flutter`). Нестандартный путь к библиотеке VISA задаётся через `TWM_VISA_LIBRARY`.
