@@ -32,8 +32,9 @@ class AppPaths {
     String? found = home ?? Platform.environment['TWM_HOME'];
     if (found == null) {
       final candidates = <String>[];
+      // (a build in place: <home>/app/build/linux/x64/release/bundle/twm_app)
       var d = p.dirname(Platform.resolvedExecutable);
-      for (var i = 0; i < 6; i++) {
+      for (var i = 0; i < 8; i++) {
         candidates.add(d);
         candidates.add(p.join(d, 'data', 'flutter_assets', 'assets'));
         d = p.dirname(d);
