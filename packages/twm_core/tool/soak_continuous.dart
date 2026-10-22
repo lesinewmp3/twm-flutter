@@ -226,9 +226,23 @@ Future<void> main(List<String> args) async {
       }
 
       // events: every record with the whole event inside it
-      if (ev != null && s.online.transferAnalysis && ev.start + ev.duration < t - 0.01) {
+      // (the analysis models two periods before and after the event)
+      final per = 1 / f0;
+      if (ev != null &&
+          s.online.transferAnalysis &&
+          t * f0 >= 5 &&
+          ev.start > 2.2 * per &&
+          ev.start + ev.duration < t - 2.2 * per) {
         var checked = 0, wrong = 0;
         String? first;
+        // edge ambiguity: near a zero crossing a shallow sag deviates from the
+        // steady waveform less than the ripple + noise (6 sigma) for a while
+        final c1 = sim.channels.first;
+        final a1 = c1.harmonics.first.amp;
+        final ripple = c1.harmonics.length > 2 ? c1.harmonics[2].amp / math.sqrt2 : 0.0;
+        final sigma = math.sqrt(ripple * ripple + c1.noiseRms * c1.noiseRms);
+        final ambiguity = math.asin(math.min(1.0, 6 * sigma / ((1 - ev.level) * a1))) / (2 * math.pi * f0) * 1000;
+        final tol = 0.25 + 2000 / fs + ambiguity;
         for (final (_, wf) in waves) {
           final o = wf.online == null ? null : OnlineResult.fromJson(wf.online!);
           if (o == null) continue;
@@ -242,8 +256,8 @@ Future<void> main(List<String> args) async {
           final dur = q('Event duration u1'), at = q('Event start u1');
           checked++;
           // depth below the 90 % threshold: 0 / 40 / 70 % levels are events
-          final okDur = dur != null && (dur - ev.duration * 1000).abs() < 0.25 + 2000 / fs;
-          final okAt = at != null && (at - ev.start * 1000).abs() < 0.25 + 2000 / fs;
+          final okDur = dur != null && (dur - ev.duration * 1000).abs() < 2 * tol;
+          final okAt = at != null && (at - ev.start * 1000).abs() < tol;
           if (!okDur || !okAt) {
             wrong++;
             first ??= 'duration $dur ms start $at ms (true ${ev.duration * 1000} ms at ${ev.start * 1000} ms)';

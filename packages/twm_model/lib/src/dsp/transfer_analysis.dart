@@ -184,7 +184,9 @@ class TransferAnalysis {
     final period = fs / f0; // samples
     final h = math.max(1, math.min(harmonics, (fs / 2 / f0).floor() - 1));
     final refLen = (2 * period).ceil();
-    if (n < 5 * period) return const TransferResult(message: 'record shorter than 5 periods');
+    // 5 periods with a margin: the frequency of a short record with an event
+    // is estimated within about a percent
+    if (n < 4.8 * period) return const TransferResult(message: 'record shorter than 5 periods');
 
     // 1: model from the first two periods (own frequency: a phase jump later in
     // the record biases the frequency of the whole record), then refined from

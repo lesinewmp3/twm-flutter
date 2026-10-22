@@ -244,6 +244,7 @@ const Map<String, String> ruStrings = {
       'Веб-версия использует симулятор дигитайзера: задайте сигнал в разделе «Дигитайзер» и нажмите «Старт».',
   'Measurement': 'Измерение',
   'Results': 'Результаты',
+  'Only the first {0} s of the {1} s record are analysed (memory limit): events later in the record are not seen here. Use shorter records or a lower sampling rate.': 'Анализируются только первые {0} с записи длиной {1} с (ограничение памяти): события дальше в записи здесь не видны. Уменьшите длину записи или частоту дискретизации.',
   'Continuous measurement without saving the records: the processing does not run.':
       'Непрерывное измерение без сохранения записей: обработка не выполняется.',
   'Single-core processing stops the acquisition after every record until the record is processed: events in these gaps are not recorded and the monitor stands still. For continuous monitoring choose "Parallel record processing (exp.)" in the processing setup.': 'Последовательная обработка останавливает съёмку после каждой записи, пока запись обрабатывается: события в этих паузах не регистрируются, монитор стоит. Для непрерывного контроля выберите «Параллельно по записям» в настройке обработки.',

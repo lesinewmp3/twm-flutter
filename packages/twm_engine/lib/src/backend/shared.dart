@@ -74,9 +74,16 @@ class MeasEventMapper {
       case MeasRecordStored():
         emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
       case MeasFinished():
-        // the last record and status first
-        if (_analyzing || _waiting != null) await (_idle ??= Completer<void>()).future;
-        await analyzer.close();
+        // the last record and status first; after STOP the end is not
+        // delayed by the analysis (the record being analysed comes later)
+        if (e.aborted) _waiting = null;
+        final busy = _analyzing || _waiting != null;
+        if (busy && !e.aborted) await (_idle ??= Completer<void>()).future;
+        if (busy && e.aborted) {
+          unawaited((_idle ??= Completer<void>()).future.then((_) => analyzer.close()));
+        } else {
+          await analyzer.close();
+        }
         if (_skipped > 0) {
           _statuses.add(() => emit(StatusEvent('On-line analysis skipped $_skipped records (slower than the acquisition)')));
         }
@@ -94,7 +101,16 @@ class MeasEventMapper {
     _analyzing = true;
     unawaited(() async {
       try {
-        final a = await analyzer.analyze(e.full!, 1 / e.fullTs);
+        var a = await analyzer.analyze(e.full!, 1 / e.fullTs);
+        final n = e.full!.first.length;
+        if (a.online != null && e.recordSamples > n) {
+          a = RecordAnalysis(
+            spectra: a.spectra,
+            df: a.df,
+            online: a.online!.part(n * e.fullTs, e.recordSamples * e.fullTs),
+            error: a.error,
+          );
+        }
         final s = settings, res = a.online;
         if (a.error.isNotEmpty) emit(StatusEvent('On-line analysis failed: ${a.error}'));
         if (res != null && s.online.saveResults && s.online.resultsFile.isNotEmpty) {

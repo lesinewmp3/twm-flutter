@@ -135,6 +135,18 @@ class _OnlineViewState extends State<OnlineView> {
               ),
             ],
           ),
+          if (r != null && r.recordTime > r.analyzedTime)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                trf(
+                  'Only the first {0} s of the {1} s record are analysed (memory limit): events later in the record '
+                  'are not seen here. Use shorter records or a lower sampling rate.',
+                  [formatNum(r.analyzedTime), formatNum(r.recordTime)],
+                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           const SizedBox(height: 8),
           Expanded(
             child: r == null

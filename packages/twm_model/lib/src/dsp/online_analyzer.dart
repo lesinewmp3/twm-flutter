@@ -125,17 +125,29 @@ class OnlineResult {
   /// Harmonic amplitudes per channel tag (for the harmonic graphs).
   final Map<String, List<double>> harmonics;
   final double f0;
-  const OnlineResult(this.quantities, this.harmonics, this.f0);
+
+  /// Analysed part and length of the record [s] when only its start was
+  /// analysed (memory limit of a long record), else 0.
+  final double analyzedTime;
+  final double recordTime;
+  const OnlineResult(this.quantities, this.harmonics, this.f0, {this.analyzedTime = 0, this.recordTime = 0});
+
+  OnlineResult part(double analyzed, double record) =>
+      OnlineResult(quantities, harmonics, f0, analyzedTime: analyzed, recordTime: record);
 
   Json toJson() => {
     'quantities': [for (final q in quantities) q.toJson()],
     'harmonics': {for (final e in harmonics.entries) e.key: [for (final v in e.value) jNum(v)]},
     'f0': jNum(f0),
+    if (recordTime > 0) 'analyzedTime': analyzedTime,
+    if (recordTime > 0) 'recordTime': recordTime,
   };
   factory OnlineResult.fromJson(Json j) => OnlineResult(
     [for (final q in jMapList(j['quantities'])) OnlineQuantity.fromJson(q)],
     {for (final e in jMap(j['harmonics']).entries) e.key: jDoubleList(e.value)},
     jDouble(j['f0'], double.nan),
+    analyzedTime: jDouble(j['analyzedTime']),
+    recordTime: jDouble(j['recordTime']),
   );
 }
 

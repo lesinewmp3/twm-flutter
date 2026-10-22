@@ -35,7 +35,8 @@ class MeasRecordData extends MeasEvent {
   final List<String> names;
 
   /// Full resolution data for the on-line analyser: the whole record or its
-  /// first [MeasurementEngine.fullDataLimit] samples (see [recordSamples]).
+  /// first [MeasurementEngine.fullDataLimit] samples of all channels
+  /// together (see [recordSamples]).
   final List<Float64List>? full;
   final double fullTs;
 
@@ -92,8 +93,9 @@ class MeasurementEngine {
   /// Max points per channel of preview data.
   final int previewPoints;
 
-  /// Max samples per channel passed as full data to the on-line analyser
-  /// (longer records are analysed by their beginning).
+  /// Max samples of all channels together passed as full data to the on-line
+  /// analyser (64 MB; longer records are analysed by their beginning, the
+  /// on-line view says so).
   final int fullDataLimit;
 
   /// Live monitor window [s] (0 = no live frames) and the shortest time
@@ -118,7 +120,7 @@ class MeasurementEngine {
     this.processor,
     this.multiplexer,
     this.previewPoints = 4000,
-    this.fullDataLimit = 2000000,
+    this.fullDataLimit = 8000000,
     this.monitorWindow = 0,
     this.monitorInterval = const Duration(milliseconds: 25),
   });
@@ -260,7 +262,7 @@ class MeasurementEngine {
                       channels: setup.channelsCount,
                       total: config.samplesCount,
                       previewPoints: previewPoints,
-                      fullLimit: fullDataLimit,
+                      fullLimit: math.max(1, fullDataLimit ~/ math.max(1, setup.channelsCount)),
                     ))
                   : null;
               final mon = sub == 0 && monitorWindow > 0
