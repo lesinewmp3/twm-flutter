@@ -134,7 +134,34 @@ void main() {
     expect(s.log, containsAllInOrder(['PRESET DIG', 'FUNC DCV,1.0', 'TRIG EXT', 'NRDGS 100,EXT', 'TARM SGL']));
     expect(m.log, contains('EXTOUT APER,NEG'));
     expect(m.log, contains('MFORMAT SINT'));
+    // as TWM: memory cleared, trigger buffer off and binary transfer without
+    // EOI before arming; END ALWAYS restored after the record
+    for (final e in [m, s]) {
+      expect(
+        e.log,
+        containsAllInOrder(['MEM OFF', 'MEM FIFO', 'TBUFF ON', 'TBUFF OFF', 'MEM FIFO', 'END OFF', 'TARM SGL']),
+      );
+    }
+    var done = false;
+    while (!done) {
+      done = (await d.fetch()).done;
+    }
+    await d.cleanup();
+    expect(m.log.sublist(m.log.lastIndexOf('TARM SGL')), containsAllInOrder(['TARM HOLD', 'END ALWAYS']));
     await d.close();
     expect(m.log, contains('PRESET NORM'));
+  });
+
+  test('streaming mode needs one GPIB controller per DMM (TWM)', () async {
+    final c = cfg()
+      ..hp3458a.streaming = true
+      ..hp3458a.channels = [
+        DmmChannelConfig(visa: 'GPIB0::22::INSTR', range: 10),
+        DmmChannelConfig(visa: 'GPIB0::23::INSTR', range: 1),
+      ];
+    await expectLater(
+      Hp3458aDigitizer(c).initialize(),
+      throwsA(isA<DigitizerException>().having((e) => e.message, 'message', contains('own GPIB controller'))),
+    );
   });
 }

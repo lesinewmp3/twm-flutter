@@ -52,7 +52,24 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "TWM - TracePQM Wattmeter");
   }
 
-  gtk_window_set_default_size(window, 1500, 950);
+  // 1500x950, but not larger than the work area of the monitor (laptops)
+  int width = 1500, height = 950;
+  GdkDisplay* display = gdk_display_get_default();
+  GdkMonitor* monitor =
+      display != nullptr ? gdk_display_get_primary_monitor(display) : nullptr;
+  if (monitor == nullptr && display != nullptr &&
+      gdk_display_get_n_monitors(display) > 0) {
+    monitor = gdk_display_get_monitor(display, 0);
+  }
+  if (monitor != nullptr) {
+    GdkRectangle area;
+    gdk_monitor_get_workarea(monitor, &area);
+    if (area.width > 0 && area.height > 0) {
+      width = MIN(width, area.width * 9 / 10);
+      height = MIN(height, area.height * 9 / 10);
+    }
+  }
+  gtk_window_set_default_size(window, width, height);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(

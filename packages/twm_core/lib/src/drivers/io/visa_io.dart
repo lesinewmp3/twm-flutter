@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -42,6 +45,9 @@ class Visa {
 /// NI-VISA (or compatible: Keysight IO Libraries, R&S VISA) binding.
 class VisaLib {
   final DynamicLibrary lib;
+
+  /// Name the library was opened by (opened again by reader isolates).
+  final String name;
   late final _OpenDefaultRMD openDefaultRM = lib.lookupFunction<_OpenDefaultRMN, _OpenDefaultRMD>('viOpenDefaultRM');
   late final _OpenD open = lib.lookupFunction<_OpenN, _OpenD>('viOpen');
   late final _CloseD close = lib.lookupFunction<_CloseN, _CloseD>('viClose');
@@ -54,7 +60,7 @@ class VisaLib {
   late final _FindNextD findNext = lib.lookupFunction<_FindNextN, _FindNextD>('viFindNext');
   late final _GpibCtrlRenD gpibControlRen = lib.lookupFunction<_GpibCtrlRenN, _GpibCtrlRenD>('viGpibControlREN');
 
-  VisaLib(this.lib);
+  VisaLib(this.lib, this.name);
 
   static VisaLib? _instance;
   static int _rm = 0;
@@ -78,7 +84,7 @@ class VisaLib {
     final errs = <String>[];
     for (final c in candidates) {
       try {
-        _instance = VisaLib(DynamicLibrary.open(c));
+        _instance = VisaLib(DynamicLibrary.open(c), c);
         return _instance!;
       } catch (e) {
         errs.add(c);
@@ -232,5 +238,90 @@ class VisaIo extends InstrumentIo {
     if (_closed) return;
     _closed = true;
     _l.close(vi);
+  }
+}
+
+/// Reads [total] bytes of binary data of a VISA session in a background
+/// isolate, in blocks of [block] bytes. Instruments streaming at the same time
+/// (3458A without reading memory, each on its own GPIB controller) must be read
+/// in parallel, as TWM's digitizing processes do: a blocking read of one would
+/// make the others lose samples. The session must not be used by the caller
+/// until [stop].
+class VisaStreamReader {
+  final VisaIo io;
+  final _port = ReceivePort();
+  final _blocks = <Object?>[];
+  Completer<void>? _wait;
+  Isolate? _isolate;
+
+  VisaStreamReader._(this.io);
+
+  static Future<VisaStreamReader> start(VisaIo io, {required int total, required int block}) async {
+    final r = VisaStreamReader._(io);
+    r._port.listen((m) {
+      r._blocks.add(m);
+      r._wait?.complete();
+      r._wait = null;
+    });
+    r._isolate = await Isolate.spawn(_run, (
+      r._port.sendPort,
+      io._l.name,
+      io.vi,
+      total,
+      block,
+      (io.timeout * 1000).round().clamp(1, 0x7FFFFFFF),
+    ), debugName: 'visa reader ${io.resource}');
+    return r;
+  }
+
+  /// Next block of data; throws on a read error of the instrument.
+  Future<Uint8List> next() async {
+    while (_blocks.isEmpty) {
+      await (_wait ??= Completer<void>()).future;
+    }
+    final m = _blocks.removeAt(0);
+    if (m is TransferableTypedData) return m.materialize().asUint8List();
+    throw InstrumentException('${io.resource}: read failed: ${io._l.describe(io.vi, m as int)}');
+  }
+
+  /// Ends the reader (a pending read ends by its timeout or a device clear).
+  void stop() {
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _port.close();
+  }
+
+  static void _run((SendPort, String, int, int, int, int) a) {
+    final (port, name, vi, total, block, timeoutMs) = a;
+    final lib = DynamicLibrary.open(name);
+    final read = lib.lookupFunction<_RwN, _RwD>('viRead');
+    final setAttribute = lib.lookupFunction<_SetAttrN, _SetAttrD>('viSetAttribute');
+    setAttribute(vi, Visa.attrTmoValue, timeoutMs);
+    setAttribute(vi, Visa.attrTermCharEn, 0);
+    final buf = calloc<Uint8>(block);
+    final ret = calloc<Uint32>();
+    try {
+      for (var left = total; left > 0;) {
+        final want = math.min(block, left);
+        final out = Uint8List(want);
+        var got = 0;
+        while (got < want) {
+          final st = read(vi, buf, want - got, ret);
+          final n = ret.value;
+          if (n > 0) out.setRange(got, got + n, buf.asTypedList(n));
+          got += n;
+          // (a timeout with some data is a partial read, the rest follows)
+          if (st < 0 && (st != Visa.errorTmo || n == 0)) {
+            port.send(st);
+            return;
+          }
+        }
+        port.send(TransferableTypedData.fromList([out]));
+        left -= want;
+      }
+    } finally {
+      calloc.free(buf);
+      calloc.free(ret);
+    }
   }
 }

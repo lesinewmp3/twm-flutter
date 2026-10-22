@@ -48,8 +48,8 @@ class DaqMx {
   late final cfgSampClkTiming = lib.lookupFunction<_TimingN, _TimingD>('DAQmxCfgSampClkTiming');
   late final readAnalogF64 = lib.lookupFunction<_ReadN, _ReadD>('DAQmxReadAnalogF64');
   late final getExtendedErrorInfo = lib.lookupFunction<_ErrN, _ErrD>('DAQmxGetExtendedErrorInfo');
-  late final setMasterTimebaseSrc = lib.lookupFunction<_SetStrN, _SetStrD>('DAQmxSetMasterTimebaseSrc');
-  late final setMasterTimebaseRate = lib.lookupFunction<_SetDblN, _SetDblD>('DAQmxSetMasterTimebaseRate');
+  late final setSampClkTimebaseSrc = lib.lookupFunction<_SetStrN, _SetStrD>('DAQmxSetSampClkTimebaseSrc');
+  late final setSampClkTimebaseRate = lib.lookupFunction<_SetDblN, _SetDblD>('DAQmxSetSampClkTimebaseRate');
   late final getReadTotalSampPerChanAcquired = lib.lookupFunction<_GetU64N, _GetU64D>(
     'DAQmxGetReadTotalSampPerChanAcquired',
   );
@@ -139,19 +139,21 @@ class CdaqDigitizer extends VirtualDigitizer {
         _d.createAIVoltageChan(_task, phys, empty, DaqMx.valDefault, -range, range, DaqMx.valVolts, nullptr),
         'CreateAIVoltageChan',
       );
-      if (_c.clockMode == CdaqClockMode.importMasterClock) {
-        final src = _c.clockSource.toNativeUtf8();
-        try {
-          _d.check(_d.setMasterTimebaseSrc(_task, src), 'MasterTimebaseSrc');
-          _d.check(_d.setMasterTimebaseRate(_task, _c.extClockHz), 'MasterTimebaseRate');
-        } finally {
-          calloc.free(src);
-        }
-      }
       _d.check(
         _d.cfgSampClkTiming(_task, empty, _c.fixedRate, DaqMx.valRising, DaqMx.valContSamps, 1 << 20),
         'CfgSampClkTiming',
       );
+      if (_c.clockMode == CdaqClockMode.importMasterClock) {
+        // timebase of the sample clock from another module or a PFI line, as
+        // TWM (SampClk.Timebase.Src, e.g. /cDAQ1Mod2/ai/SampleClockTimebase)
+        final src = _c.clockSource.toNativeUtf8();
+        try {
+          _d.check(_d.setSampClkTimebaseSrc(_task, src), 'SampClkTimebaseSrc');
+          _d.check(_d.setSampClkTimebaseRate(_task, _c.extClockHz), 'SampClkTimebaseRate');
+        } finally {
+          calloc.free(src);
+        }
+      }
       _d.check(_d.startTask(_task), 'StartTask');
     } finally {
       calloc.free(phys);

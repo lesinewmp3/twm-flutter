@@ -24,6 +24,7 @@ class NiScopeDigitizer extends VirtualDigitizer {
   TriggerConfig _trigger = TriggerConfig();
   List<double> _ranges = [];
   int _pos = 0;
+  List<double>? _stamps; // relative timestamps of the record (first fetch)
   bool _abort = false;
   bool _armed = false;
   final _sw = Stopwatch();
@@ -81,12 +82,20 @@ class NiScopeDigitizer extends VirtualDigitizer {
     channelsCount: _c.channels.length,
     allowsStreaming: true,
     streamingOn: _c.streaming,
-    hasLevelTrig: true,
-    hasExtTrig: true,
+    // streaming: continuous acquisition without a trigger (as TWM)
+    hasLevelTrig: !_c.streaming,
+    hasExtTrig: !_c.streaming,
     hasRanges: true,
     hasSelfCal: true,
     ranges: const [1, 2, 5, 10],
   );
+
+  /// Record length configured on the cards in the streaming mode: the
+  /// reference trigger never comes, so the cards acquire continuously and the
+  /// samples are fetched behind the read pointer (NI-SCOPE "Fetch Forever",
+  /// TWM streaming); the record is only the pretrigger buffer and fits the
+  /// smallest onboard memory.
+  static const _streamRecord = 1 << 20;
 
   @override
   Future<void> setup({
@@ -101,6 +110,7 @@ class NiScopeDigitizer extends VirtualDigitizer {
     _trigger = trigger;
     if (ranges.length == _c.channels.length) _ranges = ranges;
     final g = _groups;
+    final record = _c.streaming ? math.min(_n, _streamRecord) : _n;
     for (final e in g.entries) {
       final vi = _vi[e.key]!;
       final acq = _c.acquisitionType == NiScopeAcquisitionType.flexres ? NiScope.valFlexres : NiScope.valNormal;
@@ -140,32 +150,49 @@ class NiScopeDigitizer extends VirtualDigitizer {
           calloc.free(name);
         }
       }
-      _l.check(vi, _l.configureHorizontalTiming(vi, fs, _n, _c.trigger.refPosition, 1, 1), 'ConfigureHorizontalTiming');
-      if (_c.extClockHz > 0) {
-        final src = switch (_c.extClockSource) {
-          NiScopeClockSource.clkIn => 'VAL_CLK_IN',
-          NiScopeClockSource.pxiClk => 'VAL_PXI_CLK',
-          NiScopeClockSource.pfi0 => 'VAL_PFI_0',
-          NiScopeClockSource.pfi1 => 'VAL_PFI_1',
-          NiScopeClockSource.none => 'VAL_NO_SOURCE',
-        };
-        final empty = ''.toNativeUtf8();
-        final s = src.toNativeUtf8();
-        try {
-          _l.check(vi, _l.setString(vi, empty, NiScope.attrInputClockSource, s), 'ref clock source');
+      _l.check(
+        vi,
+        _l.configureHorizontalTiming(vi, fs, record, _c.trigger.refPosition, 1, 1),
+        'ConfigureHorizontalTiming',
+      );
+      // PLL reference: the external clock, or none = internal clock (set also
+      // for the internal one, the card keeps the last setting)
+      final src = _c.extClockHz > 0
+          ? switch (_c.extClockSource) {
+              NiScopeClockSource.clkIn => 'VAL_CLK_IN',
+              NiScopeClockSource.pxiClk => 'VAL_PXI_CLK',
+              NiScopeClockSource.pfi0 => 'VAL_PFI_0',
+              NiScopeClockSource.pfi1 => 'VAL_PFI_1',
+              NiScopeClockSource.none => 'VAL_NO_SOURCE',
+            }
+          : 'VAL_NO_SOURCE';
+      final empty = ''.toNativeUtf8();
+      final s = src.toNativeUtf8();
+      try {
+        _l.check(vi, _l.setString(vi, empty, NiScope.attrInputClockSource, s), 'ref clock source');
+        if (_c.extClockHz > 0) {
           _l.check(vi, _l.setReal(vi, empty, NiScope.attrRefClkRate, _c.extClockHz), 'ref clock rate');
-        } finally {
-          calloc.free(empty);
-          calloc.free(s);
         }
+        if (_c.streaming) {
+          _l.check(
+            vi,
+            _l.setInt(vi, empty, NiScope.attrFetchRelativeTo, NiScope.valReadPointer),
+            'fetch relative to read pointer',
+          );
+        }
+      } finally {
+        calloc.free(empty);
+        calloc.free(s);
       }
       _configureTrigger(vi, first: e.key == g.keys.first);
+      // settings checked by the card now, not at the start of the measurement
+      _l.check(vi, _l.commit(vi), 'Commit');
     }
     if (_vi.length > 1) {
       final arr = _sessions();
       try {
-        _l.check(0, _l.tclkConfigureForHomogeneousTriggers(_vi.length, arr), 'niTClk_ConfigureForHomogeneousTriggers');
-        _l.check(0, _l.tclkSynchronize(_vi.length, arr, 0.0), 'niTClk_Synchronize');
+        _l.checkTclk(_l.tclkConfigureForHomogeneousTriggers(_vi.length, arr), 'niTClk_ConfigureForHomogeneousTriggers');
+        _l.checkTclk(_l.tclkSynchronize(_vi.length, arr, 0.0), 'niTClk_Synchronize');
       } finally {
         calloc.free(arr);
       }
@@ -193,15 +220,22 @@ class NiScopeDigitizer extends VirtualDigitizer {
     final slope = _trigger.slope == TriggerSlope.positive ? NiScope.valPositive : NiScope.valNegative;
     final coupling = _trigger.coupling == TriggerCoupling.dc ? NiScope.valDc : NiScope.valAc;
     // with TClk only the first card has a real trigger, others follow
-    if (!first || (_trigger.source == TriggerSource.immediate && a.type == NiScopeTriggerType.immediate)) {
+    if (_c.streaming && first) {
+      // a software trigger that is never sent: continuous acquisition
+      _l.check(vi, _l.configureTriggerSoftware(vi, 0, 0), 'ConfigureTriggerSoftware');
+      return;
+    }
+    // (a software trigger in a single shot would never come: immediate)
+    final immediate = a.type == NiScopeTriggerType.immediate || a.type == NiScopeTriggerType.software;
+    if (!first || _c.streaming || (_trigger.source == TriggerSource.immediate && immediate)) {
       _l.check(vi, _l.configureTriggerImmediate(vi), 'ConfigureTriggerImmediate');
       return;
     }
-    final type = a.type != NiScopeTriggerType.immediate
+    final type = !immediate
         ? a.type
         : (_trigger.source == TriggerSource.external ? NiScopeTriggerType.digital : NiScopeTriggerType.edge);
     final src =
-        (a.type != NiScopeTriggerType.immediate
+        (!immediate
                 ? a.source
                 : (_trigger.source == TriggerSource.external ? 'VAL_EXTERNAL' : '${_c.channels.first.channelId}'))
             .toNativeUtf8();
@@ -236,9 +270,7 @@ class NiScopeDigitizer extends VirtualDigitizer {
           );
         case NiScopeTriggerType.digital:
           _l.check(vi, _l.configureTriggerDigital(vi, src, slope, a.holdoff, a.delay), 'ConfigureTriggerDigital');
-        case NiScopeTriggerType.software:
-          _l.check(vi, _l.configureTriggerSoftware(vi, src, slope, a.holdoff, a.delay), 'ConfigureTriggerSoftware');
-        case NiScopeTriggerType.immediate:
+        case NiScopeTriggerType.software || NiScopeTriggerType.immediate:
           _l.check(vi, _l.configureTriggerImmediate(vi), 'ConfigureTriggerImmediate');
       }
     } finally {
@@ -249,31 +281,18 @@ class NiScopeDigitizer extends VirtualDigitizer {
   @override
   Future<void> initiate() async {
     _pos = 0;
+    _stamps = null;
     _abort = false;
     if (_vi.length > 1) {
       final arr = _sessions();
       try {
-        _l.check(0, _l.tclkInitiate(_vi.length, arr), 'niTClk_Initiate');
+        _l.checkTclk(_l.tclkInitiate(_vi.length, arr), 'niTClk_Initiate');
       } finally {
         calloc.free(arr);
       }
     } else {
       final vi = _vi.values.first;
       _l.check(vi, _l.initiate(vi), 'InitiateAcquisition');
-    }
-    if (_c.streaming) {
-      final empty = ''.toNativeUtf8();
-      try {
-        for (final vi in _vi.values) {
-          _l.check(
-            vi,
-            _l.setInt(vi, empty, NiScope.attrFetchRelativeTo, NiScope.valReadPointer),
-            'fetch relative to read pointer',
-          );
-        }
-      } finally {
-        calloc.free(empty);
-      }
     }
     _sw
       ..reset()
@@ -306,8 +325,9 @@ class NiScopeDigitizer extends VirtualDigitizer {
     int chunk;
     double timeout;
     if (_c.streaming) {
-      // short blocking fetches keep the caller responsive
-      chunk = math.min(_n - _pos, math.max(1000, (_fs * 0.2).round()));
+      // short blocking fetches keep the caller responsive and the read pointer
+      // well within the record buffer of the cards
+      chunk = math.min(_n - _pos, math.max(1000, math.min(_streamRecord ~/ 4, (_fs * 0.2).round())));
       timeout = chunk / _fs + 1;
     } else {
       if (!_complete()) {
@@ -352,12 +372,14 @@ class NiScopeDigitizer extends VirtualDigitizer {
         calloc.free(info);
       }
     }
+    // timestamps of the record = of its first samples (streaming: first fetch)
+    final st = _stamps ??= stamps;
     final pk = DataPacket(out, nch, _pos);
     _pos += chunk;
     final done = _pos >= _n;
     return FetchResult(
       packet: pk,
-      aux: AuxData(gains: gains, offsets: offsets, timestamps: stamps, increment: inc),
+      aux: AuxData(gains: gains, offsets: offsets, timestamps: st, increment: inc),
       done: done,
       status: DigitizerStatus(sampling: !done, done: done, fetched: _pos, total: _n),
     );
@@ -404,20 +426,25 @@ class NiScopeDigitizer extends VirtualDigitizer {
     }
   }
 
-  /// Exports reference clock to PFI line (multiplexer control, TWM
-  /// "Generic - niScope PFI" multiplexer).
-  void exportPfi(int channelIndex, String terminal) {
+  /// Exports the reference clock to a PFI line, the other is released
+  /// (multiplexer control, TWM "niScope Set PFI": Disable, Export Signal,
+  /// Commit). [terminal] null = no output.
+  void exportPfi(int channelIndex, String? terminal) {
     final res = _c.channels[channelIndex].resource;
     final vi = _vi[res];
     if (vi == null) throw DigitizerException('niScope session not open for multiplexer.');
-    final id = ''.toNativeUtf8();
-    final t = terminal.toNativeUtf8();
-    try {
-      _l.check(vi, _l.exportSignal(vi, NiScope.valRefClock, id, t), 'ExportSignal($terminal)');
-    } finally {
-      calloc.free(id);
-      calloc.free(t);
+    _l.check(vi, _l.disable(vi), 'Disable');
+    if (terminal != null) {
+      final id = ''.toNativeUtf8();
+      final t = terminal.toNativeUtf8();
+      try {
+        _l.check(vi, _l.exportSignal(vi, NiScope.valRefClock, id, t), 'ExportSignal($terminal)');
+      } finally {
+        calloc.free(id);
+        calloc.free(t);
+      }
     }
+    _l.check(vi, _l.commit(vi), 'Commit');
   }
 
   @override

@@ -10,6 +10,11 @@ class AwgDriver {
   InstrumentIo? _io;
   String idn = '';
 
+  /// 33120A has no output switch (TWM: "33120 obviously has no output
+  /// disable"): the output idles at 0 V DC, the pulses are applied by APPL.
+  bool _noOutputSwitch = false;
+  String _f = '1000';
+
   AwgDriver(this.type, this.visa);
 
   bool get isDummy => type == AwgType.dummy;
@@ -27,13 +32,18 @@ class AwgDriver {
     }
     _io = await InstrumentIoFactory.open(visa);
     idn = await _io!.query('*IDN?');
+    _noOutputSwitch = idn.contains('33120');
   }
 
   /// Prepares TTL pulse train (falling edge active, 3458A EXT TRIG).
   Future<void> setup(double fs) async {
     final io = _io;
     if (io == null) return;
-    final f = fs.toStringAsPrecision(12);
+    final f = _f = fs.toStringAsPrecision(12);
+    if (_noOutputSwitch) {
+      await io.write('OUTP:LOAD INF;:APPL:DC DEF,DEF,0');
+      return;
+    }
     switch (type) {
       case AwgType.tektronixAfg3000:
         await io.write('OUTP1 OFF;:SOUR1:FUNC SQU;:SOUR1:FREQ $f;:SOUR1:VOLT:HIGH 3.3;:SOUR1:VOLT:LOW 0');
@@ -49,12 +59,20 @@ class AwgDriver {
   Future<void> start() async {
     final io = _io;
     if (io == null) return;
+    if (_noOutputSwitch) {
+      await io.write('APPL:SQU $_f,3.3,1.65'); // 0 to 3.3 V
+      return;
+    }
     await io.write(type == AwgType.tektronixAfg3000 ? 'OUTP1 ON' : 'OUTP ON');
   }
 
   Future<void> stop() async {
     final io = _io;
     if (io == null) return;
+    if (_noOutputSwitch) {
+      await io.write('APPL:DC DEF,DEF,0');
+      return;
+    }
     await io.write(type == AwgType.tektronixAfg3000 ? 'OUTP1 OFF' : 'OUTP OFF');
   }
 

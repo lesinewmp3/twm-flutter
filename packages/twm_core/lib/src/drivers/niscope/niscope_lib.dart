@@ -43,6 +43,8 @@ typedef _TrigDigN = Int32 Function(Uint32, Pointer<Utf8>, Int32, Double, Double)
 typedef _TrigDigD = int Function(int, Pointer<Utf8>, int, double, double);
 typedef _TrigWinN = Int32 Function(Uint32, Pointer<Utf8>, Double, Double, Int32, Int32, Double, Double);
 typedef _TrigWinD = int Function(int, Pointer<Utf8>, double, double, int, int, double, double);
+typedef _TrigSwN = Int32 Function(Uint32, Double, Double);
+typedef _TrigSwD = int Function(int, double, double);
 typedef _AcqN = Int32 Function(Uint32, Int32);
 typedef _AcqD = int Function(int, int);
 typedef _FetchN = Int32 Function(Uint32, Pointer<Utf8>, Double, Int32, Pointer<Int32>, Pointer<WfmInfo>);
@@ -71,6 +73,8 @@ typedef _TclkN = Int32 Function(Uint32, Pointer<Uint32>);
 typedef _TclkD = int Function(int, Pointer<Uint32>);
 typedef _TclkSyncN = Int32 Function(Uint32, Pointer<Uint32>, Double);
 typedef _TclkSyncD = int Function(int, Pointer<Uint32>, double);
+typedef _TclkErrN = Int32 Function(Pointer<Utf8>, Uint32);
+typedef _TclkErrD = int Function(Pointer<Utf8>, int);
 
 /// niScope / niTClk constants (niScope.h).
 class NiScope {
@@ -85,7 +89,7 @@ class NiScope {
   static const attrFetchRelativeTo = 1150077;
   static const attrFetchOffset = 1150078;
   static const valReadPointer = 388;
-  static const valRefClock = 2; // NISCOPE_VAL_REF_CLOCK signal for niScope_ExportSignal
+  static const valRefClock = 100; // NISCOPE_VAL_REF_CLOCK signal for niScope_ExportSignal
   static const calOptionStandard = 0;
 }
 
@@ -101,6 +105,8 @@ class NiScopeLib {
   late final reset = scope.lookupFunction<_ViN, _ViD>('niScope_reset');
   late final abort = scope.lookupFunction<_ViN, _ViD>('niScope_Abort');
   late final initiate = scope.lookupFunction<_ViN, _ViD>('niScope_InitiateAcquisition');
+  late final commit = scope.lookupFunction<_ViN, _ViD>('niScope_Commit');
+  late final disable = scope.lookupFunction<_ViN, _ViD>('niScope_Disable');
   late final configureVertical = scope.lookupFunction<_VertN, _VertD>('niScope_ConfigureVertical');
   late final configureChanCharacteristics = scope.lookupFunction<_ChanCharN, _ChanCharD>(
     'niScope_ConfigureChanCharacteristics',
@@ -113,7 +119,7 @@ class NiScopeLib {
   );
   late final configureTriggerDigital = scope.lookupFunction<_TrigDigN, _TrigDigD>('niScope_ConfigureTriggerDigital');
   late final configureTriggerWindow = scope.lookupFunction<_TrigWinN, _TrigWinD>('niScope_ConfigureTriggerWindow');
-  late final configureTriggerSoftware = scope.lookupFunction<_TrigDigN, _TrigDigD>('niScope_ConfigureTriggerSoftware');
+  late final configureTriggerSoftware = scope.lookupFunction<_TrigSwN, _TrigSwD>('niScope_ConfigureTriggerSoftware');
   late final configureAcquisition = scope.lookupFunction<_AcqN, _AcqD>('niScope_ConfigureAcquisition');
   late final fetchBinary32 = scope.lookupFunction<_FetchN, _FetchD>('niScope_FetchBinary32');
   late final fetchBinary16 = scope.lookupFunction<_Fetch16N, _Fetch16D>('niScope_FetchBinary16');
@@ -138,6 +144,7 @@ class NiScopeLib {
   late final tclkSynchronize = tclk == null
       ? (int a, Pointer<Uint32> b, double c) => throw DigitizerException('NI-TClk library not found.')
       : tclk!.lookupFunction<_TclkSyncN, _TclkSyncD>('niTClk_Synchronize');
+  late final _tclkError = tclk?.lookupFunction<_TclkErrN, _TclkErrD>('niTClk_GetExtendedErrorInfo');
 
   static NiScopeLib? _i;
 
@@ -162,6 +169,18 @@ class NiScopeLib {
       } catch (_) {}
     }
     return null;
+  }
+
+  /// Throws on negative status of a NI-TClk call with its error description.
+  void checkTclk(int status, String what) {
+    if (status >= 0) return;
+    final buf = calloc<Uint8>(1024).cast<Utf8>();
+    try {
+      final f = _tclkError;
+      throw DigitizerException('$what: ${f != null && f(buf, 1024) >= 0 ? buf.toDartString() : ''} ($status)');
+    } finally {
+      calloc.free(buf);
+    }
   }
 
   /// Throws on negative status with driver error description.

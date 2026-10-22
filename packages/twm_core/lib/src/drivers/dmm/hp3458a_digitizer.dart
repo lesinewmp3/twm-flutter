@@ -7,6 +7,7 @@ import 'package:twm_model/twm_model.dart';
 import 'package:twm_engine/twm_engine.dart';
 import '../auxiliary/aux_instruments.dart';
 import '../io/instrument_io.dart';
+import '../io/visa_io.dart';
 
 /// Virtual digitizer composed of HP/Agilent/Keysight 3458A sampling
 /// multimeters (TWM "3458A Virtual Digitizer", TPQA "LF-Setup DMMs").
@@ -15,7 +16,12 @@ import '../io/instrument_io.dart';
 /// 3458A manual: PRESET DIG; FUNC DCV,<rng>; TARM HOLD; TIMER/APER; MEM FIFO;
 /// MFORMAT/OFORMAT SINT|DINT; TRIG ...; DELAY -1; EXTOUT APER,NEG; TBUFF ON;
 /// then NRDGS n,EXT; TARM SGL on slaves and NRDGS n,TIMER; TARM SGL on master.
-/// Samples are read as big endian integers and scaled by ISCALE?.
+/// As TWM ("3458A Digitizing Low Levels"): the memory is cleared and the
+/// trigger buffer disabled before arming (TBUFF OFF;MEM FIFO, a trigger coming
+/// too fast is an error, not a silently delayed sample) and the binary samples
+/// are transferred with END OFF (no EOI after each reading). In the streaming
+/// mode (no reading memory) all DMMs are read in parallel, each on its own GPIB
+/// controller. Samples are read as big endian integers and scaled by ISCALE?.
 ///
 /// NOT VERIFIED ON REAL INSTRUMENTS (developed without hardware).
 class Hp3458aDigitizer extends VirtualDigitizer {
@@ -39,6 +45,7 @@ class Hp3458aDigitizer extends VirtualDigitizer {
   int _pos = 0;
   bool _abort = false;
   bool _armed = false;
+  List<VisaStreamReader> _readers = [];
 
   Hp3458aConfig get _c => config.hp3458a;
 
@@ -57,6 +64,20 @@ class Hp3458aDigitizer extends VirtualDigitizer {
   @override
   Future<void> initialize({bool reset = false}) async {
     if (_open) await close(resetToPreset: false);
+    if (_streaming && _c.channels.length > 1) {
+      // TWM "3458A Check Addresses": streaming needs one controller per DMM
+      final boards = [
+        for (final c in _c.channels)
+          if (RegExp(r'^GPIB(\d*)::', caseSensitive: false).firstMatch(c.visa.trim()) case final m?)
+            m.group(1)!.isEmpty ? '0' : m.group(1)!,
+      ];
+      if (boards.toSet().length != boards.length) {
+        throw DigitizerException(
+          'Streaming mode needs each 3458A on its own GPIB controller '
+          '(${[for (final c in _c.channels) c.visa].join(', ')}); use the memory mode with a shared bus.',
+        );
+      }
+    }
     try {
       channelIdns = [];
       for (var i = 0; i < _c.channels.length; i++) {
@@ -183,7 +204,8 @@ class Hp3458aDigitizer extends VirtualDigitizer {
     }
     if (ranges.length == _io.length) _ranges = ranges;
     final fmt = _sint ? 'SINT' : 'DINT';
-    final mem = _streaming ? 'OFF' : 'FIFO';
+    // memory cleared (MEM OFF), then FIFO except for streaming
+    final mem = _streaming ? 'OFF' : 'OFF;MEM FIFO';
     _iscale = [];
     for (var i = 0; i < _io.length; i++) {
       final io = _io[i];
@@ -244,10 +266,20 @@ class Hp3458aDigitizer extends VirtualDigitizer {
       _temps = [for (final io in _io) await io.queryNumber('TEMP?')];
     }
     final ds = _c.mode != Dmm3458Mode.dcv;
+    // empty memory, trigger buffer off, binary readings without EOI (TWM)
+    final pre = _streaming ? 'TBUFF OFF;MEM OFF;END OFF' : 'TBUFF OFF;MEM FIFO;END OFF';
     // slaves first, master last (master starts the sampling)
     for (var i = _io.length - 1; i >= 0; i--) {
-      final arm = ds ? 'TARM SGL' : 'NRDGS $_n,${_sampleEvent(i == 0)};TARM SGL';
+      final arm = ds ? '$pre;TARM SGL' : '$pre;NRDGS $_n,${_sampleEvent(i == 0)};TARM SGL';
       await _io[i].write(arm);
+    }
+    // streaming: the readings are not stored, all DMMs are read at once
+    if (_streaming && _io.every((io) => io is VisaIo)) {
+      final bps = _sint ? 2 : 4;
+      for (final io in _io) {
+        io.timeout = _readTimeout;
+        _readers.add(await VisaStreamReader.start(io as VisaIo, total: _n * bps, block: _chunk * bps));
+      }
     }
     await _awg?.start();
     if (_counter != null && _io.length > 1) {
@@ -268,15 +300,32 @@ class Hp3458aDigitizer extends VirtualDigitizer {
       );
     }
     final bps = _sint ? 2 : 4;
-    final chunk = math.min(_n - _pos, 20000);
     final ch = _io.length;
+    final blocks = <Uint8List>[];
+    try {
+      for (var c = 0; c < ch; c++) {
+        if (_readers.isNotEmpty) {
+          blocks.add(await _readers[c].next());
+        } else {
+          _io[c].timeout = _readTimeout;
+          blocks.add(await _io[c].readExactly(math.min(_n - _pos, _chunk) * bps));
+        }
+      }
+    } catch (_) {
+      // a read ended by the device clear of abort()
+      if (_abort) {
+        return FetchResult(
+          done: true,
+          status: DigitizerStatus(done: true, fetched: _pos, total: _n, message: 'aborted'),
+        );
+      }
+      rethrow;
+    }
+    final chunk = blocks.first.length ~/ bps;
     final out = Int32List(chunk * ch);
     final overload = <int>{};
     for (var c = 0; c < ch; c++) {
-      final io = _io[c];
-      io.timeout = 10 + chunk * _ts * 1.5;
-      final b = await io.readExactly(chunk * bps);
-      final bd = ByteData.sublistView(b);
+      final bd = ByteData.sublistView(blocks[c]);
       for (var i = 0; i < chunk; i++) {
         final v = _sint ? bd.getInt16(i * bps, Endian.big) : bd.getInt32(i * bps, Endian.big);
         if (_sint ? (v >= 32767 || v <= -32768) : (v >= 2147483647 || v <= -2147483648)) overload.add(c + 1);
@@ -303,6 +352,12 @@ class Hp3458aDigitizer extends VirtualDigitizer {
     );
   }
 
+  /// Readings transferred at once: 20000 from the memory, 0.1 s of streaming.
+  int get _chunk => _streaming ? (0.1 / _ts).round().clamp(100, 20000) : 20000;
+
+  /// Read timeout of one chunk [s].
+  double get _readTimeout => 10 + _chunk * _ts * 1.5;
+
   @override
   Future<void> abort() async {
     _abort = true;
@@ -316,10 +371,14 @@ class Hp3458aDigitizer extends VirtualDigitizer {
   @override
   Future<void> cleanup() async {
     _armed = false;
+    for (final r in _readers) {
+      r.stop();
+    }
+    _readers = [];
     await _awg?.stop();
     for (final io in _io) {
       try {
-        await io.write('TARM HOLD');
+        await io.write('TARM HOLD;END ALWAYS');
       } catch (_) {}
     }
   }

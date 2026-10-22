@@ -23,6 +23,11 @@ class KeysightDsoDigitizer extends VirtualDigitizer {
   bool _abort = false;
   final _sw = Stopwatch();
 
+  /// S series (DSOS/MSOS): 10 bit ADC, high resolution BITF11..16;
+  /// 90000 series: 8 bit ADC, high resolution BITS9..12.
+  bool _sSeries = true;
+  int _bits = 10; // resolution of the setup (Auto: native, the guaranteed one)
+
   DsoConfig get _c => config.dso;
 
   @override
@@ -44,6 +49,7 @@ class KeysightDsoDigitizer extends VirtualDigitizer {
     }
     final parts = idn.split(',');
     final model = parts.length > 1 ? parts[1].trim() : 'DSO';
+    _sSeries = !RegExp(r'^(DSO|DSA|MSO)X?9', caseSensitive: false).hasMatch(model);
     final sn = parts.length > 2 ? parts[2].trim() : '';
     channelIdns = [for (final c in _c.channels) '$model $sn, channel ${c.channelId}'];
     auxIdns = [];
@@ -74,11 +80,26 @@ class KeysightDsoDigitizer extends VirtualDigitizer {
     _n = samplesCount;
     _trigger = trigger;
     if (ranges.length == _c.channels.length) _ranges = ranges;
-    await io.write(
-      ':STOP;:ACQuire:MODE RTIMe;:ACQuire:SRATe:ANALog ${fs.toStringAsExponential(6)};'
-      ':ACQuire:POINts:ANALog $_n',
-    );
-    await io.write(':ACQuire:HRESolution ${_c.bitResolution == 'Auto' ? 'AUTO' : 'BITS${_c.bitResolution}'}');
+    await io.write(':STOP');
+    // the bit resolution is set by the high resolution mode (averaging of
+    // adjacent samples); the native resolution in the real time mode
+    final native = _sSeries ? 10 : 8;
+    final maxBits = _sSeries ? 16 : 12;
+    final want = _c.bitResolution == 'Auto' ? null : int.tryParse(_c.bitResolution);
+    if (want != null && want > maxBits) {
+      throw DigitizerException('DSO: $want bit resolution not available (max. $maxBits bits for this series).');
+    }
+    if (want != null && want <= native) {
+      await io.write(':ACQuire:MODE RTIMe');
+    } else {
+      await io.write(
+        ':ACQuire:MODE HRESolution;'
+        ':ACQuire:HRESolution ${want == null ? 'AUTO' : '${_sSeries ? 'BITF' : 'BITS'}$want'}',
+      );
+    }
+    _bits = want == null || want < native ? native : want;
+    // (after the mode: it may change the sample rate)
+    await io.write(':ACQuire:SRATe:ANALog ${fs.toStringAsExponential(6)};:ACQuire:POINts:ANALog $_n');
     await io.write(_c.bwLimit > 0 ? ':ACQuire:BANDwidth ${_c.bwLimit}' : ':ACQuire:BANDwidth MAX');
     for (var i = 0; i < _c.channels.length; i++) {
       final ch = _c.channels[i];
@@ -203,7 +224,7 @@ class KeysightDsoDigitizer extends VirtualDigitizer {
     ranges: _ranges,
     trigger: _trigger,
     isInt16: true,
-    bitResolution: _c.bitResolution == 'Auto' ? 10 : int.parse(_c.bitResolution),
+    bitResolution: _bits,
   );
 
   @override

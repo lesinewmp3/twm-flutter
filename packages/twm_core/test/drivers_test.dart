@@ -59,6 +59,28 @@ void main() {
     tmp.deleteSync(recursive: true);
   });
 
+  test('DSO bit resolution: high resolution mode of the series', () async {
+    for (final (bits, cmd, reported) in [
+      ('Auto', ':ACQuire:MODE HRESolution;:ACQuire:HRESolution AUTO', 10),
+      ('12', ':ACQuire:MODE HRESolution;:ACQuire:HRESolution BITF12', 12),
+      ('10', ':ACQuire:MODE RTIMe', 10),
+    ]) {
+      final emu = EmuDso('SIM::DSOLOG::1');
+      InstrumentIoFactory.registerEmulator('DSOLOG', (r) async => emu);
+      final c = DigitizerConfig(type: DigitizerType.keysightDso)
+        ..dso.visa = 'SIM::DSOLOG::1'
+        ..dso.bitResolution = bits;
+      final d = KeysightDsoDigitizer(c);
+      await d.initialize();
+      await d.setup(fs: 1e6, samplesCount: 1000, trigger: TriggerConfig(), aperture: 0, ranges: const []);
+      expect(emu.log.join(';'), contains(cmd), reason: bits);
+      // the mode before the sample rate (the mode may change it)
+      expect(emu.log.join(';').indexOf(cmd), lessThan(emu.log.join(';').indexOf('SRATe')));
+      expect(d.currentSetup().bitResolution, reported, reason: bits);
+      await d.close(resetToPreset: false);
+    }
+  });
+
   test('COM multiplexer requires VISA, dummy for simulator', () {
     final mux = MultiplexerConfig(enabled: true);
     expect(createMultiplexer(mux, SimulatedDigitizer(DigitizerConfig())), isA<DummyMultiplexer>());

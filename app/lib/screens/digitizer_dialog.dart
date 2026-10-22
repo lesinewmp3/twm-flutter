@@ -544,8 +544,12 @@ class _DigitizerDialogState extends State<_DigitizerDialog> {
               FieldRow([
                 Choice<NiScopeTriggerType>(
                   label: tr('Trigger type'),
-                  value: t.type,
-                  items: NiScopeTriggerType.values,
+                  // (software: only internally for the streaming mode)
+                  value: t.type == NiScopeTriggerType.software ? NiScopeTriggerType.immediate : t.type,
+                  items: [
+                    for (final v in NiScopeTriggerType.values)
+                      if (v != NiScopeTriggerType.software) v,
+                  ],
                   width: 160,
                   onChanged: (v) => setState(() => t.type = v),
                 ),

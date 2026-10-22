@@ -38,7 +38,8 @@ bool expectedRefusal(String e, AppSettings s) {
   final t = m.samplesCount / m.fs;
   final alg = m.processing.algorithmId;
   if (e.contains('Distance between the harmonics')) return alg == 'TWM-THDWFFT' && t < 30 / 40;
-  if (e.contains('nonconformant')) return (alg == 'TWM-PWRTDI' || alg == 'TWM-WRMS') && t < 5 / 40;
+  // the m-code fails in different places ('nonconformant arguments', 'interp1: minimum of 2 points')
+  if ((alg == 'TWM-PWRTDI' || alg == 'TWM-WRMS') && t < 5 / 40) return true;
   if (e.contains("Missing 'i' channel")) return alg == 'TWM-PWRTDI' && s.corrections.transducers.isEmpty;
   return false;
 }
