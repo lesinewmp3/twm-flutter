@@ -87,6 +87,29 @@ void main() {
       tester.view.reset();
     });
 
+    testWidgets('error message does not cover the tool buttons $name', (tester) async {
+      final st = await state(tester);
+      L10n.apply('ru');
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(theme: TwmTheme.light(), home: AppScope(state: st, child: MainScreen(onToggleTheme: () {}))),
+      );
+      await settle(tester);
+      st.addError('Overload (clipped signal) of channel(s) 2 - increase the range.');
+      await settle(tester);
+      expect(find.byType(SnackBar), findsOneWidget);
+      final bar = find.descendant(of: find.byType(SnackBar), matching: find.byType(Material)).first;
+      expect(tester.getRect(bar).left, greaterThan(92), reason: 'not over the navigation rail');
+      // the digitizer button is still usable
+      await tester.tap(find.byTooltip('Дигитайзер'));
+      await settle(tester);
+      expect(find.text('Настройка дигитайзера'), findsWidgets);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(minutes: 10));
+      tester.view.reset();
+    });
+
     final dialogs = <String, Future<Object?> Function(BuildContext)>{
       'corrections': showCorrectionsDialog,
       'digitizer': showDigitizerDialog,

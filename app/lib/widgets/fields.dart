@@ -409,18 +409,28 @@ Future<bool> confirm(
   return r ?? false;
 }
 
+/// Message floating above the content; in the wide layout not over the
+/// navigation rail, whose tool buttons (digitizer, corrections...) stay
+/// usable on a low window.
+SnackBar _message(BuildContext context, String text, {Color? color, Duration duration = const Duration(seconds: 4)}) {
+  final wide = MediaQuery.sizeOf(context).width >= 900;
+  return SnackBar(
+    content: Text(text),
+    backgroundColor: color,
+    duration: duration,
+    behavior: SnackBarBehavior.floating,
+    margin: EdgeInsets.fromLTRB(wide ? 93 + 16 : 16, 0, 16, 16),
+  );
+}
+
 void showError(BuildContext context, Object e) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('$e'),
-      backgroundColor: Theme.of(context).colorScheme.error,
-      duration: const Duration(seconds: 6),
-    ),
+    _message(context, '$e', color: Theme.of(context).colorScheme.error, duration: const Duration(seconds: 6)),
   );
 }
 
 void showInfo(BuildContext context, String m) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  ScaffoldMessenger.of(context).showSnackBar(_message(context, m));
 }
 
 /// Title bar of large dialogs (optionally with tabs below).
