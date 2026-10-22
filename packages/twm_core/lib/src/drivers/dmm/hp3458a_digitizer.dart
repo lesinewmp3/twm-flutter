@@ -265,6 +265,7 @@ class Hp3458aDigitizer extends VirtualDigitizer {
   Future<void> initiate() async {
     _pos = 0;
     _abort = false;
+    _stopReaders(); // (left by a record ended with an error)
     if (_c.measureTemperature) {
       _temps = [for (final io in _io) await io.queryNumber('TEMP?')];
     }
@@ -379,13 +380,17 @@ class Hp3458aDigitizer extends VirtualDigitizer {
     }
   }
 
-  @override
-  Future<void> cleanup() async {
-    _armed = false;
+  void _stopReaders() {
     for (final r in _readers) {
       r.stop();
     }
     _readers = [];
+  }
+
+  @override
+  Future<void> cleanup() async {
+    _armed = false;
+    _stopReaders();
     await _awg?.stop();
     for (final io in _io) {
       try {
