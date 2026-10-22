@@ -18,4 +18,5 @@ export 'src/qwtb/qwtb_math.dart';
 export 'src/qwtb/dart_algorithms.dart';
 export 'src/qwtb/dart_processor.dart';
 export 'src/backend/shared.dart';
+export 'src/backend/record_analysis.dart';
 export 'src/backend/browser_backend.dart';

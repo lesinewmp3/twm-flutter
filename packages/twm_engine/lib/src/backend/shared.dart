@@ -6,6 +6,7 @@ import 'package:twm_model/twm_model.dart';
 import '../measurement/measurement_engine.dart';
 import '../session/session_reader.dart';
 import '../store/file_store.dart';
+import 'record_analysis.dart';
 
 /// Converts measurement engine events to backend events: live spectra,
 /// on-line analysis (TPQA) and saving of its results. Shared by the
@@ -13,8 +14,16 @@ import '../store/file_store.dart';
 class MeasEventMapper {
   final FileStore store;
   final AppSettings settings;
-  final OnlineAnalyzer online;
   final void Function(BackendEvent) emit;
+
+  /// Spectra and on-line analysis of the records, one at a time in their
+  /// order. The acquisition never waits for it: when it is slower than the
+  /// records, only the newest record waits and the older ones are skipped.
+  final RecordAnalyzer analyzer;
+  MeasRecordData? _waiting;
+  bool _analyzing = false;
+  int _skipped = 0;
+  Completer<void>? _idle;
 
   /// Live data (waveforms, spectra, status) is sent at most once per [liveInterval]:
   /// a fast continuous acquisition (e.g. 1000 short records/s) otherwise floods
@@ -22,40 +31,31 @@ class MeasEventMapper {
   /// takes every record.
   final Duration liveInterval;
 
-  MeasEventMapper(this.store, this.settings, this.emit, {this.liveInterval = const Duration(milliseconds: 100)})
-    : online = OnlineAnalyzer(settings.online);
+  MeasEventMapper(
+    this.store,
+    this.settings,
+    this.emit, {
+    this.liveInterval = const Duration(milliseconds: 100),
+    RecordAnalyzer? analyzer,
+  }) : analyzer = analyzer ?? InlineRecordAnalyzer(settings);
 
   late final _waveforms = _Throttle(liveInterval);
   late final _statuses = _Throttle(liveInterval);
   final _monitor = _Throttle(const Duration(milliseconds: 25));
 
   Future<void> handle(MeasEvent e) async {
-    final s = settings;
     switch (e) {
       case MeasStatus():
         _statuses.add(() => emit(StatusEvent(e.message, progress: e.progress, record: e.record, records: e.records)));
       case MeasRecordData():
         final full = e.full;
-        // channel spectra: shown live and reused by the on-line analysis
-        // (computed only if needed: most records of a fast acquisition are not shown)
-        List<Spectrum>? spectra;
-        List<Spectrum> channelSpectra() => spectra ??= full == null || full.isEmpty || full.first.length < 2
-            ? const <Spectrum>[]
-            : [for (final c in full) Spectrum.of(c, 1 / e.fullTs, window: s.online.window)];
-        OnlineResult? res;
-        if (s.online.enabled && full != null) {
-          try {
-            res = online.analyze(full, 1 / e.fullTs, s.corrections.transducers, spectra: channelSpectra());
-            final f = s.online.resultsFile;
-            if (s.online.saveResults && f.isNotEmpty) {
-              final head = await store.exists(f) ? '' : '${onlineCsvHeader(res)}\n';
-              await store.appendText(f, '$head${onlineCsvRow(res, e.record, DateTime.now())}\n');
-            }
-          } catch (err) {
-            emit(StatusEvent('On-line analysis failed: $err'));
-          }
+        if (full == null || full.isEmpty) {
+          _waveforms.add(() => emit(_waveform(e, const RecordAnalysis())));
+          return;
         }
-        _waveforms.add(() => emit(_waveform(e, channelSpectra(), res)));
+        if (_waiting != null) _skipped++;
+        _waiting = e;
+        _analyzeNext();
       case MeasLiveData():
         final f = e.frame;
         _monitor.add(
@@ -75,6 +75,11 @@ class MeasEventMapper {
         emit(RecordStoredEvent(e.sessionPath, e.group, e.record));
       case MeasFinished():
         // the last record and status first
+        if (_analyzing || _waiting != null) await (_idle ??= Completer<void>()).future;
+        await analyzer.close();
+        if (_skipped > 0) {
+          _statuses.add(() => emit(StatusEvent('On-line analysis skipped $_skipped records (slower than the acquisition)')));
+        }
         _monitor.flush();
         _statuses.flush();
         _waveforms.flush();
@@ -82,28 +87,45 @@ class MeasEventMapper {
     }
   }
 
-  WaveformEvent _waveform(MeasRecordData e, List<Spectrum> channelSpectra, OnlineResult? res) {
-    final spectra = <List<double>>[];
-    var df = 0.0;
-    for (final sp in channelSpectra) {
-      df = sp.df;
-      spectra.add(sp.forDisplay(4096));
-    }
-    if (channelSpectra.isNotEmpty) {
-      // display decimation of the spectrum changes the bin width
-      final n = channelSpectra.first.amp.length;
-      if (spectra.first.length < n) df *= (n / spectra.first.length).ceilToDouble();
-    }
-    return WaveformEvent(
-      e.record,
-      e.names,
-      [for (final c in e.channels) c.toList()],
-      e.ts,
-      spectra: spectra,
-      df: df,
-      online: res?.toJson(),
-    );
+  void _analyzeNext() {
+    final e = _waiting;
+    if (_analyzing || e == null) return;
+    _waiting = null;
+    _analyzing = true;
+    unawaited(() async {
+      try {
+        final a = await analyzer.analyze(e.full!, 1 / e.fullTs);
+        final s = settings, res = a.online;
+        if (a.error.isNotEmpty) emit(StatusEvent('On-line analysis failed: ${a.error}'));
+        if (res != null && s.online.saveResults && s.online.resultsFile.isNotEmpty) {
+          final f = s.online.resultsFile;
+          final head = await store.exists(f) ? '' : '${onlineCsvHeader(res)}\n';
+          await store.appendText(f, '$head${onlineCsvRow(res, e.record, DateTime.now())}\n');
+        }
+        _waveforms.add(() => emit(_waveform(e, a)));
+      } catch (err) {
+        emit(StatusEvent('On-line analysis failed: $err'));
+      } finally {
+        _analyzing = false;
+        if (_waiting != null) {
+          _analyzeNext();
+        } else {
+          _idle?.complete();
+          _idle = null;
+        }
+      }
+    }());
   }
+
+  WaveformEvent _waveform(MeasRecordData e, RecordAnalysis a) => WaveformEvent(
+    e.record,
+    e.names,
+    [for (final c in e.channels) c.toList()],
+    e.ts,
+    spectra: [for (final sp in a.spectra) sp.toList()],
+    df: a.df,
+    online: a.online?.toJson(),
+  );
 }
 
 /// Runs the first action at once, then at most one per [interval]; actions

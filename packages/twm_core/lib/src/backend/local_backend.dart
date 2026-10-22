@@ -9,6 +9,7 @@ import 'package:twm_model/twm_model.dart';
 import 'package:twm_engine/twm_engine.dart';
 import '../drivers/auxiliary/multiplexers.dart';
 import '../store/io_file_store.dart';
+import 'isolate_record_analyzer.dart';
 import '../octave/octave_bridge.dart';
 import '../octave/qwtb_service.dart';
 
@@ -299,7 +300,7 @@ class LocalBackend implements TwmBackend {
       await mux.open();
     }
     final ps = s.measurement.processing;
-    final mapper = MeasEventMapper(_store, s, _emit);
+    final mapper = MeasEventMapper(_store, s, _emit, analyzer: await IsolateRecordAnalyzer.spawn(s));
     final engine = MeasurementEngine(
       store: _store,
       digitizer: dig,
