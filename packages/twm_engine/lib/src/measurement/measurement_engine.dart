@@ -370,11 +370,14 @@ class MeasurementEngine {
           final sc = aux ?? _lastAux;
           // a new record starts with an empty buffer: its first frames are
           // short or not on the trigger, the screen keeps the last good frame
-          // instead of jumping (a lost trigger shows after two windows)
-          if (sc != null && mon.hasWindow && _sinceLive.elapsed >= monitorInterval) {
+          // instead of jumping (a lost trigger shows after two windows, a
+          // record shorter than two windows shows its end when the trigger
+          // is not in it)
+          final recordEnd = fetched >= config.samplesCount;
+          if (sc != null && mon.hasWindow && (recordEnd || _sinceLive.elapsed >= monitorInterval)) {
             _sinceLive.reset();
             final f = mon.frame(sc.gains, sc.offsets, sc.increment);
-            if (f != null && (f.triggered || !_liveTriggered || mon.full)) {
+            if (f != null && (f.triggered || !_liveTriggered || mon.full || recordEnd)) {
               _liveTriggered = f.triggered;
               _events.add(MeasLiveData(r, f, digitizer.channelIdns));
             }

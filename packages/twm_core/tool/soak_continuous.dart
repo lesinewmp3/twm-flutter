@@ -243,7 +243,7 @@ Future<void> main(List<String> args) async {
         final sigma = math.sqrt(ripple * ripple + c1.noiseRms * c1.noiseRms);
         final ambiguity = math.asin(math.min(1.0, 6 * sigma / ((1 - ev.level) * a1))) / (2 * math.pi * f0) * 1000;
         final tol = 0.25 + 2000 / fs + ambiguity;
-        for (final (_, wf) in waves) {
+        for (final (at0, wf) in waves) {
           final o = wf.online == null ? null : OnlineResult.fromJson(wf.online!);
           if (o == null) continue;
           double? q(String name) {
@@ -260,7 +260,10 @@ Future<void> main(List<String> args) async {
           final okAt = at != null && (at - ev.start * 1000).abs() < tol;
           if (!okDur || !okAt) {
             wrong++;
-            first ??= 'duration $dur ms start $at ms (true ${ev.duration * 1000} ms at ${ev.start * 1000} ms)';
+            first ??=
+                'record ${wf.record}/${waves.length}${at0 > finAt.$1 ? ' after the end' : ''} '
+                '(${o.quantities.length} quantities): duration $dur ms start $at ms '
+                '(true ${ev.duration * 1000} ms at ${ev.start * 1000} ms)';
           }
         }
         if (checked == 0) bad('no on-line results for the event');
