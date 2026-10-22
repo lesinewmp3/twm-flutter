@@ -95,6 +95,40 @@ final _messagePatterns = <(RegExp, String)>[
     r'Внимание: перегрузка (сигнал обрезан) в канале(ах) $1',
   ),
   (RegExp(r'^Correction file not found: (.*)$'), r'Файл коррекции не найден: $1'),
+  // driver setup errors
+  (
+    RegExp(
+      r'^Streaming mode needs each 3458A on its own GPIB controller \((.*)\); use the memory mode with a shared bus\.$',
+    ),
+    r'Потоковому режиму нужен отдельный контроллер GPIB для каждого 3458A ($1); при общей шине используйте режим памяти.',
+  ),
+  (
+    RegExp(
+      r'^Samples count (\d+) exceeds 3458A memory \((\d+) readings\); enable streaming mode or Option 001 memory\.$',
+    ),
+    r'Число отсчётов $1 больше памяти 3458A ($2): включите потоковый режим или память Option 001.',
+  ),
+  (
+    RegExp(r'^Sampling period (\S+) us too short for aperture (\S+) us \(min (\S+) us\)\.$'),
+    r'Период дискретизации $1 мкс слишком мал для апертуры $2 мкс (минимум $3 мкс).',
+  ),
+  (
+    RegExp(r'^Overload of channel\(s\) ([\d, ]+) - check ranges\.$'),
+    r'Перегрузка в канале(ах) $1 — проверьте диапазоны.',
+  ),
+  (
+    RegExp(r'^Sampling rate (\S+) Sa/s out of range \(max (\S+)\)\.$'),
+    r'Частота дискретизации $1 отсч/с вне допустимого диапазона (максимум $2).',
+  ),
+  (
+    RegExp(r'^cDAQ sampling rate is fixed to (\S+) Sa/s in the digitizer configuration\.$'),
+    r'Частота дискретизации cDAQ задана в настройках дигитайзера: $1 отсч/с.',
+  ),
+  (RegExp(r'^Sound card supports only rates (.*) Sa/s\.$'), r'Звуковая карта поддерживает только частоты $1 отсч/с.'),
+  (
+    RegExp(r'^DSO: (\d+) bit resolution not available \(max\. (\d+) bits for this series\)\.$'),
+    r'DSO: разрядность $1 бит недоступна (у этой серии не больше $2 бит).',
+  ),
   (
     RegExp(r'^(.*) \(the record holds less than 5 mains periods\)$'),
     r'$1 (в записи меньше 5 периодов сети — увеличьте длину записи)',
@@ -118,18 +152,12 @@ final _messagePatterns = <(RegExp, String)>[
     r'Не удаётся запустить «$1»: $2. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
   ),
   (RegExp(r'^Digitizing record (\d+)(/\d+)?\.\.\.$'), r'Оцифровка записи $1$2...'),
-  (
-    RegExp(r'^Simulated digitizer, (\d+) bit, (\d+) channel\(s\)\.$'),
-    r'Симулятор дигитайзера, $1 бит, каналов: $2.',
-  ),
+  (RegExp(r'^Simulated digitizer, (\d+) bit, (\d+) channel\(s\)\.$'), r'Симулятор дигитайзера, $1 бит, каналов: $2.'),
   (
     RegExp(r'^#(\d+) (.*): range (\S+) V, (\d+) harmonic\(s\), noise (\S+) V rms$'),
     r'#$1 $2: диапазон $3 В, составляющих: $4, шум $5 В СКЗ',
   ),
-  (
-    RegExp(r'^Driver for "(.*)" is not available in this build\.$'),
-    r'Драйвер «$1» в этой сборке недоступен.',
-  ),
+  (RegExp(r'^Driver for "(.*)" is not available in this build\.$'), r'Драйвер «$1» в этой сборке недоступен.'),
   (RegExp(r'^Driver not verified on real instruments\.$'), 'Драйвер не проверен на реальных приборах.'),
   (RegExp(r'^Processing record (\d+)\.\.\.$'), r'Обработка записи $1...'),
   (RegExp(r'^Initializing digitizer\.\.\.$'), 'Инициализация дигитайзера...'),

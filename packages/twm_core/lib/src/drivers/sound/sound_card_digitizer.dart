@@ -65,7 +65,7 @@ class SoundCardDigitizer extends VirtualDigitizer {
     required double aperture,
     required List<double> ranges,
   }) async {
-    if (!rates.contains(fs)) throw DigitizerException('Sound card supports only rates ${rates.join(', ')} Sa/s.');
+    if (!rates.contains(fs)) throw DigitizerException('Sound card supports only rates ${rates.map(Info.formatNumber).join(', ')} Sa/s.');
     if (trigger.source != TriggerSource.immediate)
       throw DigitizerException('Sound card supports immediate trigger only.');
     _fs = fs;

@@ -176,7 +176,7 @@ class CdaqDigitizer extends VirtualDigitizer {
     required List<double> ranges,
   }) async {
     if ((fs - _c.fixedRate).abs() > 1e-6) {
-      throw DigitizerException('cDAQ sampling rate is fixed to ${_c.fixedRate} Sa/s in the digitizer configuration.');
+      throw DigitizerException('cDAQ sampling rate is fixed to ${Info.formatNumber(_c.fixedRate)} Sa/s in the digitizer configuration.');
     }
     if (trigger.source != TriggerSource.immediate) throw DigitizerException('cDAQ supports immediate trigger only.');
     if (_c.clockMode == CdaqClockMode.exportMasterClock) {

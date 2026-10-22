@@ -68,7 +68,7 @@ class SimulatedDigitizer extends VirtualDigitizer {
   }) async {
     if (!_open) throw DigitizerException('Simulated digitizer not initialized.');
     if (fs <= 0 || fs > _cfg.maxFs) {
-      throw DigitizerException('Sampling rate $fs Sa/s out of range (max ${_cfg.maxFs}).');
+      throw DigitizerException('Sampling rate ${Info.formatNumber(fs)} Sa/s out of range (max ${Info.formatNumber(_cfg.maxFs)}).');
     }
     _fs = fs;
     _n = samplesCount;

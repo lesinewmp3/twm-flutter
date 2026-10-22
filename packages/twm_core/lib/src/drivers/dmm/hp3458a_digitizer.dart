@@ -187,8 +187,8 @@ class Hp3458aDigitizer extends VirtualDigitizer {
     _aper = ds ? 2e-9 : aperture;
     if (!ds && _ts < minPeriod(_aper)) {
       throw DigitizerException(
-        'Sampling period ${_ts * 1e6} us too short for aperture ${_aper * 1e6} us '
-        '(min ${(minPeriod(_aper) * 1e6).toStringAsFixed(1)} us).',
+        'Sampling period ${_us(_ts)} us too short for aperture ${_us(_aper)} us '
+        '(min ${_us(minPeriod(_aper))} us).',
       );
     }
     _sint = switch (_c.format) {
@@ -231,6 +231,9 @@ class Hp3458aDigitizer extends VirtualDigitizer {
   }
 
   static String _fmt(double v) => v.toStringAsExponential(7);
+
+  /// [s] in microseconds for messages: 14.3, not 14.299999999999999.
+  static String _us(double s) => (s * 1e6).toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
 
   String _trigCmd(bool master) {
     final awg = _c.sync == Dmm3458Sync.masterSlaveAwg || _c.sync == Dmm3458Sync.allAwg;
