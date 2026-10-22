@@ -84,6 +84,14 @@ void main() {
     );
     expect(trMessage('Done'), 'Готово');
     expect(
+      trMessage(
+        'Cannot start "octave-cli": No such file or directory. Check the GNU Octave/Matlab path in the configuration. '
+        'On Ubuntu: sudo apt install octave octave-io octave-signal octave-statistics octave-optim',
+      ),
+      'Не удаётся запустить «octave-cli»: No such file or directory. Установите GNU Octave (sudo apt install octave '
+      'octave-io octave-signal octave-statistics octave-optim) или укажите путь к нему в окне «Octave / Matlab»',
+    );
+    expect(
       trMessage('Processing record 1: Distance between the harmonics in spectrum must be at least 30 (detected 11)!'),
       startsWith(
         'Обработка записи 1: Запись слишком короткая для этого алгоритма: между гармониками в спектре нужно не меньше 30 бинов (сейчас 11).',

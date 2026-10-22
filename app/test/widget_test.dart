@@ -19,7 +19,15 @@ Future<AppState> _state(WidgetTester tester, TwmBackend b) async {
 Future<void> _pump(WidgetTester tester, AppState st, {Size size = const Size(1500, 950)}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
-  await tester.pumpWidget(MaterialApp(theme: TwmTheme.light(), home: AppScope(state: st, child: MainScreen(onToggleTheme: () {}))));
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: TwmTheme.light(),
+      home: AppScope(
+        state: st,
+        child: MainScreen(onToggleTheme: () {}),
+      ),
+    ),
+  );
 }
 
 void main() {
@@ -27,10 +35,7 @@ void main() {
 
   testWidgets('main screen - desktop backend', (tester) async {
     final tmp = Directory.systemTemp.createTempSync('twm_ui');
-    final st = await _state(
-      tester,
-      LocalBackend(AppPaths.resolve(settingsFile: '${tmp.path}/s.json')),
-    );
+    final st = await _state(tester, LocalBackend(AppPaths.resolve(settingsFile: '${tmp.path}/s.json')));
     L10n.apply('en');
     await _pump(tester, st);
     expect(find.text('Start'), findsOneWidget);

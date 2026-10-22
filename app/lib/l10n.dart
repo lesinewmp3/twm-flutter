@@ -148,6 +148,10 @@ final _messagePatterns = <(RegExp, String)>[
         r'Увеличьте длину записи (не меньше $1 периодов основной частоты).',
   ),
   (
+    RegExp(r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path in the configuration\. On Ubuntu: (.*)$'),
+    r'Не удаётся запустить «$1»: $2. Установите GNU Octave ($3) или укажите путь к нему в окне «Octave / Matlab»',
+  ),
+  (
     RegExp(r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path.*$'),
     r'Не удаётся запустить «$1»: $2. Проверьте путь к GNU Octave/Matlab в окне «Octave / Matlab»',
   ),

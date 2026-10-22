@@ -118,7 +118,8 @@ class OctaveBridge {
     } on ProcessException catch (e) {
       throw OctaveException(
         'Cannot start "$exe": ${e.message}. '
-        'Check the GNU Octave/Matlab path in the configuration.',
+        'Check the GNU Octave/Matlab path in the configuration.'
+        '${Platform.isLinux && config.engine == CalcEngine.octave ? ' On Ubuntu: sudo apt install octave octave-io octave-signal octave-statistics octave-optim' : ''}',
       );
     }
     _proc = proc;

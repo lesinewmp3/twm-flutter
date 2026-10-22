@@ -593,4 +593,6 @@ const Map<String, String> ruStrings = {
   'amplitude': 'амплитуда',
   'max': 'макс.',
   'samples': 'отсчётов',
+  'GNU Octave packages not loaded: {0}. Some algorithms need them; on Ubuntu: sudo apt install {1}':
+      'Не загружены пакеты GNU Octave: {0}. Они нужны части алгоритмов; в Ubuntu: sudo apt install {1}',
 };
