@@ -268,17 +268,25 @@ class Hp3458aDigitizer extends VirtualDigitizer {
     final ds = _c.mode != Dmm3458Mode.dcv;
     // empty memory, trigger buffer off, binary readings without EOI (TWM)
     final pre = _streaming ? 'TBUFF OFF;MEM OFF;END OFF' : 'TBUFF OFF;MEM FIFO;END OFF';
-    // slaves first, master last (master starts the sampling)
-    for (var i = _io.length - 1; i >= 0; i--) {
-      final arm = ds ? '$pre;TARM SGL' : '$pre;NRDGS $_n,${_sampleEvent(i == 0)};TARM SGL';
-      await _io[i].write(arm);
-    }
-    // streaming: the readings are not stored, all DMMs are read at once
+    final arm = [
+      for (var i = 0; i < _io.length; i++)
+        ds ? '$pre;TARM SGL' : '$pre;NRDGS $_n,${_sampleEvent(i == 0)};TARM SGL',
+    ];
     if (_streaming && _io.every((io) => io is VisaIo)) {
+      // streaming: the readings are not stored, all DMMs are read at once and
+      // each reader arms its DMM and reads right after it (TWM processes)
       final bps = _sint ? 2 : 4;
       for (final io in _io) {
         io.timeout = _readTimeout;
         _readers.add(await VisaStreamReader.start(io as VisaIo, total: _n * bps, block: _chunk * bps));
+      }
+      // slaves first, master last (master starts the sampling)
+      for (var i = _io.length - 1; i >= 0; i--) {
+        await _readers[i].go(arm[i]);
+      }
+    } else {
+      for (var i = _io.length - 1; i >= 0; i--) {
+        await _io[i].write(arm[i]);
       }
     }
     await _awg?.start();

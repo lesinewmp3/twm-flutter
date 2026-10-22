@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
@@ -94,6 +95,14 @@ class VisaLib {
       'VISA library not found (tried ${errs.join(', ')}). Install NI-VISA or set '
       'TWM_VISA_LIBRARY to the library path.',
     );
+  }
+
+  /// Uses the VISA library at [path] instead of the default ones (other
+  /// vendor's VISA, tests).
+  static VisaLib load(String path) {
+    _instance = VisaLib(DynamicLibrary.open(path), path);
+    _rm = 0;
+    return _instance!;
   }
 
   /// Default resource manager session.
@@ -245,21 +254,24 @@ class VisaIo extends InstrumentIo {
 /// isolate, in blocks of [block] bytes. Instruments streaming at the same time
 /// (3458A without reading memory, each on its own GPIB controller) must be read
 /// in parallel, as TWM's digitizing processes do: a blocking read of one would
-/// make the others lose samples. The session must not be used by the caller
-/// until [stop].
+/// make the others lose samples. As in TWM, the reader also sends the command
+/// that starts the sampling ([go]) and reads right after it. The session must
+/// not be used by the caller until [stop].
 class VisaStreamReader {
   final VisaIo io;
   final _port = ReceivePort();
-  final _blocks = <Object?>[];
+  final _messages = <Object?>[];
   Completer<void>? _wait;
   Isolate? _isolate;
+  SendPort? _control;
 
   VisaStreamReader._(this.io);
 
+  /// Starts the reader; it waits for [go].
   static Future<VisaStreamReader> start(VisaIo io, {required int total, required int block}) async {
     final r = VisaStreamReader._(io);
     r._port.listen((m) {
-      r._blocks.add(m);
+      r._messages.add(m);
       r._wait?.complete();
       r._wait = null;
     });
@@ -271,17 +283,32 @@ class VisaStreamReader {
       block,
       (io.timeout * 1000).round().clamp(1, 0x7FFFFFFF),
     ), debugName: 'visa reader ${io.resource}');
+    r._control = await r._next() as SendPort;
     return r;
+  }
+
+  Future<Object?> _next() async {
+    while (_messages.isEmpty) {
+      await (_wait ??= Completer<void>()).future;
+    }
+    return _messages.removeAt(0);
+  }
+
+  Never _fail(int status) => throw InstrumentException('${io.resource}: ${io._l.describe(io.vi, status)}');
+
+  /// Sends [command] (e.g. the arm command) and starts reading; completes
+  /// when the command was written.
+  Future<void> go(String command) async {
+    _control!.send(command);
+    final st = await _next() as int;
+    if (st < 0) _fail(st);
   }
 
   /// Next block of data; throws on a read error of the instrument.
   Future<Uint8List> next() async {
-    while (_blocks.isEmpty) {
-      await (_wait ??= Completer<void>()).future;
-    }
-    final m = _blocks.removeAt(0);
+    final m = await _next();
     if (m is TransferableTypedData) return m.materialize().asUint8List();
-    throw InstrumentException('${io.resource}: read failed: ${io._l.describe(io.vi, m as int)}');
+    _fail(m as int);
   }
 
   /// Ends the reader (a pending read ends by its timeout or a device clear).
@@ -291,16 +318,25 @@ class VisaStreamReader {
     _port.close();
   }
 
-  static void _run((SendPort, String, int, int, int, int) a) {
+  static Future<void> _run((SendPort, String, int, int, int, int) a) async {
     final (port, name, vi, total, block, timeoutMs) = a;
+    final control = ReceivePort();
+    port.send(control.sendPort);
+    final command = await control.first as String;
     final lib = DynamicLibrary.open(name);
     final read = lib.lookupFunction<_RwN, _RwD>('viRead');
+    final write = lib.lookupFunction<_RwN, _RwD>('viWrite');
     final setAttribute = lib.lookupFunction<_SetAttrN, _SetAttrD>('viSetAttribute');
     setAttribute(vi, Visa.attrTmoValue, timeoutMs);
     setAttribute(vi, Visa.attrTermCharEn, 0);
-    final buf = calloc<Uint8>(block);
+    final buf = calloc<Uint8>(math.max(block, command.length + 1));
     final ret = calloc<Uint32>();
     try {
+      final cmd = latin1.encode('$command\n');
+      buf.asTypedList(cmd.length).setAll(0, cmd);
+      final ws = write(vi, buf, cmd.length, ret);
+      port.send(ws < 0 ? ws : 0);
+      if (ws < 0) return;
       for (var left = total; left > 0;) {
         final want = math.min(block, left);
         final out = Uint8List(want);
