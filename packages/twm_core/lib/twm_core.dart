@@ -18,6 +18,7 @@ export 'src/drivers/dmm/hp3458a_digitizer.dart';
 export 'src/drivers/auxiliary/aux_instruments.dart';
 export 'src/drivers/sound/sound_card_digitizer.dart';
 export 'src/drivers/niscope/niscope_digitizer.dart';
+export 'src/drivers/niscope/niscope_lib.dart' show NiScopeLib;
 export 'src/drivers/daqmx/cdaq_digitizer.dart';
 export 'src/drivers/dso/keysight_dso_digitizer.dart';
 export 'src/drivers/emu/emu_dso.dart';

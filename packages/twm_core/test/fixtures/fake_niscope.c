@@ -23,7 +23,7 @@ struct niScope_wfmInfo {
   ViReal64 offset, gain, reserved1, reserved2;
 };
 
-#define MEMORY (8 * 1024 * 1024) /* samples per channel */
+#define MEMORY (1024 * 1024) /* samples per channel (a small card) */
 #define ERR (-1074118000)
 
 typedef struct {
@@ -249,7 +249,13 @@ ViStatus niScope_FetchBinary16(ViSession vi, const char *ch, ViReal64 timeout, V
 
 /* NI-TClk */
 ViStatus niTClk_ConfigureForHomogeneousTriggers(uint32_t count, ViSession *sessions) {
-  for (uint32_t i = 0; i < count; i++) logf_(&ss[sessions[i]], "TClkHomogeneous");
+  /* the sessions without a reference trigger follow the one with it (master) */
+  int software = 0;
+  for (uint32_t i = 0; i < count; i++) software |= ss[sessions[i]].software;
+  for (uint32_t i = 0; i < count; i++) {
+    ss[sessions[i]].software = software;
+    logf_(&ss[sessions[i]], "TClkHomogeneous");
+  }
   return 0;
 }
 ViStatus niTClk_Synchronize(uint32_t count, ViSession *sessions, ViReal64 minTime) {

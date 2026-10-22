@@ -148,6 +148,11 @@ class NiScopeLib {
 
   static NiScopeLib? _i;
 
+  /// Uses the libraries at [scope] and [tclk] instead of the installed ones
+  /// (other install location, tests).
+  static NiScopeLib load(String scope, [String? tclk]) =>
+      _i = NiScopeLib(DynamicLibrary.open(scope), tclk == null ? null : DynamicLibrary.open(tclk));
+
   static NiScopeLib get instance {
     if (_i != null) return _i!;
     final s = _open(
