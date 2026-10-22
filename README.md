@@ -132,13 +132,19 @@ Cloudflare Pages, Vercel. Если сайт лежит не в корне дом
 ```bash
 cd packages/twm_model  && dart test       # форматы, БПФ (против прямого ДПФ), DSP
 cd packages/twm_engine && dart test       # движок, симулятор (точность до 0.5 LSB), перегрузка, просмотр записей
-cd packages/twm_core   && dart test       # бэкенд в изоляте, Octave (нужен octave-cli), драйверы на эмуляторах, звук
+cd packages/twm_core   && dart test       # бэкенд в изоляте, Octave (нужен octave-cli), драйверы на эмуляторах
+                                          # и через поддельные VISA / NI-SCOPE / DAQmx (собираются из test/fixtures/*.c), звук
 cd app && flutter test                    # все окна, перевод каждого экрана, удалённый режим end-to-end
 
 # настоящее Linux-приложение (режим profile): нагрузка и время кадров, монитор, проход по инструкции
 cd app && flutter drive -d linux --profile --driver=test_driver/integration_test.dart \
   --target=integration_test/desktop_test.dart      # или monitor_test.dart, guide_test.dart (--dart-define=SHOTS=папка)
 ```
+
+Все три сценария проходят и в чистом контейнере Ubuntu 24.04 (Xvfb, GNU Octave 8.4, программная отрисовка без
+GPU: монитор 22–30 кадров/с). Поддельные библиотеки драйверов повторяют сигнатуры C из `niScope.h`, `NIDAQmx.h`,
+`visa.h` и поведение 3458A (отсчёты в реальном времени, переполнение без памяти): так проверяются вызовы FFI,
+раскладка структур и последовательности команд — но не сами приборы.
 
 Инструменты (`packages/twm_core/tool`):
 
