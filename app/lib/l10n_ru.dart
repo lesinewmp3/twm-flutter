@@ -269,6 +269,7 @@ const Map<String, String> ruStrings = {
   'TWM · TracePQM Wattmeter': 'TWM · TracePQM Wattmeter',
   'Setup': 'Настройка',
   'Stop': 'Стоп',
+  'Stop processing': 'Остановить обработку',
   'More': 'Ещё',
   'Setup and start': 'Настроить и начать',
   'Light / dark theme': 'Светлая / тёмная тема',

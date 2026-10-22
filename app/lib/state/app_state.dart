@@ -179,11 +179,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Stops the measurement; with parallel record processing the stored
+  /// records still in the queue are processed (the next press stops that).
   Future<void> stop() async {
     status = 'Stopping...';
     notifyListeners();
-    await backend.stopMeasurement();
-    if (processing) await backend.stopProcessing();
+    final queued = settings.measurement.processing.execution == ExecutionMode.parallelRecords;
+    if (measuring) {
+      await backend.stopMeasurement();
+      if (processing && !queued) await backend.stopProcessing();
+    } else if (processing) {
+      await backend.stopProcessing();
+    }
   }
 
   @override

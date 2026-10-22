@@ -131,7 +131,7 @@ void main() {
     }
 
     Future<void> stopAndDrain() async {
-      await click(find.text('Стоп').first);
+      if (st.measuring) await click(find.text('Стоп').first);
       expect(await until(() => !st.measuring, timeout: const Duration(seconds: 20)), isTrue, reason: 'stopped');
       expect(
         await until(() => !st.processing && processed >= stored.length, timeout: const Duration(minutes: 5)),
@@ -157,20 +157,32 @@ void main() {
     stored.clear();
     frames.clear();
     final t0 = sw.elapsedMilliseconds;
+    var results5s = false;
     const pages = ['Измерение', 'Онлайн-анализ', 'Результаты', 'Измерение'];
     for (var k = 0; k < seconds ~/ 10; k++) {
       await settle(10000);
       if (k < pages.length) {
         await click(find.text(pages[k]).first);
         await shot('parallel_${k}_${pages[k]}');
+        if (pages[k] == 'Результаты') {
+          await settle(5000);
+          await shot('parallel_${k}_results_after_5s');
+          results5s = find.text('Загрузка...').evaluate().isEmpty;
+        }
       }
     }
     final span = (sw.elapsedMilliseconds - t0) / 1000;
     final recs = stored.length;
     final gaps = [for (var k = 1; k < frames.length; k++) frames[k] - frames[k - 1]]..sort();
+    await click(find.text('Стоп').first);
+    await settle(1500);
+    await shot('parallel_stop_queue');
     await stopAndDrain();
     await click(find.text('Измерение').first);
     await shot('parallel_after_stop');
+    await click(find.text('Результаты').first);
+    await settle(3000);
+    await shot('parallel_results_after_stop');
     report['parallel'] = {
       'seconds': span.toStringAsFixed(1),
       'records': recs,
@@ -178,6 +190,7 @@ void main() {
       'monitor_fps': (frames.length / span).toStringAsFixed(1),
       'monitor_gap_max_ms': gaps.isEmpty ? -1 : gaps.last,
       'processed': processed,
+      'results_page_loaded_within_5s': results5s,
       'status': st.status,
     };
     expect(recs / span, greaterThan(0.9), reason: 'no dead time: ${report['parallel']}');

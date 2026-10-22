@@ -365,7 +365,7 @@ class _Header extends StatelessWidget {
                   style: FilledButton.styleFrom(backgroundColor: t.colorScheme.error),
                   onPressed: () => st.stop(),
                   icon: const Icon(Icons.stop),
-                  label: Text(tr('Stop')),
+                  label: Text(busy ? tr('Stop') : tr('Stop processing')),
                 ),
               PopupMenuButton<String>(
                 tooltip: tr('More'),
