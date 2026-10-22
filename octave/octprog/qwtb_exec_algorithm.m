@@ -293,7 +293,9 @@ function [] = qwtb_exec_algorithm(meas_file, calc_unc, is_last_avg, avg_id, grou
     % load last measurement group
     data = tpq_load_record(meas_file, group_id, avg_id, sdata_ofs,sdata_lim, struct('time_stamp_mode',ts_mode));
     
-    if proc_all && data.subrec_count
+    % TWM-Flutter fix: tpq_load_record() reports 1 sub-record for ordinary records
+    % (it is never 0), the original 'data.subrec_count' refused every whole average
+    if proc_all && data.subrec_count > 1
         error('QWTB algorithm executer: Selected multiple records processing at once and also multiple sub-records available! That''s a bit too much... Select one or another.');
     end
         

@@ -227,6 +227,7 @@ class MeasurementEngine {
       }
 
       final records = config.continuous ? 0 : config.recordsCount;
+      var stored = 0;
       for (var r = 1; records == 0 || r <= records; r++) {
         if (_stop) break;
         if (config.preRecordDelay > 0 && r > 1) {
@@ -302,10 +303,24 @@ class MeasurementEngine {
           );
           await writer.save();
           _events.add(MeasRecordStored(sessionFile, group, r));
+          stored = r;
           if (config.processingEnabled && processor != null) {
-            _status('Processing record $r...', progress: 1, record: r, records: records);
+            // parallel record processing only queues the record (no dead time)
+            if (config.processing.execution == ExecutionMode.singleCore) {
+              _status('Processing record $r...', progress: 1, record: r, records: records);
+            }
             await processor!(sessionFile, group, r, records != 0 && r == records);
           }
+        }
+      }
+      // continuous mode: STOP ends the averaging; an algorithm set to process
+      // the whole average at once skipped every record up to now
+      if (records == 0 && stored > 0 && config.processingEnabled && processor != null) {
+        if (config.processing.wholeAverageAtOnce) {
+          if (config.processing.execution == ExecutionMode.singleCore) {
+            _status('Processing record $stored...', progress: 1, record: stored);
+          }
+          await processor!(sessionFile, group, stored, true);
         }
       }
     } catch (e) {

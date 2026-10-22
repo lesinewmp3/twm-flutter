@@ -13,9 +13,7 @@ void main() {
   late LocalBackend b;
   setUp(() {
     tmp = Directory.systemTemp.createTempSync('twm_be');
-    b = LocalBackend(
-      AppPaths.resolve(settingsFile: p.join(tmp.path, 's.json')),
-    );
+    b = LocalBackend(AppPaths.resolve(settingsFile: p.join(tmp.path, 's.json')));
   });
   tearDown(() async {
     await b.dispose();
@@ -74,5 +72,86 @@ void main() {
     expect(t.rows, isNotEmpty);
     final wd = await b.readRecord(fin.sessionPath, 1, 1, maxPoints: 1000);
     expect(wd.channels.first.length, 1000);
+  });
+
+  Future<AppSettings> continuousSetup({
+    required ExecutionMode execution,
+    bool atOnce = false,
+    String alg = 'TWM-PSFE',
+  }) async {
+    final s = await b.loadSettings();
+    s.digitizer.simulated.realtimeFactor = 1;
+    s.measurement
+      ..folder = tmp.path
+      ..nameBase = 'c'
+      ..fs = 10000
+      ..samplesCount = 5000
+      ..continuous = true
+      ..saveRecords = true
+      ..processingEnabled = true
+      ..processing = ProcessingSetup(algorithmId: alg, execution: execution, wholeAverageAtOnce: atOnce);
+    s.online.monitorWindowMs = 80;
+    return s;
+  }
+
+  Future<void> processingIdle(List<BackendEvent> events) async {
+    final end = DateTime.now().add(const Duration(minutes: 3));
+    while (DateTime.now().isBefore(end)) {
+      final p = events.whereType<ProcessingEvent>();
+      final queued = events.whereType<StatusEvent>().where((e) => e.message.contains('queued')).length;
+      if (p.isNotEmpty && !p.last.busy && (queued == 0 || events.last is StatusEvent)) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (!events.whereType<ProcessingEvent>().last.busy) return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    fail('processing did not finish');
+  }
+
+  test('continuous measurement with parallel record processing: no gaps between records', () async {
+    final s = await continuousSetup(execution: ExecutionMode.parallelRecords);
+    final events = <BackendEvent>[];
+    final liveAt = <int>[];
+    final sw = Stopwatch()..start();
+    final sub = b.events.listen((e) {
+      events.add(e);
+      if (e is LiveEvent) liveAt.add(sw.elapsedMilliseconds);
+    });
+    await b.startMeasurement(s);
+    await Future<void>.delayed(const Duration(seconds: 6));
+    await b.stopMeasurement();
+    await b.events.firstWhere((e) => e is FinishedEvent);
+    final stored = events.whereType<RecordStoredEvent>().length;
+    // 0.5 s records over 6 s: the acquisition does not wait for GNU Octave
+    expect(stored, greaterThanOrEqualTo(10));
+    final gaps = [for (var k = 1; k < liveAt.length; k++) liveAt[k] - liveAt[k - 1]]..sort();
+    expect(gaps.last, lessThan(400), reason: 'monitor gaps $gaps');
+    await processingIdle(events);
+    await sub.cancel();
+    final ok = events
+        .whereType<ProcessingEvent>()
+        .where((e) => !e.busy && e.error.isEmpty)
+        .map((e) => e.record)
+        .toList();
+    expect(ok, [for (var r = 1; r <= stored; r++) r]);
+    expect(events.whereType<ProcessingEvent>().where((e) => e.error.isNotEmpty), isEmpty);
+  });
+
+  test('continuous measurement: the whole average at once is processed after STOP', () async {
+    final s = await continuousSetup(execution: ExecutionMode.singleCore, atOnce: true, alg: 'TWM-WFFT');
+    final events = <BackendEvent>[];
+    final sub = b.events.listen(events.add);
+    await b.startMeasurement(s);
+    await Future<void>.delayed(const Duration(seconds: 3));
+    await b.stopMeasurement();
+    final fin = await b.events.firstWhere((e) => e is FinishedEvent) as FinishedEvent;
+    await sub.cancel();
+    expect(fin.error, isEmpty);
+    expect([
+      for (final e in events.whereType<ProcessingEvent>())
+        if (e.error.isNotEmpty) '${e.record}: ${e.error}',
+    ], isEmpty);
+    final ri = await b.resultsInfo(fin.sessionPath);
+    expect(ri.algorithms, ['TWM-WFFT']);
   });
 }

@@ -10,11 +10,22 @@ Future<List<String>> processingProblems(
   required Future<OctaveStatus> Function() octaveStatus,
 }) async {
   final m = settings.measurement;
+  if (!m.processingEnabled) return const [];
   // continuous acquisition without saving: nothing is processed
-  if (!m.processingEnabled || m.processing.mode != ProcessingMode.qwtb || (m.continuous && !m.saveRecords)) {
-    return const [];
+  if (m.continuous && !m.saveRecords) {
+    return [tr('Continuous measurement without saving the records: the processing does not run.')];
   }
   final out = <String>[];
+  if (m.continuous && m.processing.execution == ExecutionMode.singleCore) {
+    out.add(
+      tr(
+        'Single-core processing stops the acquisition after every record until the record is processed: '
+        'events in these gaps are not recorded and the monitor stands still. For continuous monitoring choose '
+        '"Parallel record processing (exp.)" in the processing setup.',
+      ),
+    );
+  }
+  if (m.processing.mode != ProcessingMode.qwtb) return out;
   final alg = m.processing.algorithmId;
   // lowest input grid frequency of interest: 40 Hz
   final periods = m.samplesCount / m.fs * 40;

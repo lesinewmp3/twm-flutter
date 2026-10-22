@@ -148,7 +148,9 @@ final _messagePatterns = <(RegExp, String)>[
         r'Увеличьте длину записи (не меньше $1 периодов основной частоты).',
   ),
   (
-    RegExp(r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path in the configuration\. On Ubuntu: (.*)$'),
+    RegExp(
+      r'^Cannot start "([^"]*)": (.*?)\. Check the GNU Octave/Matlab path in the configuration\. On Ubuntu: (.*)$',
+    ),
     r'Не удаётся запустить «$1»: $2. Установите GNU Octave ($3) или укажите путь к нему в окне «Octave / Matlab»',
   ),
   (
@@ -164,6 +166,7 @@ final _messagePatterns = <(RegExp, String)>[
   (RegExp(r'^Driver for "(.*)" is not available in this build\.$'), r'Драйвер «$1» в этой сборке недоступен.'),
   (RegExp(r'^Driver not verified on real instruments\.$'), 'Драйвер не проверен на реальных приборах.'),
   (RegExp(r'^Processing record (\d+)\.\.\.$'), r'Обработка записи $1...'),
+  (RegExp(r'^Processing record (\d+) \((\d+) queued\)\.\.\.$'), r'Обработка записи $1 (в очереди $2)...'),
   (RegExp(r'^Initializing digitizer\.\.\.$'), 'Инициализация дигитайзера...'),
   (RegExp(r'^Configuring digitizer\.\.\.$'), 'Настройка дигитайзера...'),
   (RegExp(r'^Pre-record delay\.\.\.$'), 'Пауза перед записью...'),

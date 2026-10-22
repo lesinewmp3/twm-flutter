@@ -244,6 +244,9 @@ const Map<String, String> ruStrings = {
       'Веб-версия использует симулятор дигитайзера: задайте сигнал в разделе «Дигитайзер» и нажмите «Старт».',
   'Measurement': 'Измерение',
   'Results': 'Результаты',
+  'Continuous measurement without saving the records: the processing does not run.':
+      'Непрерывное измерение без сохранения записей: обработка не выполняется.',
+  'Single-core processing stops the acquisition after every record until the record is processed: events in these gaps are not recorded and the monitor stands still. For continuous monitoring choose "Parallel record processing (exp.)" in the processing setup.': 'Последовательная обработка останавливает съёмку после каждой записи, пока запись обрабатывается: события в этих паузах не регистрируются, монитор стоит. Для непрерывного контроля выберите «Параллельно по записям» в настройке обработки.',
   'On-line analysis': 'Онлайн-анализ',
   'Files': 'Файлы',
   'Console': 'Консоль',
@@ -569,8 +572,7 @@ const Map<String, String> ruStrings = {
       'В записи меньше 5 периодов сети: алгоритмы QWTB могут завершиться ошибкой или дать неверный результат.',
   'TWM-THDWFFT needs at least 30 periods of the fundamental in the record (e.g. 0.75 s at 40 Hz).':
       'TWM-THDWFFT нужно не меньше 30 периодов основной частоты в записи (например, 0,75 с при 40 Гц).',
-  '{0} computes power: it needs a voltage and a current transducer (divider and shunt) with the same phase index in HW corrections.':
-      '{0} считает мощность: нужны трансдьюсеры напряжения и тока (делитель и шунт) с одинаковым индексом фазы в «Коррекциях».',
+  '{0} computes power: it needs a voltage and a current transducer (divider and shunt) with the same phase index in HW corrections.': '{0} считает мощность: нужны трансдьюсеры напряжения и тока (делитель и шунт) с одинаковым индексом фазы в «Коррекциях».',
   'Monitor': 'Монитор',
   'Whole record': 'Вся запись',
   'Window': 'Окно',

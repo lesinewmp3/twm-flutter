@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -68,6 +69,12 @@ class LocalBackend implements TwmBackend {
   QwtbService? _qwtb;
   StreamSubscription<ConsoleLine>? _consoleSub;
   bool _stopProcessing = false;
+
+  // "Parallel record processing" (TWM): the measurement only queues the
+  // stored records, one worker processes them in order meanwhile and after
+  // the measurement ends
+  final _queue = Queue<(String, ProcessingSetup, OctaveConfig, int, int, bool)>();
+  bool _draining = false;
   Timer? _closeTimer;
 
   LocalBackend(this.paths);
@@ -169,7 +176,11 @@ class LocalBackend implements TwmBackend {
   Future<void> writeText(String path, String content) async {
     final f = File(path);
     await f.parent.create(recursive: true);
-    await f.writeAsString(content);
+    // whole file or the old one: GNU Octave and the viewers read the session
+    // header while the measurement rewrites it
+    final tmp = File('$path.$pid.tmp');
+    await tmp.writeAsString(content, flush: true);
+    await tmp.rename(path);
   }
 
   @override
@@ -305,7 +316,14 @@ class LocalBackend implements TwmBackend {
       corrections: s.corrections,
       multiplexer: mux,
       processor: s.measurement.processingEnabled
-          ? (session, g, r, last) => _processRecord(session, ps, s.octave, g, r, last)
+          ? (session, g, r, last) async {
+              if (ps.execution == ExecutionMode.parallelRecords) {
+                _queue.add((session, ps, s.octave, g, r, last));
+                if (!_draining) unawaited(_drain());
+              } else {
+                await _processRecord(session, ps, s.octave, g, r, last);
+              }
+            }
           : null,
       monitorWindow: s.online.monitorWindowMs / 1000,
     );
@@ -469,6 +487,22 @@ class LocalBackend implements TwmBackend {
     }
   }
 
+  Future<void> _drain() async {
+    _draining = true;
+    var done = 0;
+    try {
+      while (_queue.isNotEmpty) {
+        final (session, ps, oc, g, r, last) = _queue.removeFirst();
+        if (!measuring) _emit(StatusEvent('Processing record $r (${_queue.length} queued)...', progress: 1));
+        await _processRecord(session, ps, oc, g, r, last);
+        done++;
+      }
+      if (!measuring && done > 0) _emit(const StatusEvent('Processing done', progress: 1));
+    } finally {
+      _draining = false;
+    }
+  }
+
   @override
   Future<void> processRecords(
     String sessionPath,
@@ -501,6 +535,7 @@ class LocalBackend implements TwmBackend {
   @override
   Future<void> stopProcessing() async {
     _stopProcessing = true;
+    _queue.clear();
     await _octave?.interrupt();
   }
 

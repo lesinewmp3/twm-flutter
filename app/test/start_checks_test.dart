@@ -34,16 +34,32 @@ void main() {
   test('nothing to report', () async {
     expect(await check(settings()), isEmpty);
     expect(await check(settings(alg: 'TWM-PWRTDI', pair: true), hasUi: true), isEmpty);
-    // processing off, or continuous acquisition without saving: no checks
+    // processing off: no checks
     expect(await check(settings(n: 10)..measurement.processingEnabled = false), isEmpty);
+    // continuous with parallel record processing: no dead time
     expect(
       await check(
-        settings(n: 10)
+        settings()
           ..measurement.continuous = true
-          ..measurement.saveRecords = false,
+          ..measurement.processing.execution = ExecutionMode.parallelRecords,
       ),
       isEmpty,
     );
+  });
+
+  test('continuous measurement', () async {
+    // without saving: nothing would be processed (only this warning)
+    final unsaved = await check(
+      settings(n: 10)
+        ..measurement.continuous = true
+        ..measurement.saveRecords = false,
+    );
+    expect(unsaved, hasLength(1));
+    expect(unsaved.first, contains('without saving'));
+    // single-core processing stops the acquisition after every record
+    final w = await check(settings()..measurement.continuous = true);
+    expect(w, hasLength(1));
+    expect(w.first, contains('Parallel record processing'));
   });
 
   test('short records', () async {
