@@ -119,12 +119,17 @@ class Panel extends StatelessWidget {
           if (title != null || actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-              child: Row(
+              // title left, actions right; on a narrow window the actions
+              // continue on the next line instead of overflowing
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 8,
                 children: [
                   if (title != null)
                     Text(title!, style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  const Spacer(),
-                  ...actions,
+                  if (actions.isNotEmpty)
+                    Wrap(crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 8, children: actions),
                 ],
               ),
             ),

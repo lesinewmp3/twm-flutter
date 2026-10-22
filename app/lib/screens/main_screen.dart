@@ -558,15 +558,24 @@ class _HardwareMenu extends StatelessWidget {
         ],
       );
     }
+    // a low window (laptop): two buttons per row, the navigation above must fit
+    final compact = MediaQuery.sizeOf(context).height < 760;
+    final buttons = [
+      for (final i in items)
+        Tooltip(
+          message: i.$2,
+          preferBelow: false,
+          child: IconButton(
+            onPressed: i.$3,
+            icon: Icon(i.$1),
+            visualDensity: compact ? VisualDensity.compact : null,
+          ),
+        ),
+    ];
     return Column(
       children: [
         const Divider(indent: 16, endIndent: 16),
-        for (final i in items)
-          Tooltip(
-            message: i.$2,
-            preferBelow: false,
-            child: IconButton(onPressed: i.$3, icon: Icon(i.$1)),
-          ),
+        if (compact) Wrap(alignment: WrapAlignment.center, children: buttons) else ...buttons,
       ],
     );
   }
