@@ -223,7 +223,7 @@ class TransferAnalysis {
 
     // 2: model after the event from the last two periods, end where the signal joins it
     // (the frequency may differ: UPS inverter before, grid after a transfer)
-    final after = _SineModel.fit(x, fs, _refineFrequency(x, fs, f0, n - refLen, n, h), n - refLen, n, h);
+    var after = _SineModel.fit(x, fs, _refineFrequency(x, fs, f0, n - refLen, n, h), n - refLen, n, h);
     if (after == null) return const TransferResult(message: 'no steady signal at the end');
     var lastOut = -1;
     for (var i = n - 1; i >= det; i--) {
@@ -240,24 +240,49 @@ class TransferAnalysis {
         message: 'event lasts until the end of the record',
       );
     }
+    {
+      // refit on the steady part right after the event (its first 100k
+      // samples, at least 4 periods): the model of the last two periods,
+      // extrapolated back to the event, misses its phase by the frequency error
+      final from = (lastOut + period / 4).ceil();
+      final int to = math.min(n, from + math.max(100000, (4 * period).ceil()));
+      if (to - from >= refLen + period) {
+        final m = _SineModel.fit(x, fs, _refineFrequency(x, fs, after.w / (2 * math.pi), from, to, h), from, to, h);
+        if (m != null) {
+          after = m;
+          for (var i = to - 1; i >= det; i--) {
+            if ((x[i] - after.value(i / fs)).abs() > threshold * a0) {
+              lastOut = i;
+              break;
+            }
+          }
+        }
+      }
+    }
 
     // 3: refine both edges with a small threshold (noise of the fits)
     final fine = math.max(0.001 * a0, 6 * math.max(before.residualRms, after.residualRms));
-    // the deviation can dip under the threshold for a sample or two when the
-    // waveform crosses zero at an edge: take the first / last sample above it
-    // within a quarter period outside the coarse detection
+    // extend the coarse edges sample by sample while the signal stays off the
+    // model; the deviation dips under the threshold for a while when the
+    // waveform crosses zero at an edge (2 fine / (a0 w) for an interruption),
+    // a gap that long is bridged. A lone noise sample farther away is not an
+    // edge (searching a quarter period from its far end put the end of an
+    // event a quarter period late).
     final quarter = math.max(1, (period / 4).round());
+    final gap = math.min(quarter, (fs * 2 * fine / (a0 * 2 * math.pi * f0)).ceil() + 2);
     var s = det;
-    for (var i = math.max(0, det - quarter); i < det; i++) {
+    for (var i = det - 1; i >= math.max(0, det - quarter); i--) {
       if ((x[i] - before.value(i / fs)).abs() > fine) {
         s = i;
+      } else if (s - i > gap) {
         break;
       }
     }
     var e = lastOut;
-    for (var i = math.min(n - 1, lastOut + quarter); i > lastOut; i--) {
+    for (var i = lastOut + 1; i <= math.min(n - 1, lastOut + quarter); i++) {
       if ((x[i] - after.value(i / fs)).abs() > fine) {
         e = i;
+      } else if (i - e > gap) {
         break;
       }
     }
