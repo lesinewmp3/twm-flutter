@@ -175,6 +175,10 @@ final _messagePatterns = <(RegExp, String)>[
   (RegExp(r'^Done$'), 'Готово'),
   (RegExp(r'^Stopped$'), 'Остановлено'),
   (RegExp(r'^Processing done$'), 'Обработка завершена'),
+  (
+    RegExp(r'^On-line analysis skipped (\d+) records \(slower than the acquisition\)$'),
+    r'Онлайн-анализ пропустил записей: $1 (медленнее съёмки; сами записи сохранены)',
+  ),
   (RegExp(r'^Processing stopped$'), 'Обработка остановлена'),
   (RegExp(r'^Error: (.*)$'), r'Ошибка: $1'),
 ];
