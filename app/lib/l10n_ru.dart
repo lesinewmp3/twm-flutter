@@ -343,7 +343,7 @@ const Map<String, String> ruStrings = {
   'Clear history': 'Очистить историю',
   'Save CVI processed data': 'Сохранять результаты (как CVI)',
   'Results file (CSV, appended)': 'Файл результатов (CSV, дописывается)',
-  'Indicative values only (not validated - use QWTB algorithms for traceable results). Settings apply to the next measurement start.': 'Значения ориентировочные (для прослеживаемых результатов используйте алгоритмы QWTB). Настройки применятся при следующем запуске.',
+  'Quick calculation for watching the measurement: nominal transducer ratios, without calibration corrections and uncertainty. Results for a report: the Results page (QWTB algorithms). Settings apply to the next measurement start.': 'Быстрый расчёт для наблюдения: номинальные коэффициенты датчиков, без калибровочных поправок и неопределённости. Результаты для протокола — на странице «Результаты» (алгоритмы QWTB). Настройки применятся при следующем запуске.',
   'No on-line results - start a measurement (continuous mode recommended).':
       'Нет онлайн-результатов — запустите измерение (лучше в непрерывном режиме).',
   'Show graph': 'Показать график',

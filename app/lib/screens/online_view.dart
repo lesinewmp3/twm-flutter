@@ -127,7 +127,8 @@ class _OnlineViewState extends State<OnlineView> {
                 ),
               Text(
                 tr(
-                  'Indicative values only (not validated - use QWTB algorithms for traceable results). '
+                  'Quick calculation for watching the measurement: nominal transducer ratios, without calibration '
+                  'corrections and uncertainty. Results for a report: the Results page (QWTB algorithms). '
                   'Settings apply to the next measurement start.',
                 ),
                 style: TextStyle(fontSize: 11),

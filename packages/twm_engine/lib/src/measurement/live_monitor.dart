@@ -45,6 +45,10 @@ class LiveMonitor {
 
   int get available => math.min(_written, _cap);
 
+  /// A whole window was acquired; the buffer is full (two windows).
+  bool get hasWindow => _written >= window;
+  bool get full => _written >= _cap;
+
   void add(DataPacket p) {
     final ch = math.min(channels, p.channels);
     final n = p.count;

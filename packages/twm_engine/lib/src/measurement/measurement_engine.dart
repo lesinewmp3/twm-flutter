@@ -41,7 +41,15 @@ class MeasRecordData extends MeasEvent {
 
   /// Samples per channel of the whole record (0 = same as [full]).
   final int recordSamples;
-  const MeasRecordData(this.record, this.channels, this.ts, this.names, this.full, this.fullTs, {this.recordSamples = 0});
+  const MeasRecordData(
+    this.record,
+    this.channels,
+    this.ts,
+    this.names,
+    this.full,
+    this.fullTs, {
+    this.recordSamples = 0,
+  });
 }
 
 /// Live monitor frame of the record being acquired (see [LiveMonitor]).
@@ -98,6 +106,7 @@ class MeasurementEngine {
   bool _running = false;
   final _sinceYield = Stopwatch()..start();
   final _sinceLive = Stopwatch()..start();
+  bool _liveTriggered = false; // the last live frame stood on the trigger
   AuxData? _lastAux; // scaling for live frames of drivers giving it at the record end
 
   MeasurementEngine({
@@ -142,6 +151,7 @@ class MeasurementEngine {
   Future<String> run({DateTime? now}) async {
     if (_running) throw StateError('Measurement already running');
     _running = true;
+    _liveTriggered = false;
     _stop = false;
     final t0 = now ?? DateTime.now();
     final save = config.saveRecords || !config.continuous;
@@ -253,7 +263,10 @@ class MeasurementEngine {
                     ))
                   : null;
               final mon = sub == 0 && monitorWindow > 0
-                  ? LiveMonitor(channels: setup.channelsCount, window: (monitorWindow * setup.fs).round().clamp(2, 1 << 21))
+                  ? LiveMonitor(
+                      channels: setup.channelsCount,
+                      window: math.min((monitorWindow * setup.fs).round(), config.samplesCount).clamp(2, 1 << 21),
+                    )
                   : null;
               final a = await _acquire(rf, lc, mon, r, records, sub, subs * muxCycles, setup.fullScaleCode);
               if (a == null) break;
@@ -341,7 +354,14 @@ class MeasurementEngine {
           if (sc != null && _sinceLive.elapsed >= monitorInterval) {
             _sinceLive.reset();
             final f = mon.frame(sc.gains, sc.offsets, sc.increment);
-            if (f != null) _events.add(MeasLiveData(r, f, digitizer.channelIdns));
+            // a new record starts with an empty buffer: its first frames are
+            // short or not on the trigger, the screen keeps the last good frame
+            // instead of jumping (a lost trigger shows after two windows)
+            final show = f != null && (f.triggered || (mon.hasWindow && (!_liveTriggered || mon.full)));
+            if (show) {
+              _liveTriggered = f.triggered;
+              _events.add(MeasLiveData(r, f, digitizer.channelIdns));
+            }
           }
         }
       }
