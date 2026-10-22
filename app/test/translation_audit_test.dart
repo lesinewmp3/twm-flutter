@@ -75,7 +75,7 @@ void main() {
     late AppState st;
     await tester.runAsync(() async {
       st = await AppState.create(
-        LocalBackend(AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json')),
+        LocalBackend(AppPaths.resolve(settingsFile: '${tmp.path}/s.json')),
       );
     });
     st.settings.digitizer.onClose = OnCloseAction.immediateReset;
@@ -143,7 +143,7 @@ void main() {
 
   testWidgets('dialogs with filled settings', (tester) async {
     final st = await state(tester);
-    const root = '/home/e/papka_dlya_claude/twm_flutter/data/corrections/transducers';
+    final root = '${AppPaths.resolve().home}/data/corrections/transducers';
     st.settings.corrections.transducers = [
       TransducerConfig(path: r'dummy.vd\dummy.info', highChannel: 1, nominalRatio: 1),
       TransducerConfig(path: r'dummy.cs\dummy.info', type: TransducerType.shunt, highChannel: 2, nominalRatio: 1),

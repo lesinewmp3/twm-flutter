@@ -10,7 +10,7 @@ import 'dart:math' as math;
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const home = '/home/e/papka_dlya_claude/twm_flutter';
+final home = AppPaths.resolve().home;
 
 late IOSink log;
 void say(String s) {

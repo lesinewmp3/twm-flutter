@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const home = '/home/e/papka_dlya_claude/twm_flutter';
+final home = AppPaths.resolve().home;
 
 /// Cross-validation of the Dart ports (browser version) against the
 /// original TWM m-code in GNU Octave on identical recorded data.

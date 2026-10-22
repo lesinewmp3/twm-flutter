@@ -9,8 +9,8 @@ import 'package:test/test.dart';
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const twmRepo = '/home/e/papka_dlya_claude/src/TWM';
-const apiRoot = '/home/e/papka_dlya_claude/twm_flutter/octave';
+final home = AppPaths.resolve().home;
+final apiRoot = '$home/octave';
 
 /// Integration with the real TWM processing module in GNU Octave.
 void main() {
@@ -20,7 +20,7 @@ void main() {
 
   setUpAll(() async {
     oct = OctaveBridge(
-      OctaveConfig(octprogPath: '$twmRepo/octprog', packages: ['io', 'signal', 'statistics', 'optim']),
+      OctaveConfig(octprogPath: '$home/octave/octprog', packages: ['io', 'signal', 'statistics', 'optim']),
       apiRoot: apiRoot,
     );
     q = QwtbService(oct);
@@ -68,9 +68,9 @@ void main() {
     );
     final corr = CorrectionsConfig(
       transducers: [
-        TransducerConfig(path: '$twmRepo/data/corrections/transducers/dummy.vd/dummy.info', highChannel: 1),
+        TransducerConfig(path: '$home/data/corrections/transducers/dummy.vd/dummy.info', highChannel: 1),
         TransducerConfig(
-          path: '$twmRepo/data/corrections/transducers/dummy.cs/dummy.info',
+          path: '$home/data/corrections/transducers/dummy.cs/dummy.info',
           type: TransducerType.shunt,
           highChannel: 2,
         ),

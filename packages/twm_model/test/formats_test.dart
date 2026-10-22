@@ -6,7 +6,14 @@ import 'package:test/test.dart';
 import 'package:twm_model/twm_model.dart';
 
 /// Original TWM repository with example correction files.
-const twmRepo = '/home/e/papka_dlya_claude/src/TWM';
+/// Project root (its data/ is TWM's data/): $TWM_HOME or a parent folder.
+final root = () {
+  var d = Directory.current.absolute;
+  while (!File('${d.path}/octave/api/twm_api.m').existsSync() && d.parent.path != d.path) {
+    d = d.parent;
+  }
+  return Platform.environment['TWM_HOME'] ?? d.path;
+}();
 
 void main() {
   group('INFO', () {
@@ -80,7 +87,7 @@ name:: Two HP3458A dmms test
 
     test('parses all correction files of TWM repository', () {
       final files = Directory(
-        '$twmRepo/data/corrections',
+        '$root/data/corrections',
       ).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.info'));
       expect(files, isNotEmpty);
       for (final f in files) {
@@ -93,7 +100,7 @@ name:: Two HP3458A dmms test
     });
 
     test('qwtb_list.info', () {
-      final i = Info.parse(File('$twmRepo/octprog/qwtb_list.info').readAsStringSync());
+      final i = Info.parse(File('$root/octave/octprog/qwtb_list.info').readAsStringSync());
       expect(i.textList('list of supported algorithms'), contains('TWM-PWRTDI'));
       expect(i.section('TWM-LowZ').textMatrix('number formats').first.first, 'f');
     });
@@ -102,7 +109,7 @@ name:: Two HP3458A dmms test
   group('CSV', () {
     test('repository table', () {
       final s = CsvSheet.parse(
-        File('$twmRepo/data/corrections/transducers/shunt_100mA113/csv/tfer_gain.csv').readAsStringSync(),
+        File('$root/data/corrections/transducers/shunt_100mA113/csv/tfer_gain.csv').readAsStringSync(),
       );
       expect(s.cell(0, 0), 'Gain tfer');
       expect(s.cell(1, 1), 'gain');

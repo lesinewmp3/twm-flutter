@@ -18,7 +18,7 @@ import 'package:twm_app/theme.dart';
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const home = '/home/e/papka_dlya_claude/twm_flutter';
+final home = AppPaths.resolve().home;
 
 /// Frame build/raster times collected while [body] runs.
 class FrameStats {

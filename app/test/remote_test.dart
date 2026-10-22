@@ -11,7 +11,7 @@ void main() {
   test('remote measurement with processing', () async {
     final tmp = Directory.systemTemp.createTempSync('twm_remote');
     final local = LocalBackend(
-      AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json'),
+      AppPaths.resolve(settingsFile: '${tmp.path}/s.json'),
     );
     final server = TwmServer(local, token: 'secret');
     await server.start(port: 0);

@@ -8,7 +8,7 @@ void main() {
   test('backend in isolate: measurement, events, server', () async {
     final tmp = Directory.systemTemp.createTempSync('twm_iso');
     final b = await IsolateBackend.spawn(
-      home: '/home/e/papka_dlya_claude/twm_flutter',
+      home: AppPaths.resolve().home,
       settingsFile: '${tmp.path}/s.json',
     );
     try {
@@ -52,7 +52,7 @@ void main() {
 
   test('a dead backend isolate fails the calls instead of hanging', () async {
     final tmp = Directory.systemTemp.createTempSync('twm_iso_dead');
-    final b = await IsolateBackend.spawn(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json');
+    final b = await IsolateBackend.spawn(home: AppPaths.resolve().home, settingsFile: '${tmp.path}/s.json');
     try {
       final events = <BackendEvent>[];
       final sub = b.events.listen(events.add);

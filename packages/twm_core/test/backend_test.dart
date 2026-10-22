@@ -14,7 +14,7 @@ void main() {
   setUp(() {
     tmp = Directory.systemTemp.createTempSync('twm_be');
     b = LocalBackend(
-      AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: p.join(tmp.path, 's.json')),
+      AppPaths.resolve(settingsFile: p.join(tmp.path, 's.json')),
     );
   });
   tearDown(() async {

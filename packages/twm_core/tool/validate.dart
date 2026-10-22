@@ -16,7 +16,7 @@ import 'package:path/path.dart' as p;
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const home = '/home/e/papka_dlya_claude/twm_flutter';
+final home = AppPaths.resolve().home;
 
 class Tone {
   final double f; // [Hz]

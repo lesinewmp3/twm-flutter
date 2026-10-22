@@ -29,7 +29,7 @@ void main() {
     final tmp = Directory.systemTemp.createTempSync('twm_ui');
     final st = await _state(
       tester,
-      LocalBackend(AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json')),
+      LocalBackend(AppPaths.resolve(settingsFile: '${tmp.path}/s.json')),
     );
     L10n.apply('en');
     await _pump(tester, st);

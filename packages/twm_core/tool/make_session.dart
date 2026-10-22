@@ -4,7 +4,7 @@ import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
 Future<void> main(List<String> args) async {
-  const repo = '/home/e/papka_dlya_claude/src/TWM/data/corrections';
+  final repo = '${AppPaths.resolve().home}/data/corrections';
   final dc = DigitizerConfig()..simulated.realtimeFactor = 0;
   final mc = MeasurementConfig(
     fs: 10000,

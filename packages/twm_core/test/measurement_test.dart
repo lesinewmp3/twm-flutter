@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const twmRepo = '/home/e/papka_dlya_claude/src/TWM';
+final twmRepo = AppPaths.resolve().home; // data/ of the project = data/ of TWM
 
 double rms(List<double> x) => math.sqrt(x.fold<double>(0, (s, v) => s + v * v) / x.length);
 

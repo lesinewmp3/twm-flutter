@@ -10,7 +10,7 @@ import 'package:twm_app/state/app_state.dart';
 import 'package:twm_core/twm_core.dart';
 import 'package:twm_model/twm_model.dart';
 
-const corr = '/home/e/papka_dlya_claude/twm_flutter/data/corrections';
+final corr = '${AppPaths.resolve().home}/data/corrections';
 
 /// Opens nested dialogs directly to catch build/layout errors.
 void main() {
@@ -31,7 +31,7 @@ void main() {
     testWidgets('nested dialog ${e.key}', (tester) async {
       final tmp = Directory.systemTemp.createTempSync('twm_ui');
       final backend = LocalBackend(
-        AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json'),
+        AppPaths.resolve(settingsFile: '${tmp.path}/s.json'),
       );
       late AppState st;
       await tester.runAsync(() async => st = await AppState.create(backend));

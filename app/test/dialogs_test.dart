@@ -36,7 +36,7 @@ void main() {
           final tmp = Directory.systemTemp.createTempSync('twm_ui');
           final TwmBackend b = browser
               ? BrowserBackend(MemoryFileStore())
-              : LocalBackend(AppPaths.resolve(home: '/home/e/papka_dlya_claude/twm_flutter', settingsFile: '${tmp.path}/s.json'));
+              : LocalBackend(AppPaths.resolve(settingsFile: '${tmp.path}/s.json'));
           late AppState st;
           await tester.runAsync(() async => st = await AppState.create(b));
           st.settings.digitizer.onClose = OnCloseAction.immediateReset;
