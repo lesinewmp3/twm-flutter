@@ -37,7 +37,11 @@ class AppState extends ChangeNotifier {
   // ------------------------------------------------------ processing state
   bool processing = false;
   int resultsVersion = 0; // incremented on every new result
+  /// Errors of this session, the last [maxErrors]; [errorCount] counts all
+  /// of them, also the cleared ones (notification of new errors).
   final List<String> errors = [];
+  int errorCount = 0;
+  static const maxErrors = 200;
 
   /// Error of the last measurement or processing (shown in the status until
   /// the next start, so a failed run is not mistaken for a finished one).
@@ -129,6 +133,8 @@ class AppState extends ChangeNotifier {
 
   void addError(String e) {
     errors.add('[${DateTime.now().toIso8601String().substring(11, 19)}] $e');
+    errorCount++;
+    if (errors.length > maxErrors) errors.removeRange(0, errors.length - maxErrors);
     notifyListeners();
   }
 

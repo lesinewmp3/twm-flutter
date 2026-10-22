@@ -43,6 +43,32 @@ void main() {
     tester.view.reset();
   });
 
+  testWidgets('error log: bounded, new errors noticed also after clearing it', (tester) async {
+    final st = await _state(tester, BrowserBackend(MemoryFileStore()));
+    L10n.apply('en');
+    await _pump(tester, st);
+    Finder badge(String n) => find.descendant(of: find.byType(Badge), matching: find.text(n));
+    for (var i = 0; i < 250; i++) {
+      st.addError('error $i');
+    }
+    await tester.pump();
+    expect(st.errors.length, AppState.maxErrors);
+    expect(st.errors.last, endsWith('error 249'));
+    expect(badge('250'), findsOneWidget);
+    // open the log (seen), clear it, a new error is shown again
+    await tester.tap(find.byType(Badge));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+    expect(st.errors, isEmpty);
+    st.addError('after clearing');
+    await tester.pump();
+    expect(badge('1'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 10)); // toast
+    expect(tester.takeException(), isNull);
+    tester.view.reset();
+  });
+
   testWidgets('main screen - browser backend in Russian, narrow layout', (tester) async {
     final st = await _state(tester, BrowserBackend(MemoryFileStore()));
     L10n.apply('ru');

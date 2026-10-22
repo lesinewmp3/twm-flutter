@@ -38,9 +38,9 @@ class _MainScreenState extends State<MainScreen> {
 
   /// New errors pop up at the bottom (the badge alone is easy to miss).
   void _toastNewErrors(AppState st) {
-    if (_toastedErrors < 0) _toastedErrors = st.errors.length; // older ones are in the log
-    if (st.errors.length <= _toastedErrors) return;
-    _toastedErrors = st.errors.length;
+    if (_toastedErrors < 0) _toastedErrors = st.errorCount; // older ones are in the log
+    if (st.errorCount <= _toastedErrors) return;
+    _toastedErrors = st.errorCount;
     final msg = trMessage(st.errors.last.replaceFirst(RegExp(r'^\[[0-9:]+\] '), ''));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showError(context, msg);
@@ -192,7 +192,7 @@ class _MainScreenState extends State<MainScreen> {
           onToggleTheme: widget.onToggleTheme,
           seenErrors: _seenErrors,
           onShowErrors: () {
-            setState(() => _seenErrors = st.errors.length);
+            setState(() => _seenErrors = st.errorCount);
             _showErrors(st);
           },
         ),
@@ -336,7 +336,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final busy = st.measuring;
-    final newErrors = st.errors.length - seenErrors;
+    final newErrors = st.errorCount - seenErrors;
     final mode = switch (st.backend.description) {
       'browser' => tr('browser version (simulator)'),
       'local' => tr('local'),
