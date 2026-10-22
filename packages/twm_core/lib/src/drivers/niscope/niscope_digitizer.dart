@@ -111,6 +111,9 @@ class NiScopeDigitizer extends VirtualDigitizer {
     if (ranges.length == _c.channels.length) _ranges = ranges;
     final g = _groups;
     final record = _c.streaming ? math.min(_n, _streamRecord) : _n;
+    // streaming: all of the record is pretrigger buffer, acquired continuously
+    // while waiting for the trigger that never comes (0 % would keep nothing)
+    final refPosition = _c.streaming ? 100.0 : _c.trigger.refPosition;
     for (final e in g.entries) {
       final vi = _vi[e.key]!;
       final acq = _c.acquisitionType == NiScopeAcquisitionType.flexres ? NiScope.valFlexres : NiScope.valNormal;
@@ -152,7 +155,7 @@ class NiScopeDigitizer extends VirtualDigitizer {
       }
       _l.check(
         vi,
-        _l.configureHorizontalTiming(vi, fs, record, _c.trigger.refPosition, 1, 1),
+        _l.configureHorizontalTiming(vi, fs, record, refPosition, 1, 1),
         'ConfigureHorizontalTiming',
       );
       // PLL reference: the external clock, or none = internal clock (set also
@@ -372,8 +375,9 @@ class NiScopeDigitizer extends VirtualDigitizer {
         calloc.free(info);
       }
     }
-    // timestamps of the record = of its first samples (streaming: first fetch)
-    final st = _stamps ??= stamps;
+    // timestamps of the record = of its first samples (streaming: first fetch;
+    // no trigger, so relative to the first channel as TWM)
+    final st = _stamps ??= _c.streaming ? [for (final t in stamps) t - stamps.first] : stamps;
     final pk = DataPacket(out, nch, _pos);
     _pos += chunk;
     final done = _pos >= _n;

@@ -105,7 +105,7 @@ void main() {
       expect(
         master,
         containsAllInOrder([
-          'Horizontal(1e+06,1048576,0,1,1)',
+          'Horizontal(1e+06,1048576,100,1,1)', // all of the record is pretrigger buffer
           'SetInt(1150077,388)', // fetch relative to the read pointer
           'TrigSoftware(0,0)',
           'Commit',

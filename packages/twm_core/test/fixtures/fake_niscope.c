@@ -211,6 +211,8 @@ static ViStatus fetch(ViSession vi, const char *chList, ViReal64 timeout, ViInt3
   int64_t start = s->readPointer ? s->fetched : 0;
   if (s->readPointer) {
     if (!s->software && start + n > s->record) return fail("Attempt to fetch beyond the end of the record.");
+    /* waiting for the reference trigger only the pretrigger samples are acquired */
+    if (s->software && s->refPos <= 0) return fail("Maximum time exceeded before the operation completed.");
     double deadline = now() + timeout;
     while ((now() - s->t0) * s->fs < start + n) {
       if (now() > deadline) return fail("Maximum time exceeded before the operation completed.");
