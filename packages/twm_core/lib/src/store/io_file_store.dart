@@ -27,7 +27,11 @@ class IoFileStore extends FileStore {
   @override
   Future<void> writeBytes(String s, Uint8List data) async {
     await File(s).parent.create(recursive: true);
-    await File(s).writeAsBytes(data);
+    // whole file or the old one: GNU Octave and the viewers read the session
+    // header while the measurement rewrites it
+    final tmp = File('$s.$pid.tmp');
+    await tmp.writeAsBytes(data, flush: true);
+    await tmp.rename(s);
   }
 
   @override

@@ -173,15 +173,7 @@ class LocalBackend implements TwmBackend {
   Future<String> readText(String path) => File(path).readAsString(encoding: latin1);
 
   @override
-  Future<void> writeText(String path, String content) async {
-    final f = File(path);
-    await f.parent.create(recursive: true);
-    // whole file or the old one: GNU Octave and the viewers read the session
-    // header while the measurement rewrites it
-    final tmp = File('$path.$pid.tmp');
-    await tmp.writeAsString(content, flush: true);
-    await tmp.rename(path);
-  }
+  Future<void> writeText(String path, String content) => _store.writeText(path, content);
 
   @override
   Future<bool> exists(String path) async => await File(path).exists() || await Directory(path).exists();

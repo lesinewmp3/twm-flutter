@@ -56,9 +56,18 @@ class _SineModel {
 
   int get harmonics => (p.length - 1) ~/ 2;
   double value(double t) {
-    var v = p[0];
-    for (var h = 1; h <= harmonics; h++) {
-      v += p[2 * h - 1] * math.cos(h * w * t) + p[2 * h] * math.sin(h * w * t);
+    // cos/sin of h w t by the Chebyshev recurrence from the fundamental
+    // (two trigonometric calls per sample instead of two per harmonic)
+    final c1 = math.cos(w * t), s1 = math.sin(w * t);
+    var v = p[0] + p[1] * c1 + p[2] * s1;
+    var cp = 1.0, sp = 0.0, c = c1, s = s1;
+    for (var h = 2; h <= harmonics; h++) {
+      final cn = 2 * c1 * c - cp, sn = 2 * c1 * s - sp;
+      cp = c;
+      sp = s;
+      c = cn;
+      s = sn;
+      v += p[2 * h - 1] * c + p[2 * h] * s;
     }
     return v;
   }
@@ -68,14 +77,7 @@ class _SineModel {
   /// Phase of the fundamental (sine reference) at t = 0.
   double get phase1 => math.atan2(p[1], p[2]);
 
-  static _SineModel? fit(
-    Float64List x,
-    double fs,
-    double f,
-    int from,
-    int to,
-    int harmonics,
-  ) {
+  static _SineModel? fit(Float64List x, double fs, double f, int from, int to, int harmonics) {
     final n = to - from;
     final m = 1 + 2 * harmonics;
     if (n < 2 * m) return null;
@@ -85,10 +87,13 @@ class _SineModel {
     final row = Float64List(m);
     for (var i = from; i < to; i++) {
       final t = i / fs;
+      final c1 = math.cos(w * t), s1 = math.sin(w * t);
       row[0] = 1;
-      for (var h = 1; h <= harmonics; h++) {
-        row[2 * h - 1] = math.cos(h * w * t);
-        row[2 * h] = math.sin(h * w * t);
+      row[1] = c1;
+      row[2] = s1;
+      for (var h = 2; h <= harmonics; h++) {
+        row[2 * h - 1] = 2 * c1 * row[2 * h - 3] - (h == 2 ? 1 : row[2 * h - 5]);
+        row[2 * h] = 2 * c1 * row[2 * h - 2] - (h == 2 ? 0 : row[2 * h - 4]);
       }
       for (var a = 0; a < m; a++) {
         atb[a] += row[a] * x[i];
@@ -153,20 +158,12 @@ class _SineModel {
 /// Frequency of the steady signal in [from, to) refined from [f0]: the phase
 /// of the fundamental fitted on both halves must be the same at the right
 /// frequency (phase difference method, a few iterations).
-double _refineFrequency(
-  Float64List x,
-  double fs,
-  double f0,
-  int from,
-  int to,
-  int harmonics,
-) {
+double _refineFrequency(Float64List x, double fs, double f0, int from, int to, int harmonics) {
   var f = f0;
   final mid = (from + to) ~/ 2;
   final dt = (to - from) / 2 / fs; // distance of the half centers [s]
   for (var it = 0; it < 4; it++) {
-    final a = _SineModel.fit(x, fs, f, from, mid, harmonics),
-        b = _SineModel.fit(x, fs, f, mid, to, harmonics);
+    final a = _SineModel.fit(x, fs, f, from, mid, harmonics), b = _SineModel.fit(x, fs, f, mid, to, harmonics);
     if (a == null || b == null) return f;
     var d = b.phase1 - a.phase1;
     d = math.atan2(math.sin(d), math.cos(d));
@@ -181,31 +178,22 @@ class TransferAnalysis {
   /// [x] samples of the voltage, [fs] sampling rate, [f0] fundamental
   /// frequency (e.g. from the harmonic analysis). [threshold] relative to
   /// the nominal peak; [harmonics] modelled in the steady waveform.
-  static TransferResult analyze(
-    Float64List x,
-    double fs,
-    double f0, {
-    double threshold = 0.1,
-    int harmonics = 10,
-  }) {
+  static TransferResult analyze(Float64List x, double fs, double f0, {double threshold = 0.1, int harmonics = 10}) {
     final n = x.length;
-    if (!(f0 > 0) || !f0.isFinite)
-      return const TransferResult(message: 'no fundamental frequency');
+    if (!(f0 > 0) || !f0.isFinite) return const TransferResult(message: 'no fundamental frequency');
     final period = fs / f0; // samples
     final h = math.max(1, math.min(harmonics, (fs / 2 / f0).floor() - 1));
     final refLen = (2 * period).ceil();
-    if (n < 5 * period)
-      return const TransferResult(message: 'record shorter than 5 periods');
+    if (n < 5 * period) return const TransferResult(message: 'record shorter than 5 periods');
 
     // 1: model from the first two periods (own frequency: a phase jump later in
     // the record biases the frequency of the whole record), then refined from
     // all samples before the event
     final fBefore = _refineFrequency(x, fs, f0, 0, refLen, h);
     var before = _SineModel.fit(x, fs, fBefore, 0, refLen, h);
-    if (before == null || before.peak1 <= 0)
-      return const TransferResult(message: 'no steady signal at the start');
-    int firstOutside(_SineModel m, double thr) {
-      for (var i = 0; i < n; i++) {
+    if (before == null || before.peak1 <= 0) return const TransferResult(message: 'no steady signal at the start');
+    int firstOutside(_SineModel m, double thr, [int from = 0]) {
+      for (var i = from; i < n; i++) {
         if ((x[i] - m.value(i / fs)).abs() > thr) return i;
       }
       return -1;
@@ -214,47 +202,27 @@ class TransferAnalysis {
     var a0 = before.peak1;
     var det = firstOutside(before, threshold * a0);
     if (det < 0) {
-      return TransferResult(
-        peakBefore: a0,
-        peakAfter: a0,
-        depth: 1,
-        maxDeviation: 0,
-        message: 'no event',
-      );
+      return TransferResult(peakBefore: a0, peakAfter: a0, depth: 1, maxDeviation: 0, message: 'no event');
     }
     if (det >= refLen + period) {
-      // refit on everything before the event (better frequency/phase match)
-      final m = _SineModel.fit(
-        x,
-        fs,
-        _refineFrequency(x, fs, fBefore, 0, (det - period / 4).floor(), h),
-        0,
-        (det - period / 4).floor(),
-        h,
-      );
+      // refit on the steady part before the event (better frequency/phase
+      // match): its last 100k samples, at least 4 periods (a longer fit costs
+      // seconds at MSa/s and gains nothing at the event)
+      final to = (det - period / 4).floor();
+      final int from = math.max(0, to - math.max(100000, (4 * period).ceil()));
+      final m = _SineModel.fit(x, fs, _refineFrequency(x, fs, fBefore, from, to, h), from, to, h);
       if (m != null) {
         before = m;
         a0 = m.peak1;
-        det = firstOutside(before, threshold * a0);
+        det = firstOutside(before, threshold * a0, from);
       }
     }
-    if (det < refLen)
-      return const TransferResult(
-        message: 'event within the first two periods',
-      );
+    if (det < refLen) return const TransferResult(message: 'event within the first two periods');
 
     // 2: model after the event from the last two periods, end where the signal joins it
     // (the frequency may differ: UPS inverter before, grid after a transfer)
-    final after = _SineModel.fit(
-      x,
-      fs,
-      _refineFrequency(x, fs, f0, n - refLen, n, h),
-      n - refLen,
-      n,
-      h,
-    );
-    if (after == null)
-      return const TransferResult(message: 'no steady signal at the end');
+    final after = _SineModel.fit(x, fs, _refineFrequency(x, fs, f0, n - refLen, n, h), n - refLen, n, h);
+    if (after == null) return const TransferResult(message: 'no steady signal at the end');
     var lastOut = -1;
     for (var i = n - 1; i >= det; i--) {
       if ((x[i] - after.value(i / fs)).abs() > threshold * a0) {
@@ -272,10 +240,7 @@ class TransferAnalysis {
     }
 
     // 3: refine both edges with a small threshold (noise of the fits)
-    final fine = math.max(
-      0.001 * a0,
-      6 * math.max(before.residualRms, after.residualRms),
-    );
+    final fine = math.max(0.001 * a0, 6 * math.max(before.residualRms, after.residualRms));
     // the deviation can dip under the threshold for a sample or two when the
     // waveform crosses zero at an edge: take the first / last sample above it
     // within a quarter period outside the coarse detection
