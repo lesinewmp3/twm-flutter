@@ -18,7 +18,7 @@
 #define ERR_TMO ((int32_t)0xBFFF0015U)
 #define ERR_IO ((int32_t)0xBFFF003EU)
 #define MAXS 16
-#define OUTBUF 64 /* readings the DMM holds without memory */
+#define OUTBUF 2000 /* readings held without memory (100 ms at 20 kSa/s: a loaded PC) */
 
 typedef struct {
   int used, sint, mem, end_always, armed, overrun;

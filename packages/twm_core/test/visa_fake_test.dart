@@ -82,7 +82,7 @@ void main() {
   test(
     'streaming: DMMs read in parallel keep up without an overrun',
     () async {
-      // 2 s at 20 kSa/s, the fake DMM buffers only 64 readings (3 ms)
+      // 2 s at 20 kSa/s, the fake DMM buffers only 2000 readings (0.1 s)
       await measure(cfg(['GPIB0::22::INSTR', 'GPIB1::23::INSTR'], streaming: true), fs: 20000, n: 40000);
     },
     skip: skip,
