@@ -30,11 +30,37 @@ class _ProcDialogState extends State<_ProcDialog> {
   String _error = '';
   int _selParam = -1;
   int _rev = 0;
+  final _listScroll = ScrollController();
+  final _selKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _loadAlgs();
+  }
+
+  @override
+  void dispose() {
+    _listScroll.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls the list to the selected algorithm (below the visible part on
+  /// a low window): near it by the mean item height first, the tiles are
+  /// built lazily, then exactly.
+  void _revealSelected() {
+    final i = _algs.indexWhere((a) => a.id == ps.algorithmId);
+    if (i < 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_listScroll.hasClients) return;
+      final p = _listScroll.position;
+      final mean = (p.maxScrollExtent + p.viewportDimension) / _algs.length;
+      _listScroll.jumpTo((i * mean - p.viewportDimension / 3).clamp(0.0, p.maxScrollExtent));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = _selKey.currentContext;
+        if (c != null) Scrollable.ensureVisible(c, alignment: 0.3);
+      });
+    });
   }
 
   Future<void> _loadAlgs() async {
@@ -47,6 +73,7 @@ class _ProcDialogState extends State<_ProcDialog> {
       await st.backend.octaveStart(st.settings.octave);
       final a = await st.backend.algorithms();
       setState(() => _algs = a);
+      _revealSelected();
       if (ps.algorithmId.isNotEmpty && a.any((e) => e.id == ps.algorithmId)) {
         await _loadAlg(ps.algorithmId, keepParams: true);
       }
@@ -208,9 +235,11 @@ class _ProcDialogState extends State<_ProcDialog> {
               ),
               Expanded(
                 child: ListView(
+                  controller: _listScroll,
                   children: [
                     for (final a in _algs)
                       ListTile(
+                        key: a.id == ps.algorithmId ? _selKey : null,
                         dense: true,
                         selected: a.id == ps.algorithmId,
                         title: Text(a.id),

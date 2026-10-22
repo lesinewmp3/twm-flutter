@@ -174,7 +174,16 @@ void main() {
     await click(find.text('Настройка обработки', skipOffstage: false));
     // the list of algorithms comes from Octave (first start takes seconds)
     final t1 = DateTime.now();
-    expect(await until(() => find.text('TWM-PSFE').evaluate().isNotEmpty, timeout: const Duration(seconds: 90)), isTrue);
+    expect(
+      await until(
+        () => find.text('TWM-PSFE', skipOffstage: false).evaluate().isNotEmpty,
+        timeout: const Duration(seconds: 90),
+      ),
+      isTrue,
+    );
+    // the selected algorithm is scrolled into view (also on a low window)
+    await settle(500);
+    expect(find.text('TWM-PSFE'), findsOneWidget);
     log.add('algorithm list loaded in ${DateTime.now().difference(t1).inMilliseconds} ms');
     await shot('processing_dialog');
     final list = find.ancestor(of: find.text('TWM-PSFE'), matching: find.byType(Scrollable)).first;
