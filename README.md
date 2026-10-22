@@ -96,7 +96,9 @@ tools/package_linux_docker.sh   # то же в контейнере Ubuntu 22.04
 
 Собранный на новой системе файл требует её версию GLib и не запустится на Ubuntu 22.04 — для раздачи
 используйте вариант с контейнером (или сборку GitHub Actions, она тоже на Ubuntu 22.04). Проверено
-в чистых контейнерах Ubuntu 22.04 и 24.04.
+в чистых контейнерах Ubuntu 22.04 и 24.04. Запуск: `chmod +x TWM-Flutter-x86_64.AppImage` и открыть файл;
+AppImage монтируется через FUSE и требует только `fusermount3` (пакет fuse3 есть в Ubuntu по умолчанию),
+`libfuse2` не нужна. Без FUSE: `./TWM-Flutter-x86_64.AppImage --appimage-extract-and-run`.
 
 Ресурсы (`octave/`, `data/`) приложение ищет через `TWM_HOME`, рядом с исполняемым файлом или в
 родительских каталогах. Настройки хранятся в `~/.config/twm_flutter/settings.json`
