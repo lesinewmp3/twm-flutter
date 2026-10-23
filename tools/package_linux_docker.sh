@@ -3,6 +3,7 @@
 # newer (built on a newer system the binary needs its newer GLib, e.g. g_once_init_enter_pointer).
 # Builds the current commit (clean clone; uncommitted changes are not included) with the local
 # Flutter SDK and pub cache, mounted at the same paths and used as the current user.
+# The portable Octave is built first (tools/bundle_octave.sh, in an Ubuntu 24.04 container).
 # Needs docker, flutter and appimagetool (on PATH or in $FLUTTER / $APPIMAGETOOL).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,11 +15,14 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/home"
 git clone -q "$root" "$work/src"
+"$root/tools/bundle_octave.sh"
+octave_rt="$root/build/octave-runtime"
 # (host network: also works behind VPNs with a smaller MTU than docker's bridge)
 docker build --network host -q -t twm-build:22.04 -f "$root/tools/ubuntu22.Dockerfile" "$root/tools" >/dev/null
 docker run --rm --network host --user "$(id -u):$(id -g)" \
   -e HOME="$work/home" -e PUB_CACHE="$pub" -e APPIMAGE_EXTRACT_AND_RUN=1 \
-  -e FLUTTER="$flutter_root/bin/flutter" -e APPIMAGETOOL="$tool" \
+  -e FLUTTER="$flutter_root/bin/flutter" -e APPIMAGETOOL="$tool" -e OCTAVE_RUNTIME="$octave_rt" \
+  -v "$octave_rt:$octave_rt:ro" \
   -v "$flutter_root:$flutter_root" -v "$pub:$pub" -v "$work:$work" -v "$(dirname "$tool"):$(dirname "$tool"):ro" \
   -w "$work/src" twm-build:22.04 tools/package_linux.sh
 mkdir -p "$root/dist"

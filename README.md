@@ -87,12 +87,18 @@ cd packages/twm_core
 dart run bin/twm_server.dart --host 0.0.0.0 --port 8080 --web ../../app/build/web --token SECRET
 ```
 
-Один файл для Linux (AppImage: приложение + `octave/` + `data/`; GNU Octave ставится отдельно):
+Один файл для Linux (AppImage: приложение + `octave/` + `data/` + переносной GNU Octave — на компьютере
+ничего ставить не нужно):
 
 ```bash
+tools/bundle_octave.sh          # build/octave-runtime: Octave 8.4 + io, signal, statistics, optim из Ubuntu 24.04
 tools/package_linux.sh          # dist/TWM-Flutter-x86_64.AppImage для систем не старее сборочной
-tools/package_linux_docker.sh   # то же в контейнере Ubuntu 22.04: запускается на Ubuntu 22.04 и новее
+tools/package_linux_docker.sh   # то же в контейнере Ubuntu 22.04 (Octave собирает сам): Ubuntu 22.04 и новее
 ```
+
+Встроенный Octave — те же версии, на которых пройдена валидация (`build/octave-runtime/VERSIONS`), со своей
+glibc и библиотеками (OpenBLAS); установленный на компьютере Octave, его пакеты и `~/.octaverc` не
+используются. Если в настройках указан путь к Octave/Matlab, работает он, а не встроенный.
 
 Собранный на новой системе файл требует её версию GLib и не запустится на Ubuntu 22.04 — для раздачи
 используйте вариант с контейнером (или сборку GitHub Actions, она тоже на Ubuntu 22.04). Проверено
@@ -221,7 +227,6 @@ dart run tool/stress.dart                                             # нагр
 - Сервер TWM использует HTTP/WebSocket вместо Windows named pipe, поэтому старые клиенты (Open-Z-Bridge) не совместимы.
 - Экспорт результатов: CSV-файл и буфер обмена в формате Excel; прямой записи в MS Excel через ActiveX нет.
 - Графики строятся во Flutter, а не окнами Octave.
-- Режим «Parallel Record Processing» (экспериментальный в TWM) пока выполняется последовательно.
 - Онлайн-анализ TPQA ориентировочный, как и в оригинале. Валидированные результаты дают только алгоритмы QWTB.
 
 Лицензия MIT, как у TWM и TPQA. У алгоритмов QWTB свои лицензии.
