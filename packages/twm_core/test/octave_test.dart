@@ -109,4 +109,30 @@ void main() {
     expect(avg.resultId, 0);
     expect(avg.channels.first.firstWhere((x) => x.name == 'P').value.first, closeTo((p1 + p2) / 2, 1e-12));
   }, timeout: const Timeout(Duration(minutes: 5)));
+
+  test('default setup (TWM-PSFE, one record): results table, octprog functions not shadowed', () async {
+    // all alg_* folders on the path made unc2str of TWM-InpZ shadow the octprog one: the results
+    // table failed with "sprintf: invalid format specified [unc2str:43]" - in a fresh engine only, a
+    // qwtb() listing reorders the path
+    await oct.restart();
+    expect(await oct.eval("disp(which('unc2str'))"), contains(p.join('octprog', 'unc2str.m')));
+    final dc = DigitizerConfig()..simulated.realtimeFactor = 0;
+    final mc = MeasurementConfig(
+      folder: tmp.path,
+      nameBase: 'psfe',
+      processingEnabled: true,
+      processing: ProcessingSetup(algorithmId: 'TWM-PSFE'),
+    );
+    final session = await MeasurementEngine(
+      store: IoFileStore(),
+      digitizer: SimulatedDigitizer(dc),
+      digitizerConfig: dc,
+      config: mc,
+      corrections: CorrectionsConfig(),
+      processor: (s, g, r, last) => q.exec(s, record: r, group: g, isLast: last),
+    ).run();
+    final t = await q.results(p.dirname(session), 'TWM-PSFE', ResultViewConfig(resultId: -1));
+    final f = t.rows.firstWhere((r) => r.first == 'f[u1]');
+    expect(double.parse(f[1].replaceAll(' ', '')), closeTo(50, 1e-3));
+  }, timeout: const Timeout(Duration(minutes: 5)));
 }

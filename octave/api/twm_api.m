@@ -61,7 +61,10 @@ function out = do_init(octprog, qwtb_path, compat, packages)
   addpath(octprog);
   addpath(fullfile(octprog, 'info'));
   if ~isempty(qwtb_path)
-    addpath(genpath(qwtb_path));
+    % only the QWTB root, as TWM does: qwtb() adds the folder of the running algorithm itself.
+    % With all alg_* folders on the path their private copies (e.g. unc2str of TWM-InpZ)
+    % shadowed the octprog functions.
+    addpath(qwtb_path);
   end
   loaded = {};
   failed = {};
